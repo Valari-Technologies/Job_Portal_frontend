@@ -3,6 +3,7 @@ import { Shield, Eye, EyeOff, Check } from 'lucide-react';
 import CustomSelect from '../../components/CustomSelect';
 import { getProfile, saveProfile } from '../../components/superadmin/profile/profileData';
 import { getSettings, saveSettings } from '../../components/superadmin/settings/settingsData';
+import ProfilePhotoCropModal from '../../components/profile/ProfilePhotoCropModal';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('Account');
@@ -10,6 +11,9 @@ export default function SettingsPage() {
   // Shared state references
   const [profile, setProfile] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isPhotoActionOpen, setIsPhotoActionOpen] = useState(false);
 
   // Notifications State
   const [notifs, setNotifs] = useState({
@@ -69,14 +73,22 @@ export default function SettingsPage() {
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (!file.type.match('image.*')) {
+      alert('Please select a valid image file (JPG, JPEG, PNG, WEBP).');
+      return;
+    }
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert('Maximum file size is 5 MB.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
-      const base64 = event.target.result;
-      const updated = { ...profile, photo: base64 };
-      setProfile(updated);
-      saveProfile(updated);
+      setCropImageSrc(event.target.result);
+      setIsCropOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleUpdatePassword = (e) => {
@@ -188,7 +200,7 @@ export default function SettingsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current.click()}
+                    onClick={() => setIsPhotoActionOpen(true)}
                     className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-black transition-colors cursor-pointer"
                   >
                     Change Photo
@@ -663,6 +675,68 @@ export default function SettingsPage() {
 
       </div>
 
+      <PhotoActionModal
+        isOpen={isPhotoActionOpen}
+        onClose={() => setIsPhotoActionOpen(false)}
+        onUploadNew={() => {
+          if (fileInputRef.current) fileInputRef.current.click();
+        }}
+        onEditCurrent={() => {
+          if (profile.photo) {
+            setCropImageSrc(profile.photo);
+            setIsCropOpen(true);
+          } else {
+            alert("No profile photo exists to edit. Please upload a new photo.");
+          }
+        }}
+      />
+
+      <ProfilePhotoCropModal
+        isOpen={isCropOpen}
+        imageSrc={cropImageSrc}
+        onClose={() => setIsCropOpen(false)}
+        onSave={(croppedBase64) => {
+          const updated = { ...profile, photo: croppedBase64 };
+          setProfile(updated);
+          saveProfile(updated);
+          setIsCropOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+// Reusable Choice Modal for Upload vs Edit Photo
+function PhotoActionModal({ isOpen, onClose, onUploadNew, onEditCurrent }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fadeIn text-center">
+      <div className="bg-white rounded-3xl w-full max-w-xs border border-slate-100 shadow-xl overflow-hidden p-6">
+        <h4 className="text-xl font-bold text-slate-800 mb-5">Profile Photo</h4>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => { onUploadNew(); onClose(); }}
+            className="w-full py-3 bg-[#8CC63F] hover:bg-[#7ab533] text-white text-base font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            Upload New Photo
+          </button>
+          <button
+            type="button"
+            onClick={() => { onEditCurrent(); onClose(); }}
+            className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-base font-semibold border border-slate-150 rounded-xl transition-colors cursor-pointer"
+          >
+            Edit Current Photo
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-500 text-[15px] font-medium rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

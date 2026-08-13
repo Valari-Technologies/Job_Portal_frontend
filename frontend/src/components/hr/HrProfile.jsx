@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera } from 'lucide-react';
+import ProfilePhotoCropModal from '../profile/ProfilePhotoCropModal';
 
 const DEFAULT_PROFILE = {
   fullName: '',
@@ -18,6 +19,9 @@ const DEFAULT_PROFILE = {
 
 export default function HrProfile() {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isPhotoActionOpen, setIsPhotoActionOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Personal');
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isEditingOrg, setIsEditingOrg] = useState(false);
@@ -77,13 +81,22 @@ export default function HrProfile() {
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Only image files (JPG, JPEG, PNG, WEBP) are allowed.');
+        return;
+      }
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('Maximum file size is 5 MB.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64 = reader.result;
-        const updated = { ...profile, image: base64 };
-        saveProfileUpdate(updated);
+        setCropImageSrc(reader.result);
+        setIsCropOpen(true);
       };
       reader.readAsDataURL(file);
+      e.target.value = '';
     }
   };
 
@@ -151,7 +164,7 @@ export default function HrProfile() {
         <div className="flex flex-col sm:flex-row items-center gap-5">
           {/* Circular profile image with upload action */}
           <div 
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setIsPhotoActionOpen(true)}
             className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#8CC63F]/30 shadow-xs relative group cursor-pointer shrink-0"
           >
             <img src={profile.image} alt="HR Manager" className="w-full h-full object-cover" />
@@ -420,6 +433,67 @@ export default function HrProfile() {
           </form>
         )}
 
+        <PhotoActionModal
+          isOpen={isPhotoActionOpen}
+          onClose={() => setIsPhotoActionOpen(false)}
+          onUploadNew={() => {
+            if (fileInputRef.current) fileInputRef.current.click();
+          }}
+          onEditCurrent={() => {
+            if (profile.image) {
+              setCropImageSrc(profile.image);
+              setIsCropOpen(true);
+            } else {
+              alert("No profile photo exists to edit. Please upload a new photo.");
+            }
+          }}
+        />
+
+        <ProfilePhotoCropModal
+          isOpen={isCropOpen}
+          imageSrc={cropImageSrc}
+          onClose={() => setIsCropOpen(false)}
+          onSave={(croppedBase64) => {
+            const updated = { ...profile, image: croppedBase64 };
+            saveProfileUpdate(updated);
+            setIsCropOpen(false);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Reusable Choice Modal for Upload vs Edit Photo
+function PhotoActionModal({ isOpen, onClose, onUploadNew, onEditCurrent }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fadeIn text-center">
+      <div className="bg-white rounded-3xl w-full max-w-xs border border-slate-100 shadow-xl overflow-hidden p-6">
+        <h4 className="text-xl font-bold text-slate-800 mb-5">Profile Photo</h4>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => { onUploadNew(); onClose(); }}
+            className="w-full py-3 bg-[#8CC63F] hover:bg-[#7ab533] text-white text-base font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            Upload New Photo
+          </button>
+          <button
+            type="button"
+            onClick={() => { onEditCurrent(); onClose(); }}
+            className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-base font-semibold border border-slate-150 rounded-xl transition-colors cursor-pointer"
+          >
+            Edit Current Photo
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-500 text-[15px] font-medium rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Phone, MapPin, GraduationCap, Briefcase, FileText, Camera, AlertTriangle, Download, RefreshCw, Upload, Globe, Eye, Edit2, Plus, Trash2, X, Calendar, Award, CheckCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import CustomSelect from '../components/CustomSelect';
+import ProfilePhotoCropModal from '../components/profile/ProfilePhotoCropModal';
 
 export default function Profile() {
   // Profile Photo states
   const [profileImage, setProfileImage] = useState(null);
   const [photoError, setPhotoError] = useState('');
   const photoInputRef = useRef(null);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isPhotoActionOpen, setIsPhotoActionOpen] = useState(false);
 
   // Resume States
   const [resumeName, setResumeName] = useState('');
@@ -224,21 +228,21 @@ export default function Profile() {
     if (!file) return;
     setPhotoError('');
     if (!file.type.startsWith('image/')) {
-      setPhotoError('Only image files (JPG, JPEG, PNG) are allowed.');
+      setPhotoError('Only image files (JPG, JPEG, PNG, WEBP) are allowed.');
       return;
     }
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      setPhotoError('Maximum file size is 2 MB.');
+      setPhotoError('Maximum file size is 5 MB.');
       return;
     }
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64Data = reader.result;
-      setProfileImage(base64Data);
-      saveCandidateProfile({ profileImage: base64Data });
+      setCropImageSrc(reader.result);
+      setIsCropOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Handle Resume Upload
@@ -283,7 +287,7 @@ export default function Profile() {
   };
 
   const triggerPhotoPicker = () => {
-    if (photoInputRef.current) photoInputRef.current.click();
+    setIsPhotoActionOpen(true);
   };
 
   const triggerResumePicker = () => {
@@ -1633,6 +1637,68 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      <PhotoActionModal
+        isOpen={isPhotoActionOpen}
+        onClose={() => setIsPhotoActionOpen(false)}
+        onUploadNew={() => {
+          if (photoInputRef.current) photoInputRef.current.click();
+        }}
+        onEditCurrent={() => {
+          if (profileImage) {
+            setCropImageSrc(profileImage);
+            setIsCropOpen(true);
+          } else {
+            alert("No profile photo exists to edit. Please upload a new photo.");
+          }
+        }}
+      />
+
+      <ProfilePhotoCropModal
+        isOpen={isCropOpen}
+        imageSrc={cropImageSrc}
+        onClose={() => setIsCropOpen(false)}
+        onSave={(croppedBase64) => {
+          setProfileImage(croppedBase64);
+          saveCandidateProfile({ profileImage: croppedBase64 });
+          setIsCropOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+// Reusable Choice Modal for Upload vs Edit Photo
+function PhotoActionModal({ isOpen, onClose, onUploadNew, onEditCurrent }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fadeIn text-center">
+      <div className="bg-white rounded-3xl w-full max-w-xs border border-slate-100 shadow-xl overflow-hidden p-6">
+        <h4 className="text-xl font-bold text-slate-800 mb-5">Profile Photo</h4>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => { onUploadNew(); onClose(); }}
+            className="w-full py-3 bg-[#8CC63F] hover:bg-[#7ab533] text-white text-base font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            Upload New Photo
+          </button>
+          <button
+            type="button"
+            onClick={() => { onEditCurrent(); onClose(); }}
+            className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-base font-semibold border border-slate-150 rounded-xl transition-colors cursor-pointer"
+          >
+            Edit Current Photo
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-500 text-[15px] font-medium rounded-xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
