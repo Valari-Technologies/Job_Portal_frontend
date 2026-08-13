@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CustomSelect from '../CustomSelect';
 import { 
   Search, 
   Download, 
@@ -180,56 +181,39 @@ export default function HrApplications() {
 
         {/* Filters Selectors */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <select 
+          <CustomSelect 
             value={selectedJob} 
-            onChange={(e) => { setSelectedJob(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2.5 text-base font-bold text-slate-500 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer flex-grow md:flex-grow-0"
-          >
-            <option value="All Jobs">All Jobs</option>
-            <option value="UI/UX Designer">UI/UX Designer</option>
-            <option value="Frontend Developer">Frontend Developer</option>
-          </select>
+            onChange={(val) => { setSelectedJob(val); setCurrentPage(1); }}
+            options={['All Jobs', 'UI/UX Designer', 'Frontend Developer']}
+            placeholder="All Jobs"
+            className="w-full md:w-auto flex-grow md:flex-grow-0"
+          />
 
-          <select 
+          <CustomSelect 
             value={selectedStatus} 
-            onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2.5 text-base font-bold text-slate-500 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer flex-grow md:flex-grow-0"
-          >
-            <option value="All Status">All Status</option>
-            <option value="Under Review">Under Review</option>
-            <option value="Shortlisted">Shortlisted</option>
-            <option value="Interviewing">Interviewing</option>
-            <option value="Selected">Selected</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+            onChange={(val) => { setSelectedStatus(val); setCurrentPage(1); }}
+            options={['All Status', 'Under Review', 'Shortlisted', 'Interviewing', 'Selected', 'Rejected']}
+            placeholder="All Status"
+            className="w-full md:w-auto flex-grow md:flex-grow-0"
+          />
 
-          <select 
+          <CustomSelect 
             value={selectedExp} 
-            onChange={(e) => setSelectedExp(e.target.value)}
-            className="px-4 py-2.5 text-base font-bold text-slate-500 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer flex-grow md:flex-grow-0"
-          >
-            <option value="All Experience">All Experience</option>
-            <option value="3+ years">3+ Years</option>
-            <option value="4+ years">4+ Years</option>
-          </select>
+            onChange={(val) => setSelectedExp(val)}
+            options={['All Experience', '3+ years', '4+ years']}
+            placeholder="All Experience"
+            className="w-full md:w-auto flex-grow md:flex-grow-0"
+          />
 
-          <select 
-            value={selectedSkill} 
-            onChange={(e) => setSelectedSkill(e.target.value)}
-            className="px-4 py-2.5 text-base font-bold text-slate-500 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer flex-grow md:flex-grow-0"
-          >
-            <option value="All Skills">All Skills</option>
-            <option value="Figma">Figma</option>
-            <option value="React">React</option>
-          </select>
 
-          <input 
+
+          {/* <input 
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             placeholder="mm/dd/yyyy"
             className="px-4 py-2 text-base font-bold text-slate-400 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer flex-grow md:flex-grow-0"
-          />
+          /> */}
         </div>
       </div>
 

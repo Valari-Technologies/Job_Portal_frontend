@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, Phone, MapPin, GraduationCap, Briefcase, FileText, Camera, AlertTriangle, Download, RefreshCw, Upload, Globe, Eye, Edit2, Plus, Trash2, X, Calendar, Award, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, GraduationCap, Briefcase, FileText, Camera, AlertTriangle, Download, RefreshCw, Upload, Globe, Eye, Edit2, Plus, Trash2, X, Calendar, Award, CheckCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import CustomSelect from '../components/CustomSelect';
 
 export default function Profile() {
   // Profile Photo states
@@ -30,6 +31,34 @@ export default function Profile() {
     state: ''
   });
   const [infoForm, setInfoForm] = useState({ ...personalInfo });
+
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
+  const [isDobOpen, setIsDobOpen] = useState(false);
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [dobPickerMode, setDobPickerMode] = useState('days'); // 'days' | 'years' | 'months'
+
+  const formatDateString = (day, month, year) => {
+    const dd = String(day).padStart(2, '0');
+    const mm = String(month + 1).padStart(2, '0');
+    const yyyy = year;
+    return `${dd}-${mm}-${yyyy}`;
+  };
+
+  const genderRef = useRef(null);
+  const dobRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (genderRef.current && !genderRef.current.contains(e.target)) {
+        setIsGenderOpen(false);
+      }
+      if (dobRef.current && !dobRef.current.contains(e.target)) {
+        setIsDobOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Education edit states
   const [isEditingEdu, setIsEditingEdu] = useState(false);
@@ -605,7 +634,7 @@ export default function Profile() {
       </div>
 
       {/* Main Single White Card containing Tab navigation & details grid */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xs overflow-hidden w-full">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xs overflow-visible w-full">
         
         {/* Tab navigation */}
         <div className="flex border-b border-slate-100 gap-8 text-sm sm:text-base font-bold select-none px-6 pt-5 overflow-x-auto scrollbar-none whitespace-nowrap">
@@ -660,14 +689,13 @@ export default function Profile() {
                         required
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                       <label className="text-xs text-slate-400 font-extrabold">GENDER</label>
-                      <input
-                        type="text"
+                      <CustomSelect
                         value={infoForm.gender}
-                        onChange={(e) => setInfoForm({ ...infoForm, gender: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-[#84A43C]"
-                        required
+                        onChange={(val) => setInfoForm({ ...infoForm, gender: val })}
+                        options={['Male', 'Female', 'Others']}
+                        placeholder="Select Gender"
                       />
                     </div>
                     <div className="space-y-1">
@@ -710,15 +738,152 @@ export default function Profile() {
                         required
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative" ref={dobRef}>
                       <label className="text-xs text-slate-400 font-extrabold">DATE OF BIRTH</label>
-                      <input
-                        type="text"
-                        value={infoForm.dob}
-                        onChange={(e) => setInfoForm({ ...infoForm, dob: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-[#84A43C]"
-                        required
-                      />
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => { setIsDobOpen(!isDobOpen); setIsGenderOpen(false); setDobPickerMode('days'); }}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-[#84A43C] text-left flex items-center justify-between font-semibold text-slate-700 cursor-pointer h-[38px]"
+                        >
+                          <span>{infoForm.dob || 'DD-MM-YYYY'}</span>
+                          <Calendar className="w-4 h-4 text-slate-400" />
+                        </button>
+                        {isDobOpen && (
+                          <div className="absolute left-0 bottom-full mb-2 w-[280px] sm:w-64 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-100">
+
+                            {dobPickerMode === 'years' ? (
+                              <div className="max-h-48 overflow-y-auto grid grid-cols-4 gap-2 pt-1 scrollbar-none">
+                                {Array.from({ length: 2026 - 1950 + 1 }).map((_, i) => {
+                                  const y = 1950 + i;
+                                  const isSelected = currentCalendarDate.getFullYear() === y;
+                                  return (
+                                    <button
+                                      key={y}
+                                      type="button"
+                                      onClick={() => {
+                                        const d = new Date(currentCalendarDate);
+                                        d.setFullYear(y);
+                                        setCurrentCalendarDate(d);
+                                        setDobPickerMode('months');
+                                      }}
+                                      className={`py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer text-center ${
+                                        isSelected
+                                          ? 'bg-[#84A43C] text-white font-extrabold'
+                                          : 'hover:bg-slate-50 text-slate-600'
+                                      }`}
+                                    >
+                                      {y}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : dobPickerMode === 'months' ? (
+                              <div className="grid grid-cols-3 gap-2 pt-2">
+                                {Array.from({ length: 12 }).map((_, m) => {
+                                  const date = new Date(currentCalendarDate.getFullYear(), m, 1);
+                                  const monthName = date.toLocaleString('default', { month: 'short' });
+                                  const isSelected = currentCalendarDate.getMonth() === m;
+                                  return (
+                                    <button
+                                      key={m}
+                                      type="button"
+                                      onClick={() => {
+                                        const d = new Date(currentCalendarDate);
+                                        d.setMonth(m);
+                                        setCurrentCalendarDate(d);
+                                        setDobPickerMode('days');
+                                      }}
+                                      className={`py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer text-center ${
+                                        isSelected
+                                          ? 'bg-[#84A43C] text-white font-extrabold'
+                                          : 'hover:bg-slate-50 text-slate-600'
+                                      }`}
+                                    >
+                                      {monthName}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <>
+                                {/* Calendar Header */}
+                                <div className="flex items-center justify-between mb-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const prev = new Date(currentCalendarDate);
+                                      prev.setMonth(prev.getMonth() - 1);
+                                      setCurrentCalendarDate(prev);
+                                    }}
+                                    className="p-1 hover:bg-slate-50 rounded-lg cursor-pointer text-slate-500"
+                                  >
+                                    <ChevronLeft className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDobPickerMode('years')}
+                                    className="text-xs font-extrabold text-slate-700 hover:text-[#84A43C] uppercase tracking-wider cursor-pointer"
+                                    title="Click to select Year"
+                                  >
+                                    {currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = new Date(currentCalendarDate);
+                                      next.setMonth(next.getMonth() + 1);
+                                      setCurrentCalendarDate(next);
+                                    }}
+                                    className="p-1 hover:bg-slate-50 rounded-lg cursor-pointer text-slate-500"
+                                  >
+                                    <ChevronRight className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                
+                                {/* Weekday Grid */}
+                                <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-slate-400 uppercase mb-2">
+                                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                    <span key={day}>{day}</span>
+                                  ))}
+                                </div>
+
+                                {/* Days Grid */}
+                                <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-600">
+                                  {Array.from({ length: new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), 1).getDay() }).map((_, i) => (
+                                    <span key={`empty-${i}`} />
+                                  ))}
+                                  {Array.from({ length: new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                                    const dayNum = i + 1;
+                                    const dateStr = formatDateString(dayNum, currentCalendarDate.getMonth(), currentCalendarDate.getFullYear());
+                                    const isSelected = infoForm.dob === dateStr;
+                                    const isToday = new Date().toDateString() === new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth(), dayNum).toDateString();
+                                    return (
+                                      <button
+                                        key={dayNum}
+                                        type="button"
+                                        onClick={() => {
+                                          setInfoForm({ ...infoForm, dob: dateStr });
+                                          setIsDobOpen(false);
+                                        }}
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-[#84A43C] text-white'
+                                            : isToday
+                                            ? 'border border-[#84A43C] text-[#84A43C]'
+                                            : 'hover:bg-slate-100 text-slate-700'
+                                        }`}
+                                      >
+                                        {dayNum}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-slate-400 font-extrabold">STATE</label>

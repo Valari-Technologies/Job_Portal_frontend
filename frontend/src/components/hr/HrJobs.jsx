@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CustomSelect from '../CustomSelect';
 import { 
   Search, 
   ChevronDown, 
@@ -797,39 +798,32 @@ export default function HrJobs() {
 
             {/* Filter dropdowns */}
             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              <select 
+              <CustomSelect 
                 value={deptFilter} 
-                onChange={(e) => setDeptFilter(e.target.value)}
-                className="px-4 py-2 text-xs font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-full focus:outline-none cursor-pointer flex-grow md:flex-grow-0"
-              >
-                <option value="All Departments">All Departments</option>
-                <option value="IT & Software">IT & Software</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Design">Design</option>
-                <option value="QA & Testing">QA & Testing</option>
-              </select>
+                onChange={(val) => setDeptFilter(val)}
+                options={['All Departments', 'IT & Software', 'Human Resources', 'Design', 'QA & Testing']}
+                placeholder="All Departments"
+                className="flex-grow md:flex-grow-0"
+                buttonClassName="rounded-full bg-slate-50 border-slate-100 text-xs px-4 h-8"
+              />
 
-              <select 
+              <CustomSelect 
                 value={typeFilter} 
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-4 py-2 text-xs font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-full focus:outline-none cursor-pointer flex-grow md:flex-grow-0"
-              >
-                <option value="All Types">All Types</option>
-                <option value="Full Time">Full Time</option>
-                <option value="Part Time">Part Time</option>
-                <option value="Contract">Contract</option>
-              </select>
+                onChange={(val) => setTypeFilter(val)}
+                options={['All Types', 'Full Time', 'Part Time', 'Contract']}
+                placeholder="All Types"
+                className="flex-grow md:flex-grow-0"
+                buttonClassName="rounded-full bg-slate-50 border-slate-100 text-xs px-4 h-8"
+              />
 
-              <select 
+              <CustomSelect 
                 value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 text-xs font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-full focus:outline-none cursor-pointer flex-grow md:flex-grow-0"
-              >
-                <option value="All Status">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Draft">Draft</option>
-                <option value="Closed">Closed</option>
-              </select>
+                onChange={(val) => setStatusFilter(val)}
+                options={['All Status', 'Active', 'Draft', 'Closed']}
+                placeholder="All Status"
+                className="flex-grow md:flex-grow-0"
+                buttonClassName="rounded-full bg-slate-50 border-slate-100 text-xs px-4 h-8"
+              />
             </div>
           </div>
 
@@ -876,13 +870,6 @@ export default function HrJobs() {
                         <td className="px-6 py-4 font-bold text-slate-400 text-base whitespace-nowrap">{job.date}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => handleDuplicate(job)}
-                              title="Duplicate Job"
-                              className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
                             {job.status === 'Active' && (
                               <button 
                                 onClick={() => handleCloseJob(job.id)}
@@ -947,13 +934,6 @@ export default function HrJobs() {
                     <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 mt-1">
                       <span className="text-xs font-bold text-slate-400">Posted: {job.date}</span>
                       <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleDuplicate(job)}
-                          title="Duplicate Job"
-                          className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
                         {job.status === 'Active' && (
                           <button 
                             onClick={() => handleCloseJob(job.id)}

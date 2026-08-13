@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CustomSelect from '../CustomSelect';
 import { 
   X, 
   ShieldCheck, 
@@ -427,60 +428,46 @@ export default function HrSettings() {
             <div className="flex flex-col gap-5 text-base font-bold text-slate-500">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-black text-slate-500 text-left">Default Job View</label>
-                <select 
+                <CustomSelect 
                   value={tempPreferences.defaultJobView}
-                  onChange={(e) => setTempPreferences({ ...tempPreferences, defaultJobView: e.target.value })}
+                  onChange={(val) => setTempPreferences({ ...tempPreferences, defaultJobView: val })}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2.5 text-base font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer disabled:opacity-80"
-                >
-                  <option value="Card View">Card View</option>
-                  <option value="Table View">Table View</option>
-                </select>
+                  options={['Card View', 'Table View']}
+                  accentColor="#8CC63F"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-black text-slate-500 text-left">Default Application Filter</label>
-                <select 
+                <CustomSelect 
                   value={tempPreferences.defaultFilter}
-                  onChange={(e) => setTempPreferences({ ...tempPreferences, defaultFilter: e.target.value })}
+                  onChange={(val) => setTempPreferences({ ...tempPreferences, defaultFilter: val })}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2.5 text-base font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer disabled:opacity-80"
-                >
-                  <option value="All Applications">All Applications</option>
-                  <option value="Under Review">Under Review</option>
-                  <option value="Shortlisted">Shortlisted</option>
-                  <option value="Interview">Interview</option>
-                  <option value="Selected">Selected</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
+                  options={['All Applications', 'Under Review', 'Shortlisted', 'Interview', 'Selected', 'Rejected']}
+                  accentColor="#8CC63F"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-black text-slate-500 text-left">Date Format</label>
-                <select 
+                <CustomSelect 
                   value={tempPreferences.dateFormat}
-                  onChange={(e) => setTempPreferences({ ...tempPreferences, dateFormat: e.target.value })}
+                  onChange={(val) => setTempPreferences({ ...tempPreferences, dateFormat: val })}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2.5 text-base font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer disabled:opacity-80"
-                >
-                  <option value="DD MMM, YYYY">DD MMM, YYYY</option>
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                </select>
+                  options={['DD MMM, YYYY', 'DD/MM/YYYY', 'MM/DD/YYYY']}
+                  accentColor="#8CC63F"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-black text-slate-500 text-left">Language</label>
-                <select 
+                <CustomSelect 
                   value={tempPreferences.language}
-                  onChange={(e) => setTempPreferences({ ...tempPreferences, language: e.target.value })}
+                  onChange={(val) => setTempPreferences({ ...tempPreferences, language: val })}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2.5 text-base font-bold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#8CC63F] cursor-pointer disabled:opacity-80"
-                >
-                  <option value="English">English</option>
-                  <option value="Tamil">Tamil</option>
-                  <option value="Hindi">Hindi</option>
-                </select>
+                  options={['English', 'Tamil', 'Hindi']}
+                  accentColor="#8CC63F"
+                />
               </div>
             </div>
           )}

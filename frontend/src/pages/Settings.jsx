@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, Phone, ShieldAlert, LogOut, X, AlertTriangle, CheckCircle, ChevronDown } from 'lucide-react';
+import CustomSelect from '../components/CustomSelect';
 
 export default function Settings() {
   // --- First Row States ---
@@ -342,42 +343,26 @@ export default function Settings() {
           <h2 className="text-xl font-bold text-[#3562D6]">Privacy</h2>
           <div className="space-y-4 text-sm font-bold text-slate-600 text-left">
             
-            {/* Profile Visibility Dropdown (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="profileVisibility" className="cursor-pointer select-none">Profile Visibility</label>
-              <div className="relative flex items-center">
-                <select
-                  id="profileVisibility"
-                  value={profileVisibility}
-                  onChange={handleProfileVisChange}
-                  disabled={hideProfile}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none disabled:opacity-50"
-                >
-                  <option value="Public">Public</option>
-                  <option value="Recruiters Only">Recruiters Only</option>
-                  <option value="Private">Private</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
-            </div>
-
-            {/* Resume Visibility Dropdown (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="resumeVisibility" className="cursor-pointer select-none">Resume Visibility</label>
-              <div className="relative flex items-center">
-                <select
-                  id="resumeVisibility"
-                  value={resumeVisibility}
-                  onChange={handleResumeVisChange}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none"
-                >
-                  <option value="Public">Public</option>
-                  <option value="Recruiters Only">Recruiters Only</option>
-                  <option value="Private">Private</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
-            </div>
+             {/* Profile Visibility Dropdown (Figma style update) */}
+             <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+               <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Profile Visibility</label>
+               <CustomSelect
+                 value={profileVisibility}
+                 onChange={(val) => handleProfileVisChange({ target: { value: val } })}
+                 disabled={hideProfile}
+                 options={['Public', 'Recruiters Only', 'Private']}
+               />
+             </div>
+ 
+             {/* Resume Visibility Dropdown (Figma style update) */}
+             <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+               <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Resume Visibility</label>
+               <CustomSelect
+                 value={resumeVisibility}
+                 onChange={(val) => handleResumeVisChange({ target: { value: val } })}
+                 options={['Public', 'Recruiters Only', 'Private']}
+               />
+             </div>
 
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <span>Allow Recruiters to Contact</span>
@@ -444,83 +429,43 @@ export default function Settings() {
           <div className="space-y-4 text-sm font-bold text-slate-600 text-left">
             
             {/* Preferred Location (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="prefLocation" className="cursor-pointer select-none">Preferred Location</label>
-              <div className="relative flex items-center">
-                <select
-                  id="prefLocation"
-                  value={prefLocation}
-                  onChange={(e) => handlePrefChange(setPrefLocation, 'settings_prefLocation', e.target.value)}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none"
-                >
-                  <option value="Chennai">Chennai</option>
-                  <option value="Bengaluru">Bengaluru</option>
-                  <option value="Hyderabad">Hyderabad</option>
-                  <option value="Mumbai">Mumbai</option>
-                  <option value="Remote">Remote</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
+            <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+              <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Preferred Location</label>
+              <CustomSelect
+                value={prefLocation}
+                onChange={(val) => handlePrefChange(setPrefLocation, 'settings_prefLocation', val)}
+                options={['Chennai', 'Bengaluru', 'Hyderabad', 'Mumbai', 'Remote']}
+              />
             </div>
 
             {/* Preferred Department (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="prefDepartment" className="cursor-pointer select-none">Preferred Department</label>
-              <div className="relative flex items-center">
-                <select
-                  id="prefDepartment"
-                  value={prefDepartment}
-                  onChange={(e) => handlePrefChange(setPrefDepartment, 'settings_prefDept', e.target.value)}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none"
-                >
-                  <option value="Software Development">Software Development</option>
-                  <option value="UI/UX Design">UI/UX Design</option>
-                  <option value="Data Science">Data Science</option>
-                  <option value="Testing">Testing</option>
-                  <option value="DevOps">DevOps</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="HR">HR</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
+            <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+              <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Preferred Department</label>
+              <CustomSelect
+                value={prefDepartment}
+                onChange={(val) => handlePrefChange(setPrefDepartment, 'settings_prefDept', val)}
+                options={['Software Development', 'UI/UX Design', 'Data Science', 'Testing', 'DevOps', 'Marketing', 'HR']}
+              />
             </div>
 
             {/* Preferred Job Type (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="prefJobType" className="cursor-pointer select-none">Preferred Job Type</label>
-              <div className="relative flex items-center">
-                <select
-                  id="prefJobType"
-                  value={prefJobType}
-                  onChange={(e) => handlePrefChange(setPrefJobType, 'settings_prefJobType', e.target.value)}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none"
-                >
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Internship">Internship</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Remote">Remote</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
+            <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+              <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Preferred Job Type</label>
+              <CustomSelect
+                value={prefJobType}
+                onChange={(val) => handlePrefChange(setPrefJobType, 'settings_prefJobType', val)}
+                options={['Full-time', 'Part-time', 'Internship', 'Contract', 'Remote']}
+              />
             </div>
 
             {/* Preferred Language (Figma style update) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-3 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group">
-              <label htmlFor="prefLanguage" className="cursor-pointer select-none">Preferred Language</label>
-              <div className="relative flex items-center">
-                <select
-                  id="prefLanguage"
-                  value={prefLanguage}
-                  onChange={(e) => handlePrefChange(setPrefLanguage, 'settings_prefLang', e.target.value)}
-                  className="bg-transparent border-0 text-slate-800 font-semibold cursor-pointer outline-none focus:ring-0 text-sm py-0 pr-6 pl-2 appearance-none text-right select-none"
-                >
-                  <option value="English">English</option>
-                  <option value="Tamil">Tamil</option>
-                  <option value="Hindi">Hindi</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
+            <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-100 text-left">
+              <label className="text-xs text-slate-400 font-extrabold uppercase select-none">Preferred Language</label>
+              <CustomSelect
+                value={prefLanguage}
+                onChange={(val) => handlePrefChange(setPrefLanguage, 'settings_prefLang', val)}
+                options={['English', 'Tamil', 'Hindi']}
+              />
             </div>
           </div>
         </div>
