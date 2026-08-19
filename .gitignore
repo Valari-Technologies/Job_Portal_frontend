@@ -1,0 +1,31 @@
+# Virtual environments
+.venv/
+backend/venv/
+venv/
+ENV/
+env/
+
+# Python cache files
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# Environment files
+.env
+
+# Media and Static directories (to avoid uploading user uploads)
+media/
+static/
+staticfiles/
+
+# SQLite database (if used in local development)
+*.sqlite3
+
+# IDE / Editor configuration
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
