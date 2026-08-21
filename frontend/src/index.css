@@ -2,6 +2,13 @@
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-lg: 1rem;       /* 16px */
+  --text-xl: 1.1875rem;  /* 19px */
+  --text-2xl: 1.75rem;   /* 28px */
+  --text-3xl: 2rem;      /* 32px */
 }
 
 @layer base {
@@ -10,5 +17,7 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color: #334155; /* Slate-700 readable body text */
   }
 }
+
