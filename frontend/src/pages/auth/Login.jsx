@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
 
 export default function Login() {
+  const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -41,13 +42,13 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Set all fields to touched to trigger validations on empty/unfocused fields
     setTouched({ email: true, password: true });
-    
+
     const isEmailValid = email && /\S+@\S+\.\S+/.test(email);
     const isPasswordValid = !!password;
-    
+
     validateField('email', email);
     validateField('password', password);
 
@@ -59,28 +60,79 @@ export default function Login() {
       // - Backend must enforce temporary login-attempt limits (lockout logic)
       // - Backend must handle generic authentication responses (no distinct user-exist checks)
       // - Backend must handle secure JWT/Session attributes (HttpOnly cookies, secure flags)
-      
+
       // Simulate generic login failure for demo purposes
       setLoginFailed(true);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 md:bg-[url('/src/assets/login/login-bg.png')] md:bg-cover md:bg-center relative">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 md:bg-[url('/src/assets/login/login-bg.png')] md:bg-cover md:bg-center relative overflow-hidden">
       {/* Light Overlay to meet contrast and design layout guidelines */}
       <div className="absolute inset-0 bg-sky-100/10 hidden md:block" />
 
+      {/* Brand Logo repositioned to top-left of viewport (transparent background) */}
+      <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
+        <img src={logoJobz} alt="TN Jobz Logo" className="h-8 md:h-9 w-auto object-contain" />
+        <span className="text-lg md:text-xl font-black text-slate-805 tracking-tight">
+          TN <span className="text-teal-600">Jobz</span>
+        </span>
+      </div>
+
+      {/* Role Selection Tabs above the login card */}
+      <div className="relative z-10 flex items-center justify-between bg-white/20 backdrop-blur-md rounded-[24px] p-1.5 w-full max-w-[92vw] md:max-w-[500px] border border-white/30 shadow-xs mb-5">
+        <button
+          type="button"
+          onClick={() => setActiveRole('candidate')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 ${
+            activeRole === 'candidate' 
+              ? 'bg-white text-blue-600 shadow-sm' 
+              : 'text-slate-700 hover:bg-white/10 hover:text-slate-900'
+          }`}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span>Candidate</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveRole('hr')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 ${
+            activeRole === 'hr' 
+              ? 'bg-white text-blue-600 shadow-sm' 
+              : 'text-slate-700 hover:bg-white/10 hover:text-slate-900'
+          }`}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <span>HR / Recruiter</span>
+        </button>
+      </div>
+
       {/* Centered Login Card - Refactored responsive sizes */}
-      <div className="relative z-10 w-full max-w-[92vw] md:max-w-[560px] bg-white rounded-[32px] p-8 md:p-12 shadow-xl border border-slate-100/50 mx-4 sm:mx-6">
-        
-        {/* Brand Logo header */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center gap-2">
-            <img src={logoJobz} alt="State Jobz Logo" className="h-10 w-auto object-contain" />
-            <span className="text-2xl font-black text-slate-800 tracking-tight">State <span className="text-teal-600">Jobz</span></span>
+      <div className="relative z-10 w-full max-w-[92vw] md:max-w-[500px] bg-white rounded-[32px] p-6 md:p-10 shadow-xl border border-slate-100/50 mx-4">
+
+        {/* Brand Header without logo inside */}
+        <div className="flex flex-col items-center mb-5">
+          <div className="flex flex-col items-center">
+            <div className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
+              {activeRole === 'candidate' ? (
+                <svg className="h-5.5 w-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              ) : (
+                <svg className="h-5.5 w-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              )}
+            </div>
+            <h2 className="text-xl font-black text-slate-900 mt-3 tracking-tight">
+              {activeRole === 'candidate' ? 'Candidate Login' : 'HR / Recruiter Login'}
+            </h2>
+            <p className="text-xs font-bold text-slate-400 mt-1">Welcome back! Please login to continue.</p>
           </div>
-          <h2 className="text-3xl font-extrabold text-slate-900 mt-6 tracking-tight">Welcome Back</h2>
-          <p className="text-sm font-bold text-slate-400 mt-2">Sign in to continue your job search journey</p>
         </div>
 
         {/* Secure generic failure alert banner */}
@@ -92,10 +144,14 @@ export default function Login() {
 
         {/* Action Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          
+
           {/* Email field */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-extrabold text-slate-900">Email Address</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="email" className={`text-sm font-extrabold transition-colors ${touched.email && errors.email ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.email && errors.email ? errors.email : 'Email Address'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,18 +169,18 @@ export default function Login() {
                   if (touched.email) validateField('email', e.target.value);
                 }}
                 aria-invalid={!!(touched.email && errors.email)}
-                aria-describedby={touched.email && errors.email ? "email-error" : undefined}
                 className={`w-full rounded-xl border ${touched.email && errors.email ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-4 text-base text-slate-950 focus:outline-none transition-colors`}
               />
             </div>
-            {touched.email && errors.email && (
-              <p id="email-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.email}</p>
-            )}
           </div>
 
           {/* Password field */}
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-extrabold text-slate-900">Password</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="password" className={`text-sm font-extrabold transition-colors ${touched.password && errors.password ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.password && errors.password ? errors.password : 'Password'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -142,7 +198,6 @@ export default function Login() {
                   if (touched.password) validateField('password', e.target.value);
                 }}
                 aria-invalid={!!(touched.password && errors.password)}
-                aria-describedby={touched.password && errors.password ? "password-error" : undefined}
                 className={`w-full rounded-xl border ${touched.password && errors.password ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-12 text-base text-slate-950 focus:outline-none transition-colors`}
               />
               <button
@@ -154,9 +209,6 @@ export default function Login() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {touched.password && errors.password && (
-              <p id="password-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.password}</p>
-            )}
           </div>
 
           {/* Remember me & Forgot password layout */}

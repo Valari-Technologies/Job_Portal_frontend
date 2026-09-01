@@ -79,10 +79,10 @@ export default function Signup() {
     validateField('password', password);
     validateField('confirmPassword', confirmPassword);
 
-    const isValid = fullName && 
-      /^[6-9]\d{9}$/.test(mobileNumber) && 
-      /\S+@\S+\.\S+/.test(email) && 
-      password.length >= 8 && 
+    const isValid = fullName &&
+      /^[6-9]\d{9}$/.test(mobileNumber) &&
+      /\S+@\S+\.\S+/.test(email) &&
+      password.length >= 8 &&
       confirmPassword === password;
 
     if (isValid) {
@@ -100,11 +100,11 @@ export default function Signup() {
 
       {/* Centered Signup Card */}
       <div className="relative z-10 w-full max-w-[92vw] md:max-w-[560px] bg-white rounded-[32px] p-8 md:p-12 shadow-xl border border-slate-100/50 mx-4 sm:mx-6">
-        
+
         {/* Brand Logo header */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center gap-2">
-            <img src={logoJobz} alt="State Jobz Logo" className="h-10 w-auto object-contain" />
+            <img src={logoJobz} alt="TN Jobz Logo" className="h-10 w-auto object-contain" />
             <span className="text-2xl font-black text-slate-800 tracking-tight">State <span className="text-teal-600">Jobz</span></span>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900 mt-6 tracking-tight">Create Your Account</h2>
@@ -113,10 +113,14 @@ export default function Signup() {
 
         {/* Action Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          
+
           {/* Full Name */}
           <div className="space-y-2">
-            <label htmlFor="fullName" className="block text-sm font-extrabold text-slate-900">Full Name</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="fullName" className={`text-sm font-extrabold transition-colors ${touched.fullName && errors.fullName ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.fullName && errors.fullName ? errors.fullName : 'Full Name'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -134,18 +138,18 @@ export default function Signup() {
                   if (touched.fullName) validateField('fullName', e.target.value);
                 }}
                 aria-invalid={!!(touched.fullName && errors.fullName)}
-                aria-describedby={touched.fullName && errors.fullName ? "fullName-error" : undefined}
                 className={`w-full rounded-xl border ${touched.fullName && errors.fullName ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-4 text-base text-slate-950 focus:outline-none transition-colors`}
               />
             </div>
-            {touched.fullName && errors.fullName && (
-              <p id="fullName-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.fullName}</p>
-            )}
           </div>
 
           {/* Mobile Number */}
           <div className="space-y-2">
-            <label htmlFor="mobileNumber" className="block text-sm font-extrabold text-slate-900">Mobile Number</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="mobileNumber" className={`text-sm font-extrabold transition-colors ${touched.mobileNumber && errors.mobileNumber ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.mobileNumber && errors.mobileNumber ? errors.mobileNumber : 'Mobile Number'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,18 +167,18 @@ export default function Signup() {
                   if (touched.mobileNumber) validateField('mobileNumber', e.target.value);
                 }}
                 aria-invalid={!!(touched.mobileNumber && errors.mobileNumber)}
-                aria-describedby={touched.mobileNumber && errors.mobileNumber ? "mobileNumber-error" : undefined}
                 className={`w-full rounded-xl border ${touched.mobileNumber && errors.mobileNumber ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-4 text-base text-slate-950 focus:outline-none transition-colors`}
               />
             </div>
-            {touched.mobileNumber && errors.mobileNumber && (
-              <p id="mobileNumber-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.mobileNumber}</p>
-            )}
           </div>
 
           {/* Email Address */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-extrabold text-slate-900">Email Address</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="email" className={`text-sm font-extrabold transition-colors ${touched.email && errors.email ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.email && errors.email ? errors.email : 'Email Address'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,18 +196,18 @@ export default function Signup() {
                   if (touched.email) validateField('email', e.target.value);
                 }}
                 aria-invalid={!!(touched.email && errors.email)}
-                aria-describedby={touched.email && errors.email ? "email-error" : undefined}
                 className={`w-full rounded-xl border ${touched.email && errors.email ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-4 text-base text-slate-950 focus:outline-none transition-colors`}
               />
             </div>
-            {touched.email && errors.email && (
-              <p id="email-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.email}</p>
-            )}
           </div>
 
           {/* Password */}
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-extrabold text-slate-900">Password</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="password" className={`text-sm font-extrabold transition-colors ${touched.password && errors.password ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.password && errors.password ? errors.password : 'Password'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -221,7 +225,6 @@ export default function Signup() {
                   if (touched.password) validateField('password', e.target.value);
                 }}
                 aria-invalid={!!(touched.password && errors.password)}
-                aria-describedby={touched.password && errors.password ? "password-error" : undefined}
                 className={`w-full rounded-xl border ${touched.password && errors.password ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-12 text-base text-slate-950 focus:outline-none transition-colors`}
               />
               <button
@@ -233,14 +236,15 @@ export default function Signup() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {touched.password && errors.password && (
-              <p id="password-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.password}</p>
-            )}
           </div>
 
           {/* Confirm Password */}
           <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="block text-sm font-extrabold text-slate-900">Confirm Password</label>
+            <div className="flex justify-between items-center h-5">
+              <label htmlFor="confirmPassword" className={`text-sm font-extrabold transition-colors ${touched.confirmPassword && errors.confirmPassword ? 'text-red-600' : 'text-slate-900'}`}>
+                {touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : 'Confirm Password'}
+              </label>
+            </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,7 +262,6 @@ export default function Signup() {
                   if (touched.confirmPassword) validateField('confirmPassword', e.target.value);
                 }}
                 aria-invalid={!!(touched.confirmPassword && errors.confirmPassword)}
-                aria-describedby={touched.confirmPassword && errors.confirmPassword ? "confirmPassword-error" : undefined}
                 className={`w-full rounded-xl border ${touched.confirmPassword && errors.confirmPassword ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-12 text-base text-slate-950 focus:outline-none transition-colors`}
               />
               <button
@@ -270,9 +273,6 @@ export default function Signup() {
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {touched.confirmPassword && errors.confirmPassword && (
-              <p id="confirmPassword-error" className="text-sm font-semibold text-red-650 mt-1" role="alert">{errors.confirmPassword}</p>
-            )}
           </div>
 
           {/* Create Account Primary Action */}

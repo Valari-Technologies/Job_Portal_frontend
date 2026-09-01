@@ -19,5 +19,10 @@
     -moz-osx-font-smoothing: grayscale;
     color: #334155; /* Slate-700 readable body text */
   }
+
+  :root {
+    --sidebar-expanded-width: 220px;
+    --sidebar-collapsed-width: 72px;
+  }
 }
 
