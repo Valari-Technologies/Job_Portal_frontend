@@ -18,12 +18,12 @@ export default function CreateRecruiterStepper({ currentStep }) {
             <div className="flex items-center gap-3">
               {/* Stepper Circle */}
               <div 
-                className={`h-8 w-8 rounded-full flex items-center justify-center text-[13px] font-bold transition-colors duration-150 shrink-0 ${
+                className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-150 shrink-0 ${
                   isCompleted 
-                    ? 'bg-green-500 text-white' 
+                    ? 'bg-emerald-600 text-white' 
                     : isCurrent 
-                    ? 'bg-[#4A1DDF] text-white shadow-md shadow-[#4A1DDF]/10' 
-                    : 'bg-slate-100 text-slate-400'
+                    ? 'bg-[#4A1DDF] text-white shadow-md shadow-[#4A1DDF]/20' 
+                    : 'bg-slate-200 text-slate-600'
                 }`}
               >
                 {isCompleted ? <Check className="h-4.5 w-4.5 stroke-[3]" /> : step.id}
@@ -31,10 +31,12 @@ export default function CreateRecruiterStepper({ currentStep }) {
 
               {/* Step Label */}
               <span 
-                className={`text-[13px] whitespace-nowrap hidden sm:inline ${
+                className={`text-sm whitespace-nowrap hidden sm:inline ${
                   isCurrent 
-                    ? 'font-bold text-[#4A1DDF]' 
-                    : 'font-medium text-slate-400'
+                    ? 'font-extrabold text-[#4A1DDF]' 
+                    : isCompleted
+                    ? 'font-bold text-slate-800'
+                    : 'font-semibold text-slate-500'
                 }`}
               >
                 {step.label}
@@ -43,7 +45,7 @@ export default function CreateRecruiterStepper({ currentStep }) {
 
             {/* Stepper Line Connectors */}
             {idx < steps.length - 1 && (
-              <div className="flex-1 h-0.5 mx-4 min-w-[30px] sm:min-w-[60px] bg-slate-100 relative">
+              <div className="flex-1 h-0.5 mx-4 min-w-[30px] sm:min-w-[60px] bg-slate-200 relative">
                 <div 
                   className="absolute inset-y-0 left-0 bg-[#4A1DDF] transition-all duration-300"
                   style={{ width: isCompleted ? '100%' : '0%' }}

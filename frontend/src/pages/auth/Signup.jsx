@@ -86,10 +86,11 @@ export default function Signup() {
       confirmPassword === password;
 
     if (isValid) {
-      // TODO: Connect Django registration API here.
-      // Backend will create users, assign Candidate or Employer role,
-      // validate mobile/email uniqueness, hash password, and send verification.
-      alert('Sign up validation passed! Ready for backend implementation.');
+      // Future Django registration rule:
+      // Public /signup creates CANDIDATE accounts only.
+      // HR/Recruiter (EMPLOYER) accounts are created internally by Super Admin.
+      // Never accept a privileged account role from a public client payload.
+      alert('Candidate sign up validation passed! Ready for backend implementation.');
     }
   };
 

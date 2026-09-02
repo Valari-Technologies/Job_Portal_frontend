@@ -212,8 +212,8 @@ export default function AdminProfile() {
       
       {/* Title Header */}
       <div>
-        <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">My Profile</h1>
-        <p className="text-[13px] font-normal text-slate-500 mt-1">
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">My Profile</h1>
+        <p className="text-sm font-medium text-slate-600 mt-1">
           View and complete your Admin profile information.
         </p>
       </div>

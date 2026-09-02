@@ -115,10 +115,10 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6 md:space-y-8 animate-fadeIn font-sans pb-8">
       
-      {/* Title Header */}
+      {/* Header title */}
       <div>
-        <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">Settings</h1>
-        <p className="text-[13px] font-normal text-slate-500 mt-1">
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Settings</h1>
+        <p className="text-sm font-medium text-slate-600 mt-1">
           Manage your preferences, notifications, and account security.
         </p>
       </div>
@@ -127,12 +127,12 @@ export default function AdminSettings() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-5xl items-start">
         
         {/* Navigation Sidebar Panel */}
-        <div className="bg-white rounded-lg border border-slate-200 p-3 flex flex-col gap-1.5 lg:col-span-1">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 flex flex-col gap-1.5 lg:col-span-1 shadow-xs">
           <button 
             type="button"
             onClick={() => { setActiveSection('general'); setError(null); setSaveWarning(null); }}
-            className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer border-none bg-transparent ${
-              activeSection === 'general' ? 'bg-indigo-50 text-[#4A1DDF]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-none bg-transparent ${
+              activeSection === 'general' ? 'bg-indigo-50 text-[#4A1DDF] font-bold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             General Settings
@@ -140,8 +140,8 @@ export default function AdminSettings() {
           <button 
             type="button"
             onClick={() => { setActiveSection('notifications'); setError(null); setSaveWarning(null); }}
-            className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer border-none bg-transparent ${
-              activeSection === 'notifications' ? 'bg-indigo-50 text-[#4A1DDF]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-none bg-transparent ${
+              activeSection === 'notifications' ? 'bg-indigo-50 text-[#4A1DDF] font-bold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'
             }`}
           >
             Notifications
@@ -149,8 +149,8 @@ export default function AdminSettings() {
           <button 
             type="button"
             onClick={() => { setActiveSection('security'); setError(null); setSaveWarning(null); }}
-            className={`w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer border-none bg-transparent ${
-              activeSection === 'security' ? 'bg-indigo-50 text-[#4A1DDF]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-none bg-transparent ${
+              activeSection === 'security' ? 'bg-indigo-50 text-[#4A1DDF] font-bold' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'
             }`}
           >
             Security & Password

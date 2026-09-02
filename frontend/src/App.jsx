@@ -22,6 +22,7 @@ import SuperAdminAddLocation from './pages/superAdmin/SuperAdminAddLocation';
 import SuperAdminAddSkill from './pages/superAdmin/SuperAdminAddSkill';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
+import AdminPortalLogin from './pages/auth/AdminPortalLogin';
 import EmployerOverview from './pages/employer/employerOverview/EmployerOverview';
 import EmployerJobs from './pages/employer/employerJobs/EmployerJobs';
 import EmployerApplications from './pages/employer/employerApplications/EmployerApplications';
@@ -35,6 +36,25 @@ import AdminCreateRecruiter from './pages/admin/AdminCreateRecruiter';
 import AdminActivity from './pages/admin/AdminActivity';
 import AdminProfile from './pages/admin/AdminProfile';
 import AdminSettings from './pages/admin/AdminSettings';
+import RecruiterDashboard from './pages/recruiter/RecruiterDashboard';
+import RecruiterJobs from './pages/recruiter/RecruiterJobs';
+import RecruiterCreateJob from './pages/recruiter/RecruiterCreateJob';
+import RecruiterSelectPostingPlan from './pages/recruiter/RecruiterSelectPostingPlan';
+import RecruiterJobCheckout from './pages/recruiter/RecruiterJobCheckout';
+import RecruiterApplications from './pages/recruiter/RecruiterApplications';
+import RecruiterApplicationDetails from './pages/recruiter/RecruiterApplicationDetails';
+import RecruiterCandidates from './pages/recruiter/RecruiterCandidates';
+import RecruiterCandidateDetails from './pages/recruiter/RecruiterCandidateDetails';
+import RecruiterInterviews from './pages/recruiter/RecruiterInterviews';
+import RecruiterScheduleInterview from './pages/recruiter/RecruiterScheduleInterview';
+import RecruiterInterviewDetails from './pages/recruiter/RecruiterInterviewDetails';
+import RecruiterPayments from './pages/recruiter/RecruiterPayments';
+import RecruiterPaymentPlans from './pages/recruiter/RecruiterPaymentPlans';
+import RecruiterPaymentUsage from './pages/recruiter/RecruiterPaymentUsage';
+import RecruiterTransactionDetails from './pages/recruiter/RecruiterTransactionDetails';
+import RecruiterCompanyProfile from './pages/recruiter/RecruiterCompanyProfile';
+import RecruiterEditCompanyProfile from './pages/recruiter/RecruiterEditCompanyProfile';
+import RecruiterSettings from './pages/recruiter/RecruiterSettings';
 import { getNotifications } from './pages/superAdmin/superAdminOverview/superAdminOverviewService';
 
 export default function App() {
@@ -172,9 +192,40 @@ export default function App() {
         element={<EmployerCompanyProfile />} 
       />
       
+      {/* Recruiter Portal Routes */}
+      <Route path="/recruiter" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/recruiter/" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+      <Route path="/recruiter/overview" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
+      <Route path="/recruiter/jobs/create" element={<RecruiterCreateJob />} />
+      <Route path="/recruiter/jobs/create/plan" element={<RecruiterSelectPostingPlan />} />
+      <Route path="/recruiter/jobs/create/payment" element={<RecruiterJobCheckout />} />
+      <Route path="/recruiter/applications" element={<RecruiterApplications />} />
+      <Route path="/recruiter/applications/:applicationId" element={<RecruiterApplicationDetails />} />
+      <Route path="/recruiter/candidates" element={<RecruiterCandidates />} />
+      <Route path="/recruiter/candidates/:candidateId/application/:applicationId" element={<RecruiterCandidateDetails />} />
+      <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
+      <Route path="/recruiter/interviews/schedule" element={<RecruiterScheduleInterview />} />
+      <Route path="/recruiter/interviews/:interviewId" element={<RecruiterInterviewDetails />} />
+      <Route path="/recruiter/payments" element={<RecruiterPayments />} />
+      <Route path="/recruiter/payments/plans" element={<RecruiterPaymentPlans />} />
+      <Route path="/recruiter/payments/usage" element={<RecruiterPaymentUsage />} />
+      <Route path="/recruiter/payments/transactions/:transactionId" element={<RecruiterTransactionDetails />} />
+      <Route path="/recruiter/company-profile" element={<RecruiterCompanyProfile />} />
+      <Route path="/recruiter/company-profile/edit" element={<RecruiterEditCompanyProfile />} />
+      <Route path="/recruiter/settings" element={<RecruiterSettings />} />
+      <Route path="/recruiter/settings/general" element={<RecruiterSettings />} />
+      <Route path="/recruiter/settings/notifications" element={<RecruiterSettings />} />
+      <Route path="/recruiter/settings/security" element={<RecruiterSettings />} />
+      <Route path="/recruiter/settings/team" element={<RecruiterSettings />} />
+
+      {/* Admin Portal Login Standalone Routes */}
+      <Route path="/admin" element={<AdminPortalLogin />} />
+      <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
+
       {/* Persistent Admin Layout routing container */}
-      <Route path="/admin" element={<AdminLayout searchPlaceholder="Search recruiters..." />}>
-        <Route index element={<Navigate to="dashboard" replace />} />
+      <Route path="/admin/*" element={<AdminLayout searchPlaceholder="Search recruiters..." />}>
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="recruiters" element={<AdminRecruiters />} />
         <Route path="recruiters/create" element={<AdminCreateRecruiter />} />
@@ -236,14 +287,15 @@ export default function App() {
 function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord, handleToast, routeContent }) {
   const location = useLocation();
   const currentPath = location.pathname;
-  const isAuthOrEmployerRoute = currentPath === '/login' || 
-                                 currentPath === '/signup' || 
-                                 currentPath.startsWith('/employer/') ||
-                                 currentPath.startsWith('/dashboard') ||
-                                 currentPath.startsWith('/admin') || // matches nested admin layout routes cleanly
-                                 currentPath === '/';
+  const isStandalonePortalRoute = currentPath === '/login' || 
+                                   currentPath === '/signup' || 
+                                   currentPath.startsWith('/recruiter') ||
+                                   currentPath.startsWith('/employer') ||
+                                   currentPath.startsWith('/dashboard') ||
+                                   currentPath.startsWith('/admin') || // matches nested admin layout routes cleanly
+                                   currentPath === '/';
 
-  if (isAuthOrEmployerRoute) {
+  if (isStandalonePortalRoute) {
     return routeContent;
   }
 
