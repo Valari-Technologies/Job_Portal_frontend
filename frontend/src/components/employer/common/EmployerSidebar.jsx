@@ -5,15 +5,18 @@ import {
   Calendar,
   MessageSquare,
   User,
-  HelpCircle
+  HelpCircle,
+  LogOut
 } from 'lucide-react';
 import logoJobz from '../../../assets/logo-jobz.png';
 import { useSidebarCollapse } from '../../shared/navigation/SidebarCollapseContext';
 import SidebarCollapseToggle from '../../shared/navigation/SidebarCollapseToggle';
 import SidebarTooltip from '../../shared/navigation/SidebarTooltip';
+import { useSignOut } from '../../../context/SignOutContext';
 
 export default function EmployerSidebar({ activeTab }) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
+  const { requestSignOut } = useSignOut();
 
   return (
     <aside 
@@ -129,8 +132,8 @@ export default function EmployerSidebar({ activeTab }) {
         </nav>
       </div>
 
-      {/* Support details */}
-      <div className="p-3 border-t border-slate-100 mb-2">
+      {/* Support details & Logout */}
+      <div className="p-3 border-t border-slate-100 mb-2 space-y-1">
         <Link
           to="#"
           title={isCollapsed ? "Support" : undefined}
@@ -139,6 +142,15 @@ export default function EmployerSidebar({ activeTab }) {
           <HelpCircle className="h-5 w-5 shrink-0" />
           {!isCollapsed && <span>Support</span>}
         </Link>
+        <button
+          type="button"
+          onClick={() => requestSignOut('employer')}
+          title={isCollapsed ? "Logout" : undefined}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium text-red-600 hover:bg-red-50 transition-colors border-none bg-transparent cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-red-100"
+        >
+          <LogOut className="h-5 w-5 shrink-0 text-red-600" />
+          {!isCollapsed && <span>Logout</span>}
+        </button>
       </div>
     </aside>
   );

@@ -14,9 +14,16 @@ import {
 import { useSidebarCollapse } from '../../shared/navigation/SidebarCollapseContext';
 import SidebarCollapseToggle from '../../shared/navigation/SidebarCollapseToggle';
 import SidebarTooltip from '../../shared/navigation/SidebarTooltip';
+import { useRecruiterUser } from '../../../context/RecruiterUserContext';
+import { useSignOut } from '../../../context/SignOutContext';
 
 export default function RecruiterSidebar({ activeTab }) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
+  const { profile } = useRecruiterUser();
+  const { requestSignOut } = useSignOut();
+
+  const { fullName } = profile.identity || {};
+  const { profilePhotoUrl } = profile.recruiterProfile || {};
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/recruiter/dashboard' },
@@ -26,6 +33,7 @@ export default function RecruiterSidebar({ activeTab }) {
     { id: 'interviews', label: 'Interviews', icon: Calendar, path: '/recruiter/interviews' },
     { id: 'payments', label: 'Payments', icon: CreditCard, path: '/recruiter/payments' },
     { id: 'company-profile', label: 'Company Profile', icon: Building2, path: '/recruiter/company-profile' },
+    { id: 'profile', label: 'My Profile', icon: User, path: '/recruiter/profile' },
   ];
 
   return (
@@ -44,19 +52,29 @@ export default function RecruiterSidebar({ activeTab }) {
                 onClick={toggleCollapse}
                 className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition-colors"
               >
-                <User className="h-5 w-5" />
+                {profilePhotoUrl ? (
+                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full rounded-xl object-cover" />
+                ) : (
+                  <span className="font-extrabold text-xs">{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-5 w-5" />}</span>
+                )}
               </button>
             </SidebarTooltip>
           ) : (
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden">
-                <User className="h-6 w-6 text-slate-500" />
+            <Link to="/recruiter/profile" className="flex items-center gap-3 min-w-0 group cursor-pointer">
+              <div className="h-10 w-10 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center border border-indigo-200 shadow-xs shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-indigo-600/30 transition-all">
+                {profilePhotoUrl ? (
+                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+                ) : (
+                  <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-5 w-5" />}</span>
+                )}
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-black text-indigo-600 tracking-tight leading-none">Job Portal</h2>
-                <span className="text-xs font-bold text-indigo-600/90 tracking-wide block mt-1">Premium Tier</span>
+                <h2 className="text-sm font-black text-slate-900 group-hover:text-indigo-600 tracking-tight leading-snug truncate">
+                  {fullName || "Jane Doe"}
+                </h2>
+                <span className="text-xs font-bold text-indigo-600 tracking-wide block">Recruiter</span>
               </div>
-            </div>
+            </Link>
           )}
           {!isCollapsed && (
             <div className="shrink-0">
@@ -75,6 +93,7 @@ export default function RecruiterSidebar({ activeTab }) {
                 key={item.id}
                 to={item.path}
                 title={isCollapsed ? item.label : undefined}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-indigo-100 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
@@ -103,14 +122,15 @@ export default function RecruiterSidebar({ activeTab }) {
           <Settings className={`h-4.5 w-4.5 shrink-0 ${activeTab === 'settings' ? 'text-white' : 'text-slate-500'}`} />
           {!isCollapsed && <span>Settings</span>}
         </Link>
-        <Link
-          to="/login"
+        <button
+          type="button"
+          onClick={() => requestSignOut('recruiter')}
           title={isCollapsed ? "Logout" : undefined}
-          className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors border-none bg-transparent cursor-pointer text-left"
         >
           <LogOut className="h-4.5 w-4.5 shrink-0 text-slate-500" />
           {!isCollapsed && <span>Logout</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );

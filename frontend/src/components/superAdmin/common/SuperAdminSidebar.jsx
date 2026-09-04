@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useSidebarCollapse } from '../../shared/navigation/SidebarCollapseContext';
 import SidebarCollapseToggle from '../../shared/navigation/SidebarCollapseToggle';
 import SidebarTooltip from '../../shared/navigation/SidebarTooltip';
+import { useSignOut } from '../../../context/SignOutContext';
 
 export default function SuperAdminSidebar({ activeItem, onItemClick }) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
+  const { requestSignOut } = useSignOut();
 
   // Navigation structure exactly matching Image 1
   const menuGroups = [
@@ -188,6 +190,21 @@ export default function SuperAdminSidebar({ activeItem, onItemClick }) {
           );
         })}
       </nav>
+
+      {/* Sign Out Footer */}
+      <div className="p-3 border-t border-slate-100 mb-2">
+        <button
+          type="button"
+          onClick={() => requestSignOut('superAdmin')}
+          title={isCollapsed ? "Sign Out" : undefined}
+          className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-[14px] font-medium text-red-600 hover:bg-red-50 transition-colors border-none bg-transparent cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-red-100"
+        >
+          <svg className="h-5 w-5 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          {!isCollapsed && <span>Sign Out</span>}
+        </button>
+      </div>
     </aside>
   );
 }

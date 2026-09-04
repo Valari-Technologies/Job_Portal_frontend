@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { SignOutProvider } from './context/SignOutContext';
+import { RecruiterUserProvider } from './context/RecruiterUserContext';
+import { SuperAdminUserProvider } from './context/SuperAdminUserContext';
 import SuperAdminLayout from './components/superAdmin/common/SuperAdminLayout';
 import SuperAdminOverview from './pages/superAdmin/superAdminOverview/SuperAdminOverview';
 import SuperAdminCandidates from './pages/superAdmin/superAdminCandidates/SuperAdminCandidates';
@@ -11,6 +14,8 @@ import SuperAdminLocations from './pages/superAdmin/superAdminLocations/SuperAdm
 import SuperAdminSkills from './pages/superAdmin/superAdminSkills/SuperAdminSkills';
 import SuperAdminReports from './pages/superAdmin/superAdminReports/SuperAdminReports';
 import SuperAdminNotifications from './pages/superAdmin/superAdminNotifications/SuperAdminNotifications';
+import SuperAdminProfile from './pages/superAdmin/superAdminProfile/SuperAdminProfile';
+import SuperAdminAccountSettings from './pages/superAdmin/superAdminAccountSettings/SuperAdminAccountSettings';
 import SuperAdminAnalytics from './pages/superAdmin/superAdminAnalytics/SuperAdminAnalytics';
 import SuperAdminAuditSecurity from './pages/superAdmin/superAdminAuditSecurity/SuperAdminAuditSecurity';
 import SuperAdminAdmins from './pages/superAdmin/SuperAdminAdmins';
@@ -55,6 +60,8 @@ import RecruiterTransactionDetails from './pages/recruiter/RecruiterTransactionD
 import RecruiterCompanyProfile from './pages/recruiter/RecruiterCompanyProfile';
 import RecruiterEditCompanyProfile from './pages/recruiter/RecruiterEditCompanyProfile';
 import RecruiterSettings from './pages/recruiter/RecruiterSettings';
+import RecruiterNotifications from './pages/recruiter/RecruiterNotifications';
+import RecruiterProfile from './pages/recruiter/RecruiterProfile';
 import { getNotifications } from './pages/superAdmin/superAdminOverview/superAdminOverviewService';
 
 export default function App() {
@@ -86,6 +93,18 @@ export default function App() {
             onToast={handleToast}
           />
         } 
+      />
+      <Route 
+        path="/super-admin/profile" 
+        element={<SuperAdminProfile />} 
+      />
+      <Route 
+        path="/super-admin/account-settings" 
+        element={<SuperAdminAccountSettings />} 
+      />
+      <Route 
+        path="/super-admin/my-profile" 
+        element={<Navigate to="/super-admin/profile" replace />} 
       />
       <Route 
         path="/super-admin/candidates" 
@@ -193,32 +212,37 @@ export default function App() {
       />
       
       {/* Recruiter Portal Routes */}
-      <Route path="/recruiter" element={<Navigate to="/recruiter/dashboard" replace />} />
-      <Route path="/recruiter/" element={<Navigate to="/recruiter/dashboard" replace />} />
-      <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
-      <Route path="/recruiter/overview" element={<Navigate to="/recruiter/dashboard" replace />} />
-      <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
-      <Route path="/recruiter/jobs/create" element={<RecruiterCreateJob />} />
-      <Route path="/recruiter/jobs/create/plan" element={<RecruiterSelectPostingPlan />} />
-      <Route path="/recruiter/jobs/create/payment" element={<RecruiterJobCheckout />} />
-      <Route path="/recruiter/applications" element={<RecruiterApplications />} />
-      <Route path="/recruiter/applications/:applicationId" element={<RecruiterApplicationDetails />} />
-      <Route path="/recruiter/candidates" element={<RecruiterCandidates />} />
-      <Route path="/recruiter/candidates/:candidateId/application/:applicationId" element={<RecruiterCandidateDetails />} />
-      <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
-      <Route path="/recruiter/interviews/schedule" element={<RecruiterScheduleInterview />} />
-      <Route path="/recruiter/interviews/:interviewId" element={<RecruiterInterviewDetails />} />
-      <Route path="/recruiter/payments" element={<RecruiterPayments />} />
-      <Route path="/recruiter/payments/plans" element={<RecruiterPaymentPlans />} />
-      <Route path="/recruiter/payments/usage" element={<RecruiterPaymentUsage />} />
-      <Route path="/recruiter/payments/transactions/:transactionId" element={<RecruiterTransactionDetails />} />
-      <Route path="/recruiter/company-profile" element={<RecruiterCompanyProfile />} />
-      <Route path="/recruiter/company-profile/edit" element={<RecruiterEditCompanyProfile />} />
-      <Route path="/recruiter/settings" element={<RecruiterSettings />} />
-      <Route path="/recruiter/settings/general" element={<RecruiterSettings />} />
-      <Route path="/recruiter/settings/notifications" element={<RecruiterSettings />} />
-      <Route path="/recruiter/settings/security" element={<RecruiterSettings />} />
-      <Route path="/recruiter/settings/team" element={<RecruiterSettings />} />
+      <Route element={<RecruiterPortalWrapper />}>
+        <Route path="/recruiter" element={<Navigate to="/recruiter/dashboard" replace />} />
+        <Route path="/recruiter/" element={<Navigate to="/recruiter/dashboard" replace />} />
+        <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+        <Route path="/recruiter/overview" element={<Navigate to="/recruiter/dashboard" replace />} />
+        <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
+        <Route path="/recruiter/jobs/create" element={<RecruiterCreateJob />} />
+        <Route path="/recruiter/jobs/create/plan" element={<RecruiterSelectPostingPlan />} />
+        <Route path="/recruiter/jobs/create/payment" element={<RecruiterJobCheckout />} />
+        <Route path="/recruiter/applications" element={<RecruiterApplications />} />
+        <Route path="/recruiter/applications/:applicationId" element={<RecruiterApplicationDetails />} />
+        <Route path="/recruiter/candidates" element={<RecruiterCandidates />} />
+        <Route path="/recruiter/candidates/:candidateId/application/:applicationId" element={<RecruiterCandidateDetails />} />
+        <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
+        <Route path="/recruiter/interviews/schedule" element={<RecruiterScheduleInterview />} />
+        <Route path="/recruiter/interviews/:interviewId" element={<RecruiterInterviewDetails />} />
+        <Route path="/recruiter/payments" element={<RecruiterPayments />} />
+        <Route path="/recruiter/payments/plans" element={<RecruiterPaymentPlans />} />
+        <Route path="/recruiter/payments/usage" element={<RecruiterPaymentUsage />} />
+        <Route path="/recruiter/payments/transactions/:transactionId" element={<RecruiterTransactionDetails />} />
+        <Route path="/recruiter/company-profile" element={<RecruiterCompanyProfile />} />
+        <Route path="/recruiter/company-profile/edit" element={<RecruiterEditCompanyProfile />} />
+        <Route path="/recruiter/settings" element={<RecruiterSettings />} />
+        <Route path="/recruiter/settings/general" element={<RecruiterSettings />} />
+        <Route path="/recruiter/settings/notifications" element={<RecruiterSettings />} />
+        <Route path="/recruiter/settings/security" element={<RecruiterSettings />} />
+        <Route path="/recruiter/settings/team" element={<RecruiterSettings />} />
+        <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
+        <Route path="/recruiter/profile" element={<RecruiterProfile />} />
+        <Route path="/recruiter/my-profile" element={<Navigate to="/recruiter/profile" replace />} />
+      </Route>
 
       {/* Admin Portal Login Standalone Routes */}
       <Route path="/admin" element={<AdminPortalLogin />} />
@@ -261,26 +285,36 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* Toast Alert Banner */}
-      {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 transform animate-slideUp">
-          <div className="flex items-center gap-2.5 rounded-xl bg-slate-900 px-4.5 py-3 text-xs font-bold text-white shadow-xl">
-            <svg className="h-4.5 w-4.5 text-teal-455" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{toastMessage}</span>
+      <SignOutProvider>
+        {/* Toast Alert Banner */}
+        {toastMessage && (
+          <div className="fixed bottom-5 right-5 z-50 transform animate-slideUp">
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-900 px-4.5 py-3 text-xs font-bold text-white shadow-xl">
+              <svg className="h-4.5 w-4.5 text-teal-455" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{toastMessage}</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <LayoutWrapper 
-        notifications={notifications}
-        setNotifications={setNotifications}
-        setGlobalDetailsRecord={setGlobalDetailsRecord}
-        handleToast={handleToast}
-        routeContent={routeContent}
-      />
+        <LayoutWrapper 
+          notifications={notifications}
+          setNotifications={setNotifications}
+          setGlobalDetailsRecord={setGlobalDetailsRecord}
+          handleToast={handleToast}
+          routeContent={routeContent}
+        />
+      </SignOutProvider>
     </BrowserRouter>
+  );
+}
+
+function RecruiterPortalWrapper() {
+  return (
+    <RecruiterUserProvider>
+      <Outlet />
+    </RecruiterUserProvider>
   );
 }
 
@@ -300,13 +334,15 @@ function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord
   }
 
   return (
-    <SuperAdminLayout 
-      onToast={handleToast} 
-      notifications={notifications}
-      setNotifications={setNotifications}
-      onOpenDrawerDetails={setGlobalDetailsRecord}
-    >
-      {routeContent}
-    </SuperAdminLayout>
+    <SuperAdminUserProvider>
+      <SuperAdminLayout 
+        onToast={handleToast} 
+        notifications={notifications}
+        setNotifications={setNotifications}
+        onOpenDrawerDetails={setGlobalDetailsRecord}
+      >
+        {routeContent}
+      </SuperAdminLayout>
+    </SuperAdminUserProvider>
   );
 }

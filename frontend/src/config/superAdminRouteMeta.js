@@ -3,6 +3,14 @@ export const superAdminRouteMeta = {
     section: null,
     label: "Overview"
   },
+  "/super-admin/profile": {
+    section: null,
+    label: "Profile"
+  },
+  "/super-admin/account-settings": {
+    section: "System",
+    label: "Account Settings"
+  },
   "/super-admin/candidates": {
     section: "Management",
     label: "Candidates"
@@ -67,7 +75,7 @@ export const superAdminRouteMeta = {
     ]
   },
   "/super-admin/notifications": {
-    section: "Communication",
+    section: null,
     label: "Notifications"
   },
   "/super-admin/reports": {

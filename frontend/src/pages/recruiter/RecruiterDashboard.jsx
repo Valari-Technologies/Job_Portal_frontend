@@ -20,8 +20,10 @@ import RecruiterMetricCard from '../../components/recruiter/dashboard/RecruiterM
 import RecruiterMobileHeroIllustration from '../../components/recruiter/dashboard/RecruiterMobileHeroIllustration';
 import { getRecruiterDashboardData } from '../../services/recruiter/recruiterDashboardService';
 import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
+import { useRecruiterUser } from '../../context/RecruiterUserContext';
 
 export default function RecruiterDashboard() {
+  const { profile } = useRecruiterUser();
   const [data] = useState(() => getRecruiterDashboardData());
   const [commerceSummary] = useState(() => getRecruiterCommerceSummary());
 
@@ -36,7 +38,7 @@ export default function RecruiterDashboard() {
   };
 
   const walletBalanceFormatted = commerceSummary?.wallet?.formatted_balance || "₹0.00";
-  const companyName = data?.company?.company_name || "No company linked";
+  const companyName = profile?.companySummary?.name || data?.company?.company_name || "State Jobz Technologies";
 
   return (
     <RecruiterLayout activeTab="dashboard">

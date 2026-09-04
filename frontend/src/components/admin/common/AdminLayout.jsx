@@ -4,16 +4,12 @@ import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import AdminMobileHeader from './AdminMobileHeader';
 import AdminMobileNav from './AdminMobileNav';
-import AdminLogoutConfirmationModal from './AdminLogoutConfirmationModal';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { useSignOut } from '../../../context/SignOutContext';
 
 export default function AdminLayout({ searchPlaceholder = "Search anything..." }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState(null);
   const location = useLocation();
-  const navigate = useNavigate();
   
   // Determine activeTab based on pathname
   let activeTab = 'dashboard';
@@ -31,25 +27,16 @@ export default function AdminLayout({ searchPlaceholder = "Search anything..." }
     activeTab = 'settings';
   }
 
+  const { requestSignOut } = useSignOut();
+
   const handleLogoutInitiate = (e) => {
     e.preventDefault();
-    setLogoutModalOpen(true);
-  };
-
-  const handleLogoutConfirm = () => {
-    setIsLoggingOut(true);
-    setLogoutError(null);
-    // Simulate short timeout for clean logout navigation matching handlers
-    setTimeout(() => {
-      setIsLoggingOut(false);
-      setLogoutModalOpen(false);
-      navigate('/login');
-    }, 1000);
+    requestSignOut('admin');
   };
 
   return (
     <SidebarCollapseProvider>
-      <div className={`flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-805 antialiased ${logoutModalOpen ? 'overflow-hidden' : ''}`}>
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-805 antialiased">
         {/* Desktop Sidebar (Fixed) */}
         <AdminSidebar activeTab={activeTab} onLogoutClick={handleLogoutInitiate} />
 
@@ -84,15 +71,6 @@ export default function AdminLayout({ searchPlaceholder = "Search anything..." }
           {/* Mobile Bottom Navigation Toolbar */}
           <AdminMobileNav activeTab={activeTab} />
         </div>
-
-        {/* Centered Destructive confirmation modal */}
-        <AdminLogoutConfirmationModal 
-          isOpen={logoutModalOpen}
-          onClose={() => setLogoutModalOpen(false)}
-          onConfirm={handleLogoutConfirm}
-          isLoggingOut={isLoggingOut}
-          error={logoutError}
-        />
       </div>
     </SidebarCollapseProvider>
   );
