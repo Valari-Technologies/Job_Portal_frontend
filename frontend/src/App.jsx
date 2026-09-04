@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { SignOutProvider } from './context/SignOutContext';
+import { CandidateUserProvider } from './context/CandidateUserContext';
 import { RecruiterUserProvider } from './context/RecruiterUserContext';
 import { SuperAdminUserProvider } from './context/SuperAdminUserContext';
 import SuperAdminLayout from './components/superAdmin/common/SuperAdminLayout';
@@ -62,6 +63,16 @@ import RecruiterEditCompanyProfile from './pages/recruiter/RecruiterEditCompanyP
 import RecruiterSettings from './pages/recruiter/RecruiterSettings';
 import RecruiterNotifications from './pages/recruiter/RecruiterNotifications';
 import RecruiterProfile from './pages/recruiter/RecruiterProfile';
+import CandidateOnboardingPage from './pages/candidate/CandidateOnboardingPage';
+import CandidateDashboard from './pages/candidate/CandidateDashboard';
+import CandidateJobsPage from './pages/candidate/CandidateJobsPage';
+import CandidateJobDetailsPage from './pages/candidate/CandidateJobDetailsPage';
+import CandidateQuickApplyPage from './pages/candidate/CandidateQuickApplyPage';
+import CandidateApplicationsPage from './pages/candidate/CandidateApplicationsPage';
+import CandidateInterviewsPage from './pages/candidate/CandidateInterviewsPage';
+import CandidateResumePage from './pages/candidate/CandidateResumePage';
+import CandidateProfilePage from './pages/candidate/CandidateProfilePage';
+import CandidateSettingsPage from './pages/candidate/CandidateSettingsPage';
 import { getNotifications } from './pages/superAdmin/superAdminOverview/superAdminOverviewService';
 
 export default function App() {
@@ -84,6 +95,7 @@ export default function App() {
 
   const routeContent = (
     <Routes>
+      {/* Super Admin Routes */}
       <Route 
         path="/super-admin/overview" 
         element={
@@ -178,6 +190,37 @@ export default function App() {
         path="/super-admin/skills/create" 
         element={<SuperAdminAddSkill />} 
       />
+
+      {/* Candidate Portal Routes */}
+      <Route element={<CandidatePortalWrapper />}>
+        <Route path="/candidate" element={<Navigate to="/candidate/dashboard" replace />} />
+        <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+        <Route path="/candidate/overview" element={<Navigate to="/candidate/dashboard" replace />} />
+        <Route path="/candidate/jobs" element={<CandidateJobsPage />} />
+        <Route path="/candidate/jobs/:jobId" element={<CandidateJobDetailsPage />} />
+        <Route path="/candidate/jobs/:jobId/apply" element={<CandidateQuickApplyPage />} />
+        <Route path="/candidate/applications" element={<CandidateApplicationsPage />} />
+        <Route path="/candidate/interviews" element={<CandidateInterviewsPage />} />
+        <Route path="/candidate/resume" element={<CandidateResumePage />} />
+        <Route path="/candidate/profile" element={<CandidateProfilePage />} />
+        <Route path="/candidate/settings" element={<CandidateSettingsPage />} />
+      </Route>
+
+      {/* Candidate Onboarding Routes */}
+      <Route 
+        path="/candidate/onboarding" 
+        element={<Navigate to="/candidate/onboarding/industry" replace />} 
+      />
+      <Route 
+        path="/candidate/onboarding/industry" 
+        element={<CandidateOnboardingPage step={1} />} 
+      />
+      <Route 
+        path="/candidate/onboarding/specialization" 
+        element={<CandidateOnboardingPage step={2} />} 
+      />
+
+      {/* Auth Routes */}
       <Route 
         path="/login" 
         element={<Login />} 
@@ -186,6 +229,8 @@ export default function App() {
         path="/signup" 
         element={<Signup />} 
       />
+
+      {/* Employer Routes */}
       <Route 
         path="/employer/overview" 
         element={<EmployerOverview />} 
@@ -310,6 +355,14 @@ export default function App() {
   );
 }
 
+function CandidatePortalWrapper() {
+  return (
+    <CandidateUserProvider>
+      <Outlet />
+    </CandidateUserProvider>
+  );
+}
+
 function RecruiterPortalWrapper() {
   return (
     <RecruiterUserProvider>
@@ -323,6 +376,7 @@ function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord
   const currentPath = location.pathname;
   const isStandalonePortalRoute = currentPath === '/login' || 
                                    currentPath === '/signup' || 
+                                   currentPath.startsWith('/candidate') ||
                                    currentPath.startsWith('/recruiter') ||
                                    currentPath.startsWith('/employer') ||
                                    currentPath.startsWith('/dashboard') ||
