@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import { useCandidateUser } from '../../context/CandidateUserContext';
@@ -10,7 +10,12 @@ import {
   rejectResumeSuggestion,
   undoResumeSuggestion,
   createTailoredResumeVersion,
-  exportResumeVersion
+  exportResumeVersion,
+  exportResumeAsDocx,
+  downloadOriginalResume,
+  uploadCandidateResume,
+  deleteCandidateResume,
+  updateResumeVersion
 } from '../../services/candidate/candidateResumeService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
 import {
@@ -25,7 +30,15 @@ import {
   AlertCircle,
   ArrowRight,
   FileText,
-  Check
+  Check,
+  Upload,
+  UploadCloud,
+  AlertTriangle,
+  ChevronDown,
+  Plus,
+  Trash2,
+  FileType,
+  FileCode
 } from 'lucide-react';
 
 export default function CandidateResumePage() {
@@ -42,9 +55,22 @@ export default function CandidateResumePage() {
   // Mobile navigation tab ('preview' | 'ai')
   const [activeMobileTab, setActiveMobileTab] = useState('preview');
 
-  // Resume State
+  // Resume Workspace State
   const [resumes, setResumes] = useState([]);
   const [currentResume, setCurrentResume] = useState(null);
+
+  // Custom Dropdown Popover State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Delete Resume Confirmation Modal State
+  const [resumeToDelete, setResumeToDelete] = useState(null);
+  const [isDeletingResume, setIsDeletingResume] = useState(false);
+
+  // Export Menu State
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isExportingFormat, setIsExportingFormat] = useState(null); // 'pdf' | 'docx' | 'original'
+  const exportMenuRef = useRef(null);
 
   // Job Targeting State
   const [targetJob, setTargetJob] = useState(null);
@@ -59,6 +85,22 @@ export default function CandidateResumePage() {
   const [isEditingSuggestion, setIsEditingSuggestion] = useState(false);
   const [editedText, setEditedText] = useState('');
 
+  // Upload Resume Modal State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
+  const [uploadDisplayName, setUploadDisplayName] = useState('');
+  const [setAsDefaultUpload, setSetAsDefaultUpload] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Edit Structured Resume Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Toast State
   const [toastMessage, setToastMessage] = useState('');
 
@@ -66,6 +108,30 @@ export default function CandidateResumePage() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
+
+  // Close dropdowns on outside click or Escape
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsDropdownOpen(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setIsExportMenuOpen(false);
+      }
+    }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false);
+        setIsExportMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // 1. Check Onboarding Guard
   useEffect(() => {
@@ -92,7 +158,7 @@ export default function CandidateResumePage() {
     return () => { isMounted = false; };
   }, [navigate]);
 
-  // 2. Fetch Resume & Target Job Data
+  // 2. Fetch Initial Workspace Data
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -103,21 +169,24 @@ export default function CandidateResumePage() {
       ]);
 
       setResumes(resumesList || []);
-      const selected = resumesList?.[0] || null;
-      setCurrentResume(selected);
+      const defaultOrFirst = resumesList?.find(r => r.isDefault) || resumesList?.[0] || null;
+      setCurrentResume(defaultOrFirst);
 
       if (jobData) {
         setTargetJob(jobData);
       }
 
-      // Initial analysis load
-      const initialAnalysisRes = await startResumeAnalysis({
-        resumeVersionId: selected?.versionId || 'v1_original',
-        jobId: jobData?.id || 'job_techflow_01'
-      });
+      if (defaultOrFirst) {
+        setIsAnalyzing(true);
+        const initialAnalysisRes = await startResumeAnalysis({
+          resumeVersionId: defaultOrFirst.versionId || defaultOrFirst.id,
+          jobId: jobData?.id || 'job_techflow_01'
+        });
 
-      if (initialAnalysisRes.success) {
-        setAnalysis(initialAnalysisRes.analysis);
+        if (initialAnalysisRes.success) {
+          setAnalysis(initialAnalysisRes.analysis);
+        }
+        setIsAnalyzing(false);
       }
     } catch (err) {
       console.error('Failed to load candidate resume workspace:', err);
@@ -142,20 +211,24 @@ export default function CandidateResumePage() {
 
         if (!isMounted) return;
         setResumes(resumesList || []);
-        const selected = resumesList?.[0] || null;
-        setCurrentResume(selected);
+        const defaultOrFirst = resumesList?.find(r => r.isDefault) || resumesList?.[0] || null;
+        setCurrentResume(defaultOrFirst);
 
         if (jobData) {
           setTargetJob(jobData);
         }
 
-        const initialAnalysisRes = await startResumeAnalysis({
-          resumeVersionId: selected?.versionId || 'v1_original',
-          jobId: jobData?.id || 'job_techflow_01'
-        });
+        if (defaultOrFirst) {
+          setIsAnalyzing(true);
+          const initialAnalysisRes = await startResumeAnalysis({
+            resumeVersionId: defaultOrFirst.versionId || defaultOrFirst.id,
+            jobId: jobData?.id || 'job_techflow_01'
+          });
 
-        if (isMounted && initialAnalysisRes.success) {
-          setAnalysis(initialAnalysisRes.analysis);
+          if (isMounted && initialAnalysisRes.success) {
+            setAnalysis(initialAnalysisRes.analysis);
+          }
+          if (isMounted) setIsAnalyzing(false);
         }
       } catch (err) {
         console.error('Failed to load candidate resume workspace:', err);
@@ -169,13 +242,73 @@ export default function CandidateResumePage() {
     return () => { isMounted = false; };
   }, [isCheckingOnboarding, jobIdParam]);
 
+  // Action: Select Resume Version (Clears old AI state & refetches specifically for selected resume)
+  const handleSelectVersion = async (targetResume) => {
+    if (!targetResume) return;
+    setIsDropdownOpen(false);
+    setCurrentResume(targetResume);
+
+    // Immediately clear previous AI analysis state
+    setAnalysis(null);
+    setIsAnalyzing(true);
+
+    try {
+      const res = await startResumeAnalysis({
+        resumeVersionId: targetResume.versionId || targetResume.id,
+        jobId: targetJob?.id || null,
+        manualJobDescription: pastedJd.trim() || null
+      });
+
+      if (res.success) {
+        setAnalysis(res.analysis);
+        setActiveSuggestionIndex(0);
+      }
+    } catch (err) {
+      console.error('Error re-analyzing selected resume:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Action: Confirm Delete Resume
+  const handleConfirmDeleteResume = async () => {
+    if (!resumeToDelete) return;
+    setIsDeletingResume(true);
+    try {
+      const res = await deleteCandidateResume(resumeToDelete.id || resumeToDelete.versionId);
+      if (res.success) {
+        const remaining = res.remainingResumes || [];
+        setResumes(remaining);
+
+        // If deleted resume was currently selected, select another remaining or empty state
+        if (currentResume?.id === resumeToDelete.id || currentResume?.versionId === resumeToDelete.versionId) {
+          setAnalysis(null);
+          const nextSelected = remaining[0] || null;
+          setCurrentResume(nextSelected);
+
+          if (nextSelected) {
+            handleSelectVersion(nextSelected);
+          }
+        }
+
+        triggerToast(`Resume "${resumeToDelete.title || resumeToDelete.fileName}" deleted.`);
+        setResumeToDelete(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete resume:', err);
+      triggerToast('Failed to delete resume. Please retry.');
+    } finally {
+      setIsDeletingResume(false);
+    }
+  };
+
   // Action: Trigger new AI analysis
   const handleRunAnalysis = async () => {
     if (!currentResume) return;
     setIsAnalyzing(true);
     try {
       const res = await startResumeAnalysis({
-        resumeVersionId: currentResume.versionId,
+        resumeVersionId: currentResume.versionId || currentResume.id,
         jobId: targetJob?.id || null,
         manualJobDescription: pastedJd.trim() || null
       });
@@ -204,19 +337,24 @@ export default function CandidateResumePage() {
         setAnalysis(res.updatedAnalysis);
 
         // Update current resume draft section text in real time
-        const updatedExp = currentResume.sections.experience.map(exp => {
+        const updatedExp = (currentResume.sections?.experience || []).map(exp => {
           if (exp.id === suggestion.sectionId) {
-            const newBullets = [...exp.bullets];
+            const newBullets = [...(exp.bullets || [])];
             newBullets[suggestion.bulletIndex] = textToApply;
             return { ...exp, bullets: newBullets };
           }
           return exp;
         });
 
-        setCurrentResume({
+        const updatedResume = {
           ...currentResume,
           sections: { ...currentResume.sections, experience: updatedExp }
-        });
+        };
+
+        setCurrentResume(updatedResume);
+
+        // Save updated draft to service
+        await updateResumeVersion(currentResume.versionId || currentResume.id, { sections: updatedResume.sections });
 
         setIsEditingSuggestion(false);
         triggerToast('Suggestion applied to Current Draft!');
@@ -255,15 +393,139 @@ export default function CandidateResumePage() {
     }
   };
 
-  // Action: Export Resume
-  const handleExport = async () => {
+  // Action: Export Handlers (PDF, DOCX, Original)
+  const handleExportFormat = async (format) => {
     if (!currentResume) return;
+    setIsExportingFormat(format);
+    setIsExportMenuOpen(false);
+
     try {
-      await exportResumeVersion(currentResume.versionId);
-      triggerToast('Resume document exported successfully!');
+      let res;
+      if (format === 'original') {
+        res = await downloadOriginalResume(currentResume.versionId || currentResume.id);
+      } else if (format === 'docx') {
+        res = await exportResumeAsDocx(currentResume.versionId || currentResume.id);
+      } else {
+        res = await exportResumeVersion(currentResume.versionId || currentResume.id);
+      }
+
+      if (res.success) {
+        triggerToast(`Downloaded ${res.filename}`);
+      }
     } catch (err) {
-      console.error('Error exporting resume:', err);
-      triggerToast('Failed to export resume.');
+      console.error(`Error exporting resume as ${format}:`, err);
+      triggerToast('Export failed. Please retry.');
+    } finally {
+      setIsExportingFormat(null);
+    }
+  };
+
+  // Action: Open Edit Resume Modal
+  const handleOpenEditModal = () => {
+    if (!currentResume) return;
+    setEditFormData(JSON.parse(JSON.stringify(currentResume)));
+    setIsEditModalOpen(true);
+  };
+
+  // Action: Save Manual Resume Edits
+  const handleSaveResumeEdits = async () => {
+    if (!editFormData) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await updateResumeVersion(editFormData.versionId || editFormData.id, editFormData);
+      if (res.success) {
+        setCurrentResume(res.updatedVersion);
+        setResumes(prev => prev.map(r => ((r.versionId === res.updatedVersion.versionId || r.id === res.updatedVersion.id) ? res.updatedVersion : r)));
+        setIsEditModalOpen(false);
+        triggerToast('Resume updated successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to save resume edits:', err);
+      triggerToast('Failed to save changes.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // Action: File Upload Selection / Drag Drop
+  const handleFileChange = (file) => {
+    if (!file) return;
+    setUploadError(null);
+    setSelectedUploadFile(file);
+    if (!uploadDisplayName) {
+      const defaultName = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
+      setUploadDisplayName(defaultName);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
+
+  // Action: Submit Upload New Resume
+  const handlePerformUpload = async () => {
+    if (!selectedUploadFile) {
+      setUploadError('Please select a resume file to upload.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(20);
+    setUploadError(null);
+
+    // Immediately clear previous preview & AI analysis during upload
+    setAnalysis(null);
+
+    try {
+      const progressTimer = setInterval(() => {
+        setUploadProgress(prev => (prev < 85 ? prev + 25 : prev));
+      }, 80);
+
+      const candidateDisplayName = profile?.firstName
+        ? `${profile.firstName} ${profile.lastName || ''}`.trim()
+        : selectedUploadFile.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ').toUpperCase();
+
+      const res = await uploadCandidateResume(selectedUploadFile, {
+        displayName: uploadDisplayName,
+        setAsDefault: setAsDefaultUpload,
+        candidateName: candidateDisplayName,
+        contactInfo: profile?.email ? `${profile.email} • San Francisco, CA` : undefined
+      });
+
+      clearInterval(progressTimer);
+      setUploadProgress(100);
+
+      if (res.success) {
+        // Refresh list
+        const updatedList = await getCandidateResumes();
+        setResumes(updatedList);
+        setCurrentResume(res.resume);
+
+        triggerToast('Resume uploaded and parsed successfully!');
+        setIsUploadModalOpen(false);
+        setSelectedUploadFile(null);
+        setUploadDisplayName('');
+        setUploadProgress(0);
+
+        // Re-analyze newly uploaded resume specifically
+        setIsAnalyzing(true);
+        startResumeAnalysis({
+          resumeVersionId: res.resume.versionId || res.resume.id,
+          jobId: targetJob?.id || 'job_techflow_01'
+        }).then(analysisRes => {
+          if (analysisRes.success) setAnalysis(analysisRes.analysis);
+          setIsAnalyzing(false);
+        });
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setUploadError(err.message || 'Upload failed. Please check file format and retry.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -275,9 +537,8 @@ export default function CandidateResumePage() {
       const targetJobId = targetJob?.id || jobIdParam || 'job_techflow_01';
       const targetJobTitle = targetJob?.title || analysis?.jobTitle || 'Target Role';
 
-      // 1. Create job-specific tailored version
       const tailoredRes = await createTailoredResumeVersion({
-        baseVersionId: currentResume.versionId,
+        baseVersionId: currentResume.versionId || currentResume.id,
         jobId: targetJobId,
         jobTitle: targetJobTitle,
         updatedSections: currentResume.sections
@@ -286,8 +547,6 @@ export default function CandidateResumePage() {
       if (tailoredRes.success) {
         const newVersionId = tailoredRes.tailoredVersion.versionId;
         triggerToast('Tailored resume version saved!');
-
-        // 2. Navigate to Quick Apply page with tailored resume preselected
         navigate(`/candidate/jobs/${targetJobId}/apply?resumeVersionId=${newVersionId}`);
       }
     } catch (err) {
@@ -307,9 +566,8 @@ export default function CandidateResumePage() {
     );
   }
 
-  const firstName = profile?.firstName || 'Alexandra';
+  const firstName = profile?.firstName || 'Candidate';
   const userAvatar = profile?.avatarUrl;
-
   const currentSuggestion = analysis?.suggestions?.[activeSuggestionIndex] || analysis?.suggestions?.[0];
 
   return (
@@ -393,7 +651,7 @@ export default function CandidateResumePage() {
           </button>
         </div>
 
-        {/* --- MAIN 2-COLUMN WORKSPACE GRID --- */}
+        {/* --- MAIN WORKSPACE GRID --- */}
         {isLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-7 h-96 bg-slate-200 animate-pulse rounded-2xl" />
@@ -416,11 +674,11 @@ export default function CandidateResumePage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
             
-            {/* ================= LEFT COLUMN: CURRENT DRAFT PREVIEW ================= */}
+            {/* ================= LEFT COLUMN: CURRENT DRAFT PREVIEW & TOOLBAR ================= */}
             <div className={`lg:col-span-7 space-y-4 ${activeMobileTab === 'preview' ? 'block' : 'hidden sm:block'}`}>
               
-              {/* Header: Title + Version Selector + Actions */}
-              <div className="flex items-center justify-between pb-1">
+              {/* CURRENT DRAFT TOOLBAR (Selector, Upload, Export Menu, Edit) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-1">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-[#3B00FF]" />
                   <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
@@ -428,118 +686,240 @@ export default function CandidateResumePage() {
                   </h2>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Version dropdown if multiple */}
-                  {resumes.length > 1 && (
-                    <select
-                      value={currentResume?.versionId || ''}
-                      onChange={(e) => {
-                        const target = resumes.find(r => r.versionId === e.target.value);
-                        if (target) setCurrentResume(target);
-                      }}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none"
+                {/* Toolbar Buttons Container */}
+                <div className="flex flex-wrap items-center gap-2">
+                  
+                  {/* 1. CUSTOM ACCESSIBLE RESUME DROPDOWN POPOVER WITH DELETE BUTTONS */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      disabled={resumes.length === 0}
+                      className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 hover:border-slate-300 focus:outline-none focus:border-[#3B00FF] transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-2xs max-w-[220px] truncate"
+                      aria-label="Select Resume Version"
                     >
-                      {resumes.map(r => (
-                        <option key={r.versionId} value={r.versionId}>
-                          {r.title}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                      <span className="truncate">{currentResume?.title || currentResume?.fileName || 'Select Resume'}</span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-                  {/* Export Action Button */}
+                    {/* Popover Menu */}
+                    {isDropdownOpen && (
+                      <div className="absolute left-0 mt-1.5 w-72 max-h-64 overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-xl z-40 p-1.5 space-y-1 animate-scaleUp">
+                        {resumes.map((r) => {
+                          const isSelected = currentResume?.id === r.id || currentResume?.versionId === r.versionId;
+                          return (
+                            <div
+                              key={r.id || r.versionId}
+                              onClick={() => handleSelectVersion(r)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-colors group ${
+                                isSelected ? 'bg-indigo-50 text-[#3B00FF] font-black' : 'hover:bg-slate-50 text-slate-700 font-bold'
+                              }`}
+                            >
+                              <div className="min-w-0 pr-2">
+                                <p className="truncate text-xs">{r.title || r.fileName}</p>
+                                <p className="text-[10px] text-slate-400 font-normal truncate">
+                                  {r.isDefault ? 'Default Resume' : 'Uploaded Version'}
+                                </p>
+                              </div>
+
+                              {/* Delete Resume Action Icon */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsDropdownOpen(false);
+                                  setResumeToDelete(r);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                                title={`Delete ${r.title}`}
+                                aria-label={`Delete resume ${r.title}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Upload New Resume Button */}
                   <button
                     type="button"
-                    onClick={handleExport}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-[#3B00FF] text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => {
+                      setUploadError(null);
+                      setSelectedUploadFile(null);
+                      setIsUploadModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Upload a new resume document"
                   >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Export</span>
+                    <Upload className="h-3.5 w-3.5 text-slate-700" />
+                    <span>Upload New Resume</span>
                   </button>
 
-                  {/* Edit Action Button */}
+                  {/* 3. EXPORT DROPDOWN MENU (Download Original, PDF, DOCX) */}
+                  <div className="relative" ref={exportMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                      disabled={!currentResume || !!isExportingFormat}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-[#3B00FF] text-xs font-extrabold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Export resume file options"
+                    >
+                      {isExportingFormat ? (
+                        <div className="h-3.5 w-3.5 border-2 border-[#3B00FF] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isExportingFormat ? 'Preparing...' : 'Export'}</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${isExportMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Export Format Popover Options */}
+                    {isExportMenuOpen && (
+                      <div className="absolute right-0 mt-1.5 w-52 rounded-2xl bg-white border border-slate-200 shadow-xl z-40 p-1.5 space-y-1 animate-scaleUp">
+                        <button
+                          type="button"
+                          onClick={() => handleExportFormat('original')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <FileCode className="h-4 w-4 text-slate-500" />
+                          <span>Download Original</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleExportFormat('pdf')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-indigo-50 hover:text-[#3B00FF] transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <Download className="h-4 w-4 text-[#3B00FF]" />
+                          <span>Download as PDF (.pdf)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleExportFormat('docx')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <FileType className="h-4 w-4 text-blue-600" />
+                          <span>Download as Word (.docx)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Edit Resume Icon Button */}
                   <button
                     type="button"
-                    onClick={() => triggerToast('Structured resume editor opened.')}
-                    className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
-                    title="Edit Resume"
+                    onClick={handleOpenEditModal}
+                    disabled={!currentResume}
+                    className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Edit structured resume details"
+                    aria-label="Edit Resume"
                   >
                     <Edit3 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
 
-              {/* DOCUMENT PREVIEW SHEET (Matching Reference Screenshot precisely) */}
-              <div className="bg-white shadow-md border border-slate-200/80 p-6 sm:p-10 rounded-2xl space-y-6 text-slate-800 font-sans text-xs leading-relaxed max-w-2xl mx-auto overflow-x-hidden">
-                
-                {/* Resume Header */}
-                <div className="text-center space-y-1 border-b border-slate-200 pb-5">
-                  <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-widest text-slate-900 uppercase">
-                    {currentResume?.candidateName || 'ALEXANDRA CHEN'}
-                  </h1>
-                  <p className="text-[11px] font-semibold text-slate-500">
-                    {currentResume?.contactInfo || 'San Francisco, CA • alex.chen@email.com • (555) 123-4567 • linkedin.com/in/alexc'}
-                  </p>
-                </div>
-
-                {/* Section: PROFESSIONAL EXPERIENCE */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
-                    PROFESSIONAL EXPERIENCE
-                  </h3>
-
-                  {currentResume?.sections?.experience?.map((exp) => (
-                    <div key={exp.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between font-bold text-slate-900">
-                        <span className="text-sm font-black">{exp.roleTitle}</span>
-                        <span className="text-[11px] text-slate-500 font-semibold">{exp.period}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-bold text-indigo-700 italic">
-                        <span>{exp.companyName}</span>
-                        <span className="text-slate-400 not-italic font-normal">{exp.location}</span>
-                      </div>
-
-                      <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-xs font-normal pl-1 pt-1">
-                        {exp.bullets.map((bullet, idx) => (
-                          <li key={idx} className="leading-relaxed">
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Section: CORE COMPETENCIES */}
-                <div className="space-y-2 pt-2">
-                  <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
-                    CORE COMPETENCIES
-                  </h3>
-
-                  <div className="space-y-1.5 text-xs">
-                    <p>
-                      <strong className="font-extrabold text-slate-900">Design: </strong>
-                      <span className="text-slate-700 font-medium">
-                        {currentResume?.sections?.competencies?.design || 'UI/UX Design, Interaction Design, Wireframing, Prototyping, Design Systems, Information Architecture.'}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="font-extrabold text-slate-900">Tools: </strong>
-                      <span className="text-slate-700 font-medium">
-                        {currentResume?.sections?.competencies?.tools || 'Figma, Sketch, Adobe Creative Suite, Principle, InVision, Basic HTML/CSS/React.'}
-                      </span>
-                    </p>
-                    <p>
-                      <strong className="font-extrabold text-slate-900">Research: </strong>
-                      <span className="text-slate-700 font-medium">
-                        {currentResume?.sections?.competencies?.research || 'Usability Testing, User Interviews, A/B Testing, Persona Development.'}
-                      </span>
+              {/* DOCUMENT PREVIEW SHEET */}
+              {!currentResume ? (
+                <div className="bg-white shadow-md border border-slate-200/80 p-12 rounded-2xl text-center space-y-4 max-w-2xl mx-auto">
+                  <FileText className="h-12 w-12 text-slate-300 mx-auto" />
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-slate-900">No resume uploaded yet.</h3>
+                    <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+                      Upload your resume to begin optimizing it for jobs and applying with tailored versions.
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-black hover:bg-[#3000D6] inline-flex items-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Upload Resume</span>
+                  </button>
                 </div>
+              ) : (
+                <div className="bg-white shadow-md border border-slate-200/80 p-6 sm:p-10 rounded-2xl space-y-6 text-slate-800 font-sans text-xs leading-relaxed max-w-2xl mx-auto overflow-x-hidden">
+                  
+                  {/* Dynamic Resume Header (strictly matching selected currentResume) */}
+                  <div className="text-center space-y-1 border-b border-slate-200 pb-5">
+                    <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-widest text-slate-900 uppercase">
+                      {currentResume.candidateName || currentResume.title || 'RESUME'}
+                    </h1>
+                    <p className="text-[11px] font-semibold text-slate-500">
+                      {currentResume.contactInfo || 'San Francisco, CA • contact@email.com • (555) 123-4567'}
+                    </p>
+                  </div>
 
-              </div>
+                  {/* Section: PROFESSIONAL EXPERIENCE */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
+                      PROFESSIONAL EXPERIENCE
+                    </h3>
+
+                    {currentResume.sections?.experience?.map((exp) => (
+                      <div key={exp.id || exp.roleTitle} className="space-y-1.5">
+                        <div className="flex items-center justify-between font-bold text-slate-900">
+                          <span className="text-sm font-black">{exp.roleTitle}</span>
+                          <span className="text-[11px] text-slate-500 font-semibold">{exp.period}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-bold text-indigo-700 italic">
+                          <span>{exp.companyName}</span>
+                          <span className="text-slate-400 not-italic font-normal">{exp.location}</span>
+                        </div>
+
+                        <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-xs font-normal pl-1 pt-1">
+                          {exp.bullets?.map((bullet, idx) => (
+                            <li key={idx} className="leading-relaxed">
+                              <span>{bullet}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Section: CORE COMPETENCIES */}
+                  <div className="space-y-2 pt-2">
+                    <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
+                      CORE COMPETENCIES
+                    </h3>
+
+                    <div className="space-y-1.5 text-xs">
+                      {currentResume.sections?.competencies?.design && (
+                        <p>
+                          <strong className="font-extrabold text-slate-900">Design: </strong>
+                          <span className="text-slate-700 font-medium">
+                            {currentResume.sections.competencies.design}
+                          </span>
+                        </p>
+                      )}
+                      {currentResume.sections?.competencies?.tools && (
+                        <p>
+                          <strong className="font-extrabold text-slate-900">Tools: </strong>
+                          <span className="text-slate-700 font-medium">
+                            {currentResume.sections.competencies.tools}
+                          </span>
+                        </p>
+                      )}
+                      {currentResume.sections?.competencies?.research && (
+                        <p>
+                          <strong className="font-extrabold text-slate-900">Research: </strong>
+                          <span className="text-slate-700 font-medium">
+                            {currentResume.sections.competencies.research}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              )}
 
             </div>
 
@@ -581,52 +961,59 @@ export default function CandidateResumePage() {
                   </div>
 
                   <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-3 py-1 rounded-full border border-indigo-100 truncate max-w-[180px]">
-                    Context: {targetJob?.companyName || analysis?.companyName || 'TechFlow'} Role
+                    Context: {targetJob?.companyName || analysis?.companyName || 'Tech Employer'} Role
                   </span>
                 </div>
 
-                {/* MATCH SCORE BOX (Matching Screenshot) */}
-                <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
-                  {/* Score SVG Circle Indicator */}
-                  <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
-                    <svg className="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="text-indigo-200"
-                        strokeWidth="3"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className="text-[#3B00FF]"
-                        strokeDasharray={`${analysis?.score || 72}, 100`}
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <span className="absolute text-base font-black text-slate-900">
-                      {analysis?.score || 72}
-                    </span>
+                {/* MATCH SCORE BOX */}
+                {isAnalyzing ? (
+                  <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-2xl flex items-center justify-center gap-3 text-xs font-extrabold text-[#3B00FF]">
+                    <div className="h-5 w-5 border-2 border-[#3B00FF] border-t-transparent rounded-full animate-spin" />
+                    <span>Analyzing target resume against job description...</span>
                   </div>
-
-                  {/* Score Label & Text */}
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                        MATCH SCORE
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                        {analysis?.scoreLabel || 'Good'}
+                ) : (
+                  <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
+                    {/* Score SVG Circle Indicator */}
+                    <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
+                      <svg className="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-indigo-200"
+                          strokeWidth="3"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="text-[#3B00FF]"
+                          strokeDasharray={`${analysis?.score || 80}, 100`}
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <span className="absolute text-base font-black text-slate-900">
+                        {analysis?.score || 80}
                       </span>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-500 leading-snug">
-                      {analysis?.scoreFeedback || 'Matches standard Senior Designer roles. Add target JD to improve.'}
-                    </p>
+
+                    {/* Score Label & Text */}
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                          MATCH SCORE
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                          {analysis?.scoreLabel || 'Strong'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-500 leading-snug">
+                        {analysis?.scoreFeedback || 'Matches standard target role requirements. Review active suggestions to increase impact.'}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* ACTIVE SUGGESTION SECTION */}
                 <div className="space-y-2">
@@ -649,9 +1036,16 @@ export default function CandidateResumePage() {
 
                       {/* Suggested Improvement */}
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center gap-1.5 text-[#3B00FF]">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          <span className="text-xs font-black">Suggested Improvement:</span>
+                        <div className="flex items-center justify-between text-[#3B00FF]">
+                          <div className="flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            <span className="text-xs font-black">Suggested Improvement:</span>
+                          </div>
+
+                          <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Add this only if true
+                          </span>
                         </div>
 
                         {isEditingSuggestion ? (
@@ -761,7 +1155,7 @@ export default function CandidateResumePage() {
                     </button>
                   </div>
 
-                  {/* Missing Keywords Pills */}
+                  {/* Missing Keywords Chips */}
                   {analysis?.missingKeywords && analysis.missingKeywords.length > 0 && (
                     <div className="flex items-center gap-2 pt-1 text-xs">
                       <span className="text-slate-400 font-extrabold text-[11px]">Missing:</span>
@@ -784,7 +1178,8 @@ export default function CandidateResumePage() {
                   <button
                     type="button"
                     onClick={handleApplyWithTailoredResume}
-                    className="w-full py-3 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs sm:text-sm font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    disabled={!currentResume}
+                    className="w-full py-3 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs sm:text-sm font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
                   >
                     <span>Use This Resume to Apply</span>
                     <ArrowRight className="h-4 w-4" />
@@ -795,6 +1190,401 @@ export default function CandidateResumePage() {
 
             </div>
 
+          </div>
+        )}
+
+        {/* ================= MODAL 1: DELETE RESUME CONFIRMATION ================= */}
+        {resumeToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-150 animate-scaleUp">
+              
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="p-3 bg-rose-50 rounded-2xl">
+                  <Trash2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Delete resume?</h3>
+                  <p className="text-xs font-semibold text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <p className="text-xs font-medium text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-150">
+                <strong className="font-extrabold text-slate-900">"{resumeToDelete.title || resumeToDelete.fileName}"</strong> and its editable versions will be removed from your resume library. Applications already submitted with this resume will retain their submitted copy.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setResumeToDelete(null)}
+                  disabled={isDeletingResume}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteResume}
+                  disabled={isDeletingResume}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isDeletingResume && <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  <span>{isDeletingResume ? 'Deleting...' : 'Delete Resume'}</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL 2: UPLOAD NEW RESUME ================= */}
+        {isUploadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative border border-slate-150 animate-scaleUp">
+              
+              <div className="flex items-center justify-between border-b border-slate-150 pb-4">
+                <div className="flex items-center gap-2">
+                  <UploadCloud className="h-6 w-6 text-[#3B00FF]" />
+                  <h3 className="text-lg font-black text-slate-900">Upload New Resume</h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                  isDragOver
+                    ? 'border-[#3B00FF] bg-indigo-50/50 scale-[1.01]'
+                    : selectedUploadFile
+                    ? 'border-emerald-400 bg-emerald-50/30'
+                    : 'border-slate-300 hover:border-slate-400 bg-slate-50/50'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                  accept=".pdf,.docx,.doc"
+                  className="hidden"
+                />
+
+                {selectedUploadFile ? (
+                  <div className="space-y-2">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
+                    <p className="text-sm font-black text-slate-900">{selectedUploadFile.name}</p>
+                    <p className="text-xs font-semibold text-slate-500">
+                      {(selectedUploadFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for parsing
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUploadFile(null);
+                      }}
+                      className="text-xs text-rose-600 font-bold hover:underline"
+                    >
+                      Choose a different file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <UploadCloud className="h-10 w-10 text-indigo-500 mx-auto" />
+                    <div>
+                      <p className="text-sm font-black text-slate-900">Drag & drop your resume file here</p>
+                      <p className="text-xs font-semibold text-slate-500">or click to browse local files</p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">Supported formats: PDF, DOCX (Max 5MB)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Display Name Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-slate-700 block">
+                  Resume Title / Version Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Designer Base Resume 2026"
+                  value={uploadDisplayName}
+                  onChange={(e) => setUploadDisplayName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF] bg-white"
+                />
+              </div>
+
+              {/* Set as Default Checkbox */}
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="setAsDefault"
+                  checked={setAsDefaultUpload}
+                  onChange={(e) => setSetAsDefaultUpload(e.target.checked)}
+                  className="h-4 w-4 rounded-md border-slate-300 text-[#3B00FF] focus:ring-[#3B00FF] cursor-pointer"
+                />
+                <label htmlFor="setAsDefault" className="text-xs font-bold text-slate-700 cursor-pointer">
+                  Set as current default active resume
+                </label>
+              </div>
+
+              {/* Upload Progress Bar */}
+              {isUploading && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-bold text-slate-600">
+                    <span>Parsing resume content...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-[#3B00FF] transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Error Banner */}
+              {uploadError && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-slate-150 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  disabled={isUploading}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePerformUpload}
+                  disabled={!selectedUploadFile || isUploading}
+                  className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isUploading && <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  <span>{isUploading ? 'Uploading...' : 'Upload Resume'}</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL 3: STRUCTURED RESUME EDITOR ================= */}
+        {isEditModalOpen && editFormData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative border border-slate-150 my-8">
+              
+              <div className="flex items-center justify-between border-b border-slate-150 pb-4">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-6 w-6 text-[#3B00FF]" />
+                  <h3 className="text-lg font-black text-slate-900">Edit Resume Content</h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                
+                {/* Candidate Name & Title */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 block">Full Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.candidateName || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, candidateName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 block">Version Label</label>
+                    <input
+                      type="text"
+                      value={editFormData.title || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-1">
+                  <label className="text-xs font-extrabold text-slate-700 block">Contact Info Header</label>
+                  <input
+                    type="text"
+                    value={editFormData.contactInfo || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactInfo: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                  />
+                </div>
+
+                {/* Experience Bullets */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-black text-[#3B00FF] uppercase">Experience Bullets</h4>
+
+                  {editFormData.sections?.experience?.map((exp, expIdx) => (
+                    <div key={exp.id || expIdx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-900">
+                        <span>{exp.roleTitle} at {exp.companyName}</span>
+                        <span className="text-slate-500">{exp.period}</span>
+                      </div>
+
+                      {exp.bullets?.map((b, bIdx) => (
+                        <div key={bIdx} className="flex items-start gap-2">
+                          <textarea
+                            rows={2}
+                            value={b}
+                            onChange={(e) => {
+                              const updatedExp = [...editFormData.sections.experience];
+                              updatedExp[expIdx].bullets[bIdx] = e.target.value;
+                              setEditFormData({
+                                ...editFormData,
+                                sections: { ...editFormData.sections, experience: updatedExp }
+                              });
+                            }}
+                            className="flex-1 p-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-[#3B00FF] bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedExp = [...editFormData.sections.experience];
+                              updatedExp[expIdx].bullets.splice(bIdx, 1);
+                              setEditFormData({
+                                ...editFormData,
+                                sections: { ...editFormData.sections, experience: updatedExp }
+                              });
+                            }}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer mt-1"
+                            title="Remove bullet"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedExp = [...editFormData.sections.experience];
+                          updatedExp[expIdx].bullets.push('New accomplishment metric or key initiative.');
+                          setEditFormData({
+                            ...editFormData,
+                            sections: { ...editFormData.sections, experience: updatedExp }
+                          });
+                        }}
+                        className="text-xs font-bold text-[#3B00FF] hover:underline flex items-center gap-1 pt-1 cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Bullet Point
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Core Competencies */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-black text-[#3B00FF] uppercase">Core Competencies</h4>
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Design</label>
+                      <input
+                        type="text"
+                        value={editFormData.sections?.competencies?.design || ''}
+                        onChange={(e) => setEditFormData({
+                          ...editFormData,
+                          sections: {
+                            ...editFormData.sections,
+                            competencies: { ...editFormData.sections.competencies, design: e.target.value }
+                          }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Tools</label>
+                      <input
+                        type="text"
+                        value={editFormData.sections?.competencies?.tools || ''}
+                        onChange={(e) => setEditFormData({
+                          ...editFormData,
+                          sections: {
+                            ...editFormData.sections,
+                            competencies: { ...editFormData.sections.competencies, tools: e.target.value }
+                          }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Research</label>
+                      <input
+                        type="text"
+                        value={editFormData.sections?.competencies?.research || ''}
+                        onChange={(e) => setEditFormData({
+                          ...editFormData,
+                          sections: {
+                            ...editFormData.sections,
+                            competencies: { ...editFormData.sections.competencies, research: e.target.value }
+                          }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-slate-150 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-extrabold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveResumeEdits}
+                  disabled={isSavingEdit}
+                  className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSavingEdit && <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  <span>{isSavingEdit ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+
+            </div>
           </div>
         )}
 
