@@ -4,6 +4,7 @@ import { SignOutProvider } from './context/SignOutContext';
 import { CandidateUserProvider } from './context/CandidateUserContext';
 import { RecruiterUserProvider } from './context/RecruiterUserContext';
 import { SuperAdminUserProvider } from './context/SuperAdminUserContext';
+import SuperAdminRouteGuard from './components/auth/superAdmin/SuperAdminRouteGuard';
 import SuperAdminLayout from './components/superAdmin/common/SuperAdminLayout';
 import SuperAdminOverview from './pages/superAdmin/superAdminOverview/SuperAdminOverview';
 import SuperAdminCandidates from './pages/superAdmin/superAdminCandidates/SuperAdminCandidates';
@@ -28,7 +29,6 @@ import SuperAdminAddLocation from './pages/superAdmin/SuperAdminAddLocation';
 import SuperAdminAddSkill from './pages/superAdmin/SuperAdminAddSkill';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
-import AdminPortalLogin from './pages/auth/AdminPortalLogin';
 import EmployerOverview from './pages/employer/employerOverview/EmployerOverview';
 import EmployerJobs from './pages/employer/employerJobs/EmployerJobs';
 import EmployerApplications from './pages/employer/employerApplications/EmployerApplications';
@@ -36,6 +36,7 @@ import EmployerInterviews from './pages/employer/employerInterviews/EmployerInte
 import EmployerMessages from './pages/employer/employerMessages/EmployerMessages';
 import EmployerCompanyProfile from './pages/employer/employerCompanyProfile/EmployerCompanyProfile';
 import AdminLayout from './components/admin/common/AdminLayout';
+import AdminRouteGuard from './components/auth/admin/AdminRouteGuard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminRecruiters from './pages/admin/AdminRecruiters';
 import AdminCreateRecruiter from './pages/admin/AdminCreateRecruiter';
@@ -289,12 +290,30 @@ export default function App() {
         <Route path="/recruiter/my-profile" element={<Navigate to="/recruiter/profile" replace />} />
       </Route>
 
-      {/* Admin Portal Login Standalone Routes */}
-      <Route path="/admin" element={<AdminPortalLogin />} />
+      {/* Admin Portal Login / Super Admin Route */}
+      <Route 
+        path="/admin" 
+        element={
+          <SuperAdminRouteGuard renderLoginWhenUnauthenticated={true}>
+            <SuperAdminOverview 
+              globalDetailsRecord={globalDetailsRecord} 
+              setGlobalDetailsRecord={setGlobalDetailsRecord}
+              onToast={handleToast}
+            />
+          </SuperAdminRouteGuard>
+        } 
+      />
       <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
 
       {/* Persistent Admin Layout routing container */}
-      <Route path="/admin/*" element={<AdminLayout searchPlaceholder="Search recruiters..." />}>
+      <Route 
+        path="/admin/*" 
+        element={
+          <AdminRouteGuard>
+            <AdminLayout searchPlaceholder="Search recruiters..." />
+          </AdminRouteGuard>
+        }
+      >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="recruiters" element={<AdminRecruiters />} />
         <Route path="recruiters/create" element={<AdminCreateRecruiter />} />
@@ -316,7 +335,27 @@ export default function App() {
         />
       </Route>
 
-      {/* Legacy Redirect Routes */}
+      {/* Legacy & Alias Redirect Routes */}
+      <Route path="/superadmin-dashboard" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/superadmin-dashboard/*" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/super-admin" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/super-admin/dashboard" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/superadmin" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/superadmin/overview" element={<Navigate to="/super-admin/overview" replace />} />
+
+      <Route path="/hr-dashboard" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/hr-dashboard/*" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/hr" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/hr/*" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/hr/dashboard" element={<Navigate to="/recruiter/dashboard" replace />} />
+      <Route path="/recruiter-dashboard" element={<Navigate to="/recruiter/dashboard" replace />} />
+
+      <Route path="/employer-dashboard" element={<Navigate to="/employer/overview" replace />} />
+      <Route path="/employer/dashboard" element={<Navigate to="/employer/overview" replace />} />
+
+      <Route path="/candidate-dashboard" element={<Navigate to="/candidate/dashboard" replace />} />
+      <Route path="/admin-dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+
       <Route path="/dashboard" element={<Navigate to="/super-admin/overview" replace />} />
       <Route path="/dashboard/" element={<Navigate to="/super-admin/overview" replace />} />
       <Route path="/dashboard/profile" element={<Navigate to="/super-admin/overview" replace />} />
@@ -374,29 +413,34 @@ function RecruiterPortalWrapper() {
 function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord, handleToast, routeContent }) {
   const location = useLocation();
   const currentPath = location.pathname;
-  const isStandalonePortalRoute = currentPath === '/login' || 
-                                   currentPath === '/signup' || 
-                                   currentPath.startsWith('/candidate') ||
-                                   currentPath.startsWith('/recruiter') ||
-                                   currentPath.startsWith('/employer') ||
-                                   currentPath.startsWith('/dashboard') ||
-                                   currentPath.startsWith('/admin') || // matches nested admin layout routes cleanly
-                                   currentPath === '/';
 
-  if (isStandalonePortalRoute) {
-    return routeContent;
+  const token = localStorage.getItem('access_token');
+  const userStr = localStorage.getItem('auth_user');
+  let user;
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch {
+    user = null;
+  }
+  const role = user?.role || localStorage.getItem('auth_role');
+
+  const isSuperAdminRoute = currentPath === '/admin' || currentPath.startsWith('/super-admin');
+  const isSuperAdminAuthenticated = Boolean(token && user && role === 'SUPER_ADMIN');
+
+  if (isSuperAdminRoute && isSuperAdminAuthenticated) {
+    return (
+      <SuperAdminUserProvider>
+        <SuperAdminLayout 
+          onToast={handleToast} 
+          notifications={notifications}
+          setNotifications={setNotifications}
+          onOpenDrawerDetails={setGlobalDetailsRecord}
+        >
+          {routeContent}
+        </SuperAdminLayout>
+      </SuperAdminUserProvider>
+    );
   }
 
-  return (
-    <SuperAdminUserProvider>
-      <SuperAdminLayout 
-        onToast={handleToast} 
-        notifications={notifications}
-        setNotifications={setNotifications}
-        onOpenDrawerDetails={setGlobalDetailsRecord}
-      >
-        {routeContent}
-      </SuperAdminLayout>
-    </SuperAdminUserProvider>
-  );
+  return routeContent;
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 import { createAdminService } from '../../services/superAdmin/superAdminService';
 
 export default function SuperAdminCreateAdmin() {
@@ -9,26 +10,34 @@ export default function SuperAdminCreateAdmin() {
     name: '',
     email: '',
     password: '',
-    status: ''
+    confirmPassword: '',
+    status: 'ACTIVE'
   });
 
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     const newErrors = {};
     if (!formState.name.trim()) {
-      newErrors.name = "Name is required.";
+      newErrors.name = "Full Name is required.";
     }
     
     if (!formState.email.trim()) {
       newErrors.email = "Email address is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim())) {
       newErrors.email = "Enter a valid email address.";
     }
 
     if (!formState.password) {
       newErrors.password = "Password is required.";
+    }
+
+    if (!formState.confirmPassword) {
+      newErrors.confirmPassword = "Confirm password is required.";
+    } else if (formState.password !== formState.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
     }
 
     if (!formState.status) {
@@ -41,8 +50,8 @@ export default function SuperAdminCreateAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError(null);
     if (!validate()) {
-      // Focus first error element
       setTimeout(() => {
         const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] button');
         if (firstErrorEl) firstErrorEl.focus();
@@ -53,21 +62,32 @@ export default function SuperAdminCreateAdmin() {
     setIsSubmitting(true);
     try {
       const payload = {
-        full_name: formState.name.trim(),
+        name: formState.name.trim(),
         email: formState.email.trim(),
         password: formState.password,
-        account_status: formState.status
+        confirmPassword: formState.confirmPassword,
+        status: formState.status
       };
       
       const res = await createAdminService(payload);
       if (res.success) {
-        // Clear password state
-        setFormState(prev => ({ ...prev, password: '' }));
-        // Back to list
         navigate('/super-admin/admins');
+      } else {
+        if (res.errors && typeof res.errors === 'object') {
+          const fieldErrors = {};
+          if (res.errors.email) fieldErrors.email = Array.isArray(res.errors.email) ? res.errors.email[0] : res.errors.email;
+          if (res.errors.password) fieldErrors.password = Array.isArray(res.errors.password) ? res.errors.password[0] : res.errors.password;
+          if (res.errors.confirmPassword) fieldErrors.confirmPassword = Array.isArray(res.errors.confirmPassword) ? res.errors.confirmPassword[0] : res.errors.confirmPassword;
+          if (res.errors.status) fieldErrors.status = Array.isArray(res.errors.status) ? res.errors.status[0] : res.errors.status;
+          
+          if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+          }
+        }
+        setApiError(res.message || 'Failed to create Admin user.');
       }
-    } catch (err) {
-      console.error("Failed to create admin user", err);
+    } catch {
+      setApiError("An unexpected error occurred while creating admin account.");
     } finally {
       setIsSubmitting(false);
     }
@@ -84,11 +104,18 @@ export default function SuperAdminCreateAdmin() {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-150 p-6 sm:p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {apiError && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700 flex items-center gap-2.5">
+            <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0" />
+            <span>{apiError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
           
-          {/* Field 1: Name */}
+          {/* Field 1: Full Name */}
           <div className="space-y-1.5" data-error={!!errors.name}>
-            <label className="text-[13px] font-bold text-slate-700">Name *</label>
+            <label className="text-[13px] font-bold text-slate-700">Full Name *</label>
             <input 
               type="text"
               value={formState.name}
@@ -96,7 +123,7 @@ export default function SuperAdminCreateAdmin() {
                 setFormState(prev => ({ ...prev, name: e.target.value }));
                 if (errors.name) setErrors(prev => ({ ...prev, name: null }));
               }}
-              placeholder="Enter admin name"
+              placeholder="Enter admin full name"
               className={`w-full rounded-lg border px-3.5 py-2.5 text-[14px] font-medium text-slate-800 focus:outline-none min-h-[40px] ${
                 errors.name 
                   ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
@@ -137,7 +164,7 @@ export default function SuperAdminCreateAdmin() {
                 setFormState(prev => ({ ...prev, password: e.target.value }));
                 if (errors.password) setErrors(prev => ({ ...prev, password: null }));
               }}
-              placeholder="Create a password"
+              placeholder="Create a strong password"
               className={`w-full rounded-lg border px-3.5 py-2.5 text-[14px] font-medium text-slate-800 focus:outline-none min-h-[40px] ${
                 errors.password 
                   ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
@@ -147,7 +174,28 @@ export default function SuperAdminCreateAdmin() {
             {errors.password && <p className="text-xs text-red-500 font-semibold">{errors.password}</p>}
           </div>
 
-          {/* Field 4: Account Status */}
+          {/* Field 4: Confirm Password */}
+          <div className="space-y-1.5" data-error={!!errors.confirmPassword}>
+            <label className="text-[13px] font-bold text-slate-700">Confirm Password *</label>
+            <input 
+              type="password"
+              autoComplete="new-password"
+              value={formState.confirmPassword}
+              onChange={(e) => {
+                setFormState(prev => ({ ...prev, confirmPassword: e.target.value }));
+                if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: null }));
+              }}
+              placeholder="Confirm password"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-[14px] font-medium text-slate-800 focus:outline-none min-h-[40px] ${
+                errors.confirmPassword 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                  : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
+              }`}
+            />
+            {errors.confirmPassword && <p className="text-xs text-red-500 font-semibold">{errors.confirmPassword}</p>}
+          </div>
+
+          {/* Field 5: Account Status */}
           <div className="space-y-2" data-error={!!errors.status}>
             <label className="text-[13px] font-bold text-slate-700 block">Account Status *</label>
             <div className="flex items-center gap-6">
@@ -155,10 +203,10 @@ export default function SuperAdminCreateAdmin() {
                 <input 
                   type="radio"
                   name="accountStatus"
-                  value="Active"
-                  checked={formState.status === 'Active'}
+                  value="ACTIVE"
+                  checked={formState.status === 'ACTIVE'}
                   onChange={() => {
-                    setFormState(prev => ({ ...prev, status: 'Active' }));
+                    setFormState(prev => ({ ...prev, status: 'ACTIVE' }));
                     if (errors.status) setErrors(prev => ({ ...prev, status: null }));
                   }}
                   className="h-4.5 w-4.5 accent-teal-600 focus:ring-2 focus:ring-teal-500"
@@ -169,10 +217,10 @@ export default function SuperAdminCreateAdmin() {
                 <input 
                   type="radio"
                   name="accountStatus"
-                  value="Inactive"
-                  checked={formState.status === 'Inactive'}
+                  value="INACTIVE"
+                  checked={formState.status === 'INACTIVE'}
                   onChange={() => {
-                    setFormState(prev => ({ ...prev, status: 'Inactive' }));
+                    setFormState(prev => ({ ...prev, status: 'INACTIVE' }));
                     if (errors.status) setErrors(prev => ({ ...prev, status: null }));
                   }}
                   className="h-4.5 w-4.5 accent-teal-600 focus:ring-2 focus:ring-teal-500"

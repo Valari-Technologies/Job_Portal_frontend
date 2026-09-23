@@ -6,6 +6,18 @@ import { getProfilePhotoFromStorage, subscribeProfilePhoto } from '../../../serv
 export default function AdminHeader({ onMobileMenuToggle, searchPlaceholder = "Search anything..." }) {
   const [photo, setPhoto] = useState(() => getProfilePhotoFromStorage('current-admin'));
 
+  const userStr = localStorage.getItem('auth_user');
+  let user;
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch {
+    user = null;
+  }
+
+  const displayName = user?.fullName || user?.name || user?.username || 'Admin';
+  const displayRole = user?.role === 'ADMIN' ? 'Administrator' : (user?.role || 'System Admin');
+  const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+
   useEffect(() => {
     return subscribeProfilePhoto(setPhoto);
   }, []);
@@ -42,12 +54,12 @@ export default function AdminHeader({ onMobileMenuToggle, searchPlaceholder = "S
             <img src={photo} alt="Avatar" className="h-9 w-9 rounded-full object-cover border border-slate-200 shrink-0" />
           ) : (
             <div className="h-9 w-9 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center font-bold text-indigo-700 text-sm shrink-0">
-              AS
+              {initials}
             </div>
           )}
           <div className="hidden md:flex flex-col">
-            <span className="text-sm font-bold text-slate-900 leading-none">Admin</span>
-            <span className="text-xs font-semibold text-slate-500 mt-1">System Admin</span>
+            <span className="text-sm font-bold text-slate-900 leading-none">{displayName}</span>
+            <span className="text-xs font-semibold text-slate-500 mt-1">{displayRole}</span>
           </div>
         </Link>
       </div>

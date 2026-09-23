@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import logoJobz from '../../../assets/logo-jobz.png';
 import { loginAdmin } from '../../../services/auth/adminAuthService';
-import { normalizeAuthError } from '../../../services/auth/authErrorNormalizer';
 
 export default function AdminPortalLoginForm() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -12,11 +13,43 @@ export default function AdminPortalLoginForm() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [authError, setAuthError] = useState(null);
+  const [isErrorVisible, setIsErrorVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   const authErrorRef = useRef(null);
+  const authErrorTimerRef = useRef(null);
+
+  const triggerAuthError = (msg) => {
+    if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    setAuthError(msg);
+    setIsErrorVisible(true);
+    setTimeout(() => {
+      authErrorRef.current?.focus();
+    }, 50);
+
+    authErrorTimerRef.current = setTimeout(() => {
+      setIsErrorVisible(false);
+      setTimeout(() => {
+        setAuthError(null);
+      }, 500);
+    }, 4000);
+  };
+
+  const clearAuthError = () => {
+    if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    setIsErrorVisible(false);
+    setTimeout(() => {
+      setAuthError(null);
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    };
+  }, []);
 
   const validateField = (fieldName, value) => {
     let errorMsg = '';
@@ -49,19 +82,19 @@ export default function AdminPortalLoginForm() {
 
   const handleEmailChange = (val) => {
     setEmail(val);
-    if (authError) setAuthError(null);
+    if (authError) clearAuthError();
     if (touched.email) validateField('email', val);
   };
 
   const handlePasswordChange = (val) => {
     setPassword(val);
-    if (authError) setAuthError(null);
+    if (authError) clearAuthError();
     if (touched.password) validateField('password', val);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setAuthError(null);
+    clearAuthError();
     setTouched({ email: true, password: true });
 
     const isEmailValid = validateField('email', email);
@@ -76,11 +109,6 @@ export default function AdminPortalLoginForm() {
       return;
     }
 
-    // Future Django authentication:
-    // Normalize every rejected credential, account-state, and disallowed-role
-    // response to the public message "Invalid email or password."
-    // Do not expose account existence, role, status, or the incorrect field.
-
     setIsSubmitting(true);
 
     try {
@@ -90,22 +118,23 @@ export default function AdminPortalLoginForm() {
       });
 
       if (response.success) {
-        // When backend is connected: redirect based on verified backend role response
-        // SUPER_ADMIN -> window.location.href = '/super-admin/overview'
-        // ADMIN       -> window.location.href = '/admin/dashboard'
+        const role = response.role;
+        if (role === 'SUPER_ADMIN') {
+          navigate('/admin', { replace: true });
+        } else if (role === 'ADMIN') {
+          navigate('/admin/dashboard', { replace: true });
+        } else if (role === 'HR') {
+          navigate('/recruiter/dashboard', { replace: true });
+        } else if (role === 'CANDIDATE') {
+          navigate('/candidate/dashboard', { replace: true });
+        } else {
+          triggerAuthError('Unauthorized account role.');
+        }
       } else {
-        const normalized = normalizeAuthError(response);
-        setAuthError(normalized.message);
-        setTimeout(() => {
-          authErrorRef.current?.focus();
-        }, 50);
+        triggerAuthError(response.message || 'Invalid email or password.');
       }
-    } catch (err) {
-      const normalized = normalizeAuthError(err);
-      setAuthError(normalized.message);
-      setTimeout(() => {
-        authErrorRef.current?.focus();
-      }, 50);
+    } catch {
+      triggerAuthError('An unexpected authentication error occurred.');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,10 +177,16 @@ export default function AdminPortalLoginForm() {
           tabIndex={-1}
           role="alert"
           aria-live="polite"
-          className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2.5 focus:outline-none"
+          className={`transition-all duration-500 ease-in-out transform ${
+            isErrorVisible 
+              ? 'opacity-100 translate-y-0 max-h-24 mb-4' 
+              : 'opacity-0 -translate-y-2 max-h-0 mb-0 overflow-hidden pointer-events-none'
+          }`}
         >
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-          <span className="leading-relaxed">{authError}</span>
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2.5 focus:outline-none">
+            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <span className="leading-relaxed">{authError}</span>
+          </div>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignOutConfirmationModal from '../components/shared/auth/SignOutConfirmationModal';
+import { logoutAdmin } from '../services/auth/adminAuthService';
 
 const SignOutContext = createContext(null);
 
@@ -29,16 +30,12 @@ export function SignOutProvider({ children }) {
     setError(null);
 
     try {
-      // Simulate/execute auth session cleanup
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // Clear local session markers if any
-      sessionStorage.clear();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      logoutAdmin();
 
       setIsSigningOut(false);
       setIsOpen(false);
 
-      // Navigate to portal-appropriate login route
       if (portalType === 'admin' || portalType === 'superAdmin') {
         navigate('/admin', { replace: true });
       } else {

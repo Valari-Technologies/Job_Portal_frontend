@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
-import { normalizeAuthError } from '../../services/auth/authErrorNormalizer';
+import { loginAdmin } from '../../services/auth/adminAuthService';
 
 export default function Login() {
   const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
@@ -14,16 +14,48 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [authError, setAuthError] = useState(null);
+  const [isErrorVisible, setIsErrorVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const authErrorRef = useRef(null);
+  const authErrorTimerRef = useRef(null);
+
+  const triggerAuthError = (msg) => {
+    if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    setAuthError(msg);
+    setIsErrorVisible(true);
+    setTimeout(() => {
+      authErrorRef.current?.focus();
+    }, 50);
+
+    authErrorTimerRef.current = setTimeout(() => {
+      setIsErrorVisible(false);
+      setTimeout(() => {
+        setAuthError(null);
+      }, 500);
+    }, 4000);
+  };
+
+  const clearAuthError = () => {
+    if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    setIsErrorVisible(false);
+    setTimeout(() => {
+      setAuthError(null);
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
+    };
+  }, []);
 
   // Switch active role tab cleanly without API side-effects
   const handleRoleChange = (newRole) => {
     if (newRole === activeRole) return;
     setActiveRole(newRole);
     setPassword('');
-    setAuthError(null);
+    clearAuthError();
     setErrors({});
     setTouched({});
   };
@@ -60,19 +92,19 @@ export default function Login() {
 
   const handleEmailChange = (val) => {
     setEmail(val);
-    if (authError) setAuthError(null);
+    if (authError) clearAuthError();
     if (touched.email) validateField('email', val);
   };
 
   const handlePasswordChange = (val) => {
     setPassword(val);
-    if (authError) setAuthError(null);
+    if (authError) clearAuthError();
     if (touched.password) validateField('password', val);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    clearAuthError();
     // Set all fields to touched to trigger validations on empty/unfocused fields
     setTouched({ email: true, password: true });
     setAuthError(null);
@@ -81,26 +113,31 @@ export default function Login() {
     const isPasswordValid = validateField('password', password);
 
     if (isEmailValid && isPasswordValid) {
-      // Future Django Candidate & Employer authentication:
-      // Selected Candidate + verified CANDIDATE role -> Candidate dashboard
-      // Selected HR / Recruiter + verified EMPLOYER role -> Recruiter/Employer dashboard
-      // Reject disallowed roles, unknown accounts, or invalid credentials with "Invalid email or password."
-      // HR/Recruiter accounts cannot self-register; they are created internally by Super Admin.
-
       setIsSubmitting(true);
       try {
-        // Frontend error normalization boundary:
-        const normalized = normalizeAuthError({ status: 401 });
-        setAuthError(normalized.message);
-        setTimeout(() => {
-          authErrorRef.current?.focus();
-        }, 50);
-      } catch (err) {
-        const normalized = normalizeAuthError(err);
-        setAuthError(normalized.message);
-        setTimeout(() => {
-          authErrorRef.current?.focus();
-        }, 50);
+        const response = await loginAdmin({
+          email: email.trim(),
+          password: password
+        });
+
+        if (response.success) {
+          const role = response.role;
+          if (role === 'SUPER_ADMIN') {
+            window.location.href = '/admin';
+          } else if (role === 'ADMIN') {
+            window.location.href = '/admin/dashboard';
+          } else if (role === 'HR') {
+            window.location.href = '/recruiter/dashboard';
+          } else if (role === 'CANDIDATE') {
+            window.location.href = '/candidate/dashboard';
+          } else {
+            triggerAuthError('Unauthorized account role.');
+          }
+        } else {
+          triggerAuthError(response.message || 'Invalid email or password.');
+        }
+      } catch {
+        triggerAuthError('An unexpected authentication error occurred.');
       } finally {
         setIsSubmitting(false);
       }
@@ -108,12 +145,12 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 md:bg-[url('/src/assets/login/login-bg.png')] md:bg-cover md:bg-center relative overflow-hidden font-sans select-none">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 md:bg-[url('/src/assets/login/login-bg.png')] md:bg-cover md:bg-center relative overflow-y-auto md:overflow-hidden font-sans select-none p-4 md:p-6">
       {/* Light Overlay to meet contrast and design layout guidelines */}
       <div className="absolute inset-0 bg-sky-100/10 hidden md:block" />
 
       {/* Brand Logo repositioned to top-left of viewport (transparent background) */}
-      <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
+      <div className="absolute top-5 left-5 md:top-6 md:left-6 flex items-center gap-2 z-20">
         <img src={logoJobz} alt="TN Jobz Logo" className="h-8 md:h-9 w-auto object-contain" />
         <span className="text-lg md:text-xl font-black text-slate-805 tracking-tight">
           TN <span className="text-teal-600">Jobz</span>
@@ -121,14 +158,14 @@ export default function Login() {
       </div>
 
       {/* Role Selection Tabs above the login card */}
-      <div role="tablist" aria-label="Login Account Type" className="relative z-10 flex items-center justify-between bg-white/20 backdrop-blur-md rounded-[24px] p-1.5 w-full max-w-[92vw] md:max-w-[500px] border border-white/30 shadow-xs mb-5">
+      <div role="tablist" aria-label="Login Account Type" className="relative z-10 flex items-center justify-between bg-white/20 backdrop-blur-md rounded-[24px] p-1.5 w-full max-w-[92vw] md:max-w-[480px] border border-white/30 shadow-xs mb-3.5 md:mb-4">
         <button
           type="button"
           role="tab"
           aria-selected={activeRole === 'candidate'}
           aria-controls="login-form-card"
           onClick={() => handleRoleChange('candidate')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 md:py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 cursor-pointer ${
             activeRole === 'candidate' 
               ? 'bg-white text-blue-600 shadow-sm' 
               : 'text-slate-700 hover:bg-white/10 hover:text-slate-900'
@@ -145,7 +182,7 @@ export default function Login() {
           aria-selected={activeRole === 'hr'}
           aria-controls="login-form-card"
           onClick={() => handleRoleChange('hr')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 md:py-3 rounded-[20px] text-xs font-extrabold transition-all duration-200 cursor-pointer ${
             activeRole === 'hr' 
               ? 'bg-white text-blue-600 shadow-sm' 
               : 'text-slate-700 hover:bg-white/10 hover:text-slate-900'
@@ -158,13 +195,13 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Centered Login Card */}
-      <div id="login-form-card" className="relative z-10 w-full max-w-[92vw] md:max-w-[500px] bg-white rounded-[32px] p-6 md:p-10 shadow-xl border border-slate-100/50 mx-4">
+      {/* Shared Centered Login Card */}
+      <div id="login-form-card" className="relative z-10 w-full max-w-[92vw] md:max-w-[480px] bg-white rounded-[28px] md:rounded-[32px] p-6 md:py-7 md:px-9 shadow-xl border border-slate-100/50">
 
         {/* Brand Header */}
-        <div className="flex flex-col items-center mb-5">
-          <div className="flex flex-col items-center">
-            <div className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
+        <div className="flex flex-col items-center mb-3.5">
+          <div className="flex flex-col items-center text-center">
+            <div className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
               {activeRole === 'candidate' ? (
                 <svg className="h-5.5 w-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -175,10 +212,10 @@ export default function Login() {
                 </svg>
               )}
             </div>
-            <h2 className="text-xl font-extrabold text-slate-900 mt-3 tracking-tight">
+            <h2 className="text-lg md:text-xl font-extrabold text-slate-900 mt-2.5 tracking-tight">
               {activeRole === 'candidate' ? 'Candidate Login' : 'HR / Recruiter Login'}
             </h2>
-            <p className="text-xs font-bold text-slate-500 mt-1">Welcome back! Please login to continue.</p>
+            <p className="text-xs font-bold text-slate-500 mt-0.5">Welcome back! Please login to continue.</p>
           </div>
         </div>
 
@@ -189,15 +226,21 @@ export default function Login() {
             tabIndex={-1}
             role="alert"
             aria-live="polite"
-            className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700 flex items-center gap-2 focus:outline-none"
+            className={`transition-all duration-500 ease-in-out transform ${
+              isErrorVisible 
+                ? 'opacity-100 translate-y-0 max-h-24 mb-3.5' 
+                : 'opacity-0 -translate-y-2 max-h-0 mb-0 overflow-hidden pointer-events-none'
+            }`}
           >
-            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-            <span>{authError}</span>
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 flex items-center gap-2 focus:outline-none">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <span>{authError}</span>
+            </div>
           </div>
         )}
 
         {/* Action Form */}
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-3">
 
           {/* Email field with reserved error slot */}
           <div className="space-y-1 text-left">
@@ -205,8 +248,8 @@ export default function Login() {
               Email Address
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </span>
@@ -219,10 +262,10 @@ export default function Login() {
                 onChange={(e) => handleEmailChange(e.target.value)}
                 aria-invalid={!!(touched.email && errors.email)}
                 aria-describedby="email-field-error"
-                className={`w-full rounded-xl border ${touched.email && errors.email ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-4 text-base text-slate-950 focus:outline-none transition-colors min-h-[46px]`}
+                className={`w-full rounded-xl border ${touched.email && errors.email ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3 pl-11 pr-4 text-sm md:text-base text-slate-950 focus:outline-none transition-colors min-h-[44px]`}
               />
             </div>
-            <div id="email-field-error" role="alert" aria-live="polite" className="min-h-[18px] pt-0.5 pl-1 text-xs font-semibold text-red-600 leading-tight">
+            <div id="email-field-error" role="alert" aria-live="polite" className="min-h-[16px] pt-0.5 pl-1 text-[11px] font-semibold text-red-600 leading-tight">
               {touched.email && errors.email ? errors.email : ''}
             </div>
           </div>
@@ -233,8 +276,8 @@ export default function Login() {
               Password
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </span>
@@ -247,24 +290,24 @@ export default function Login() {
                 onChange={(e) => handlePasswordChange(e.target.value)}
                 aria-invalid={!!(touched.password && errors.password)}
                 aria-describedby="password-field-error"
-                className={`w-full rounded-xl border ${touched.password && errors.password ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3.5 pl-12 pr-12 text-base text-slate-950 focus:outline-none transition-colors min-h-[46px]`}
+                className={`w-full rounded-xl border ${touched.password && errors.password ? 'border-red-500 focus:border-red-500 bg-red-50/10' : 'border-slate-200 focus:border-blue-600'} bg-white py-3 pl-11 pr-11 text-sm md:text-base text-slate-950 focus:outline-none transition-colors min-h-[44px]`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center h-10 w-10 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center h-9 w-9 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <div id="password-field-error" role="alert" aria-live="polite" className="min-h-[18px] pt-0.5 pl-1 text-xs font-semibold text-red-600 leading-tight">
+            <div id="password-field-error" role="alert" aria-live="polite" className="min-h-[16px] pt-0.5 pl-1 text-[11px] font-semibold text-red-600 leading-tight">
               {touched.password && errors.password ? errors.password : ''}
             </div>
           </div>
 
           {/* Remember me & Forgot password layout */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-0.5">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -281,14 +324,14 @@ export default function Login() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 text-base shadow-md hover:shadow-lg transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:opacity-70"
+            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 text-sm md:text-base shadow-md hover:shadow-lg transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer disabled:opacity-70"
           >
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         {/* Divider lines */}
-        <div className="relative flex items-center justify-center my-4">
+        <div className="relative flex items-center justify-center my-3">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-150" />
           </div>
@@ -299,22 +342,29 @@ export default function Login() {
         <div className="flex justify-center">
           <button
             type="button"
-            className="w-full max-w-full md:max-w-[340px] h-[50px] flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/50 text-sm font-bold text-slate-700 transition-colors focus:ring-2 focus:ring-slate-300 focus:outline-none cursor-pointer"
+            className="w-full max-w-full md:max-w-[340px] h-[46px] flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/50 text-xs md:text-sm font-bold text-slate-700 transition-colors focus:ring-2 focus:ring-slate-300 focus:outline-none cursor-pointer"
           >
-            <img src="/google-image.png" alt="Google Logo" className="h-5 w-5 shrink-0 object-contain" />
+            <img src="/google-image.png" alt="Google Logo" className="h-4.5 w-4.5 shrink-0 object-contain" />
             <span>Continue with Google</span>
           </button>
         </div>
 
-        {/* Conditional Signup Prompt: Candidate mode only */}
-        {activeRole === 'candidate' && (
-          <div className="mt-6 text-center text-xs font-bold text-slate-600">
-            Don’t have an account?{' '}
-            <Link to="/signup" className="text-blue-600 hover:text-blue-700 hover:underline">Create Account</Link>
-          </div>
-        )}
+        {/* Shared Footer Slot: Candidate Signup link vs HR reserved space */}
+        <div className="mt-3.5 text-center text-xs font-bold leading-normal min-h-[18px]">
+          {activeRole === 'candidate' ? (
+            <span className="text-slate-600">
+              Don’t have an account?{' '}
+              <Link to="/signup" className="text-blue-600 hover:text-blue-700 hover:underline">Create Account</Link>
+            </span>
+          ) : (
+            <span className="text-transparent select-none pointer-events-none" aria-hidden="true">
+              &nbsp;
+            </span>
+          )}
+        </div>
 
       </div>
     </div>
   );
 }
+
