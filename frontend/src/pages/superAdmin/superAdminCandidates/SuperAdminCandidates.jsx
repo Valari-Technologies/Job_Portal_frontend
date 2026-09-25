@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { fetchCandidatesService } from '../../../services/superAdmin/superAdminService';
 import { useNavigate } from 'react-router-dom';
 import CandidateFilters from '../../../components/superAdmin/superAdminCandidates/CandidateFilters';
 import CandidateTable from '../../../components/superAdmin/superAdminCandidates/CandidateTable';
@@ -10,15 +11,37 @@ export default function SuperAdminCandidates({ onToast }) {
   // Empty State Rule: No candidate has registered yet. Connects later.
   // We initialize candidates as an empty list to represent no data connected.
   const [candidates, setCandidates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Search & filter state values
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedState, setSelectedState] = useState('Tamil Nadu');
-  const [selectedDistrict, setSelectedDistrict] = useState('Chennai District');
+  const [selectedState, setSelectedState] = useState('All');
+  const [selectedDistrict, setSelectedDistrict] = useState('All');
   const [profileStatus, setProfileStatus] = useState('All');
   const [accountStatus, setAccountStatus] = useState('All');
+
+  const loadCandidates = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchCandidatesService({
+        search: searchQuery,
+        state: selectedState,
+        district: selectedDistrict,
+        status: accountStatus
+      });
+      setCandidates(data);
+    } catch (err) {
+      console.error("Failed to fetch candidates:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedState, selectedDistrict, accountStatus]);
+
+  useEffect(() => {
+    loadCandidates();
+  }, [loadCandidates]);
 
   // Side Drawer config
   const [panelOpen, setPanelOpen] = useState(false);
@@ -155,7 +178,7 @@ export default function SuperAdminCandidates({ onToast }) {
 
           {/* Pagination bar */}
           <div className="flex items-center justify-between text-sm font-bold text-slate-500">
-            <span>Showing 0 to 0 of 0 candidates</span>
+            <span>Showing 1 to {candidates.length} of {candidates.length} candidates</span>
             <div className="flex items-center gap-3">
               <select
                 value={pageSize}

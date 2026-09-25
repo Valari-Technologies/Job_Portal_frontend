@@ -1,17 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LocationHierarchy from '../../../components/superAdmin/superAdminLocations/LocationHierarchy';
 import LocationDetailsPanel from '../../../components/superAdmin/superAdminLocations/LocationDetailsPanel';
 import LocationInsights from '../../../components/superAdmin/superAdminLocations/LocationInsights';
-
-// TODO: Connect Django API:
-// GET /api/admin/locations/
-// Future data source: locations, candidates, jobs and job_locations.
-// Location hierarchy must follow State → District → City/Town → Locality.
+import { fetchLocations } from '../../../services/superAdmin/locationService';
 
 export default function SuperAdminLocations() {
   const navigate = useNavigate();
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const loadLocations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchLocations();
+      setLocations(data);
+    } catch (err) {
+      console.error('Failed to load locations:', err);
+      setError('Failed to load locations from server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLocations();
+  }, []);
+
+  const filteredLocations = locations.filter((loc) =>
+    loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (loc.location_type && loc.location_type.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -35,17 +58,11 @@ export default function SuperAdminLocations() {
             <input
               type="text"
               placeholder="Search location..."
-              className="rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:outline-none"
-              disabled
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-teal-500"
             />
           </div>
-
-          <button
-            disabled
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed"
-          >
-            <span>Filter by status</span>
-          </button>
 
           <button
             onClick={() => navigate('/super-admin/locations/create')}
@@ -64,13 +81,29 @@ export default function SuperAdminLocations() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Side Hierarchy Table */}
         <div className="lg:col-span-2 space-y-6">
-          <LocationHierarchy 
-            locations={[]}
-            selectedLocation={selectedLocation}
-            onSelectLocation={setSelectedLocation}
-          />
+          {loading ? (
+            <div className="bg-white rounded-2xl border border-slate-150 p-12 text-center text-slate-500 font-semibold">
+              Loading location hierarchy...
+            </div>
+          ) : error ? (
+            <div className="bg-white rounded-2xl border border-red-200 p-8 text-center text-red-600 font-semibold flex flex-col items-center gap-3">
+              <span>{error}</span>
+              <button
+                onClick={loadLocations}
+                className="px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <LocationHierarchy 
+              locations={filteredLocations}
+              selectedLocation={selectedLocation}
+              onSelectLocation={setSelectedLocation}
+            />
+          )}
           <div className="text-sm font-bold text-slate-500">
-            Showing 0 of 0 locations
+            Showing {filteredLocations.length} of {locations.length} locations
           </div>
         </div>
 

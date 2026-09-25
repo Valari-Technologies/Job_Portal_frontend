@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X } from 'lucide-react';
+import { Upload, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { createCandidateService } from '../../../services/superAdmin/superAdminService';
+import { fetchLocations } from '../../../services/superAdmin/locationService';
 
 export default function AddCandidateForm() {
   const navigate = useNavigate();
@@ -11,22 +12,91 @@ export default function AddCandidateForm() {
     countryCode: '+91',
     mobileNumber: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     profilePhoto: null,
     dob: '',
     gender: '',
-    state: '',
-    district: '',
-    city: '',
-    locality: '',
+    stateId: '',
+    districtId: '',
+    cityId: '',
+    localityId: '',
     salaryMin: '',
     salaryMax: '',
     jobType: '',
     workMode: ''
   });
 
+  const [states, setStates] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [localities, setLocalities] = useState([]);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch initial States from location catalog
+  useEffect(() => {
+    let active = true;
+    async function loadStates() {
+      const data = await fetchLocations({ location_type: 'STATE' });
+      if (active) setStates(data);
+    }
+    loadStates();
+    return () => { active = false; };
+  }, []);
+
+  // Fetch Districts when State changes
+  useEffect(() => {
+    let active = true;
+    if (!formState.stateId) {
+      setDistricts([]);
+      setCities([]);
+      setLocalities([]);
+      return;
+    }
+    async function loadDistricts() {
+      const data = await fetchLocations({ location_type: 'DISTRICT', parent_id: formState.stateId });
+      if (active) setDistricts(data);
+    }
+    loadDistricts();
+    return () => { active = false; };
+  }, [formState.stateId]);
+
+  // Fetch Cities when District changes
+  useEffect(() => {
+    let active = true;
+    if (!formState.districtId) {
+      setCities([]);
+      setLocalities([]);
+      return;
+    }
+    async function loadCities() {
+      const data = await fetchLocations({ location_type: 'CITY', parent_id: formState.districtId });
+      if (active) setCities(data);
+    }
+    loadCities();
+    return () => { active = false; };
+  }, [formState.districtId]);
+
+  // Fetch Localities when City changes
+  useEffect(() => {
+    let active = true;
+    if (!formState.cityId) {
+      setLocalities([]);
+      return;
+    }
+    async function loadLocalities() {
+      const data = await fetchLocations({ location_type: 'LOCALITY', parent_id: formState.cityId });
+      if (active) setLocalities(data);
+    }
+    loadLocalities();
+    return () => { active = false; };
+  }, [formState.cityId]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -80,6 +150,18 @@ export default function AddCandidateForm() {
       }
     }
 
+    if (!formState.password) {
+      newErrors.password = 'Password is required.';
+    } else if (formState.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long.';
+    }
+
+    if (!formState.confirmPassword) {
+      newErrors.confirmPassword = 'Confirm Password is required.';
+    } else if (formState.password !== formState.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match.';
+    }
+
     if (formState.salaryMin !== '' && Number(formState.salaryMin) < 0) {
       newErrors.salaryMin = 'Minimum salary cannot be negative.';
     }
@@ -102,6 +184,8 @@ export default function AddCandidateForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError(null);
+
     if (!validate()) {
       setTimeout(() => {
         const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] select');
@@ -112,16 +196,17 @@ export default function AddCandidateForm() {
 
     setIsSubmitting(true);
     try {
+      const selectedLocationId = formState.localityId || formState.cityId || formState.districtId || formState.stateId || null;
+
       const payload = {
         full_name: formState.fullName.trim(),
         mobile_number: `${formState.countryCode}${formState.mobileNumber.trim()}`,
         email: formState.email.trim(),
+        password: formState.password,
+        confirmPassword: formState.confirmPassword,
         dob: formState.dob || null,
         gender: formState.gender || null,
-        state: formState.state || null,
-        district: formState.district || null,
-        city: formState.city || null,
-        locality: formState.locality || null,
+        location_id: selectedLocationId ? Number(selectedLocationId) : null,
         salary_min: formState.salaryMin !== '' ? Number(formState.salaryMin) : null,
         salary_max: formState.salaryMax !== '' ? Number(formState.salaryMax) : null,
         job_type: formState.jobType || null,
@@ -131,9 +216,19 @@ export default function AddCandidateForm() {
       const res = await createCandidateService(payload);
       if (res.success) {
         navigate('/super-admin/candidates');
+      } else {
+        setApiError(res.message || 'Failed to create candidate account.');
+        if (res.errors) {
+          const fieldErrors = {};
+          if (res.errors.email) fieldErrors.email = Array.isArray(res.errors.email) ? res.errors.email[0] : res.errors.email;
+          if (res.errors.password) fieldErrors.password = Array.isArray(res.errors.password) ? res.errors.password[0] : res.errors.password;
+          if (res.errors.confirmPassword) fieldErrors.confirmPassword = Array.isArray(res.errors.confirmPassword) ? res.errors.confirmPassword[0] : res.errors.confirmPassword;
+          setErrors(prev => ({ ...prev, ...fieldErrors }));
+        }
       }
     } catch (err) {
       console.error("Failed to create candidate", err);
+      setApiError('An unexpected error occurred. Please check connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,15 +243,24 @@ export default function AddCandidateForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8 bg-white rounded-2xl border border-slate-150 p-6 sm:p-8">
+      {apiError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 flex items-center gap-2.5">
+          <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0" />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
         
-        {/* Section 1: Account Information */}
-        <div className="space-y-5">
-          <h2 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-2">Account Information</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Account Information Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 space-y-4 shadow-xs">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">
+            Account Information
+          </h2>
+
+          <div className="space-y-4">
             {/* Full Name */}
-            <div className="space-y-1.5 md:col-span-2" data-error={!!errors.fullName}>
+            <div className="space-y-1.5" data-error={!!errors.fullName}>
               <label htmlFor="fullName" className="text-[13px] font-bold text-slate-700">Full Name *</label>
               <input 
                 id="fullName"
@@ -176,91 +280,158 @@ export default function AddCandidateForm() {
               {errors.fullName && <p className="text-xs text-red-500 font-semibold">{errors.fullName}</p>}
             </div>
 
-            {/* Mobile Number */}
-            <div className="space-y-1.5" data-error={!!errors.mobileNumber}>
-              <label htmlFor="mobileNumber" className="text-[13px] font-bold text-slate-700">Mobile Number *</label>
-              <div className="flex gap-2">
-                <select
-                  value={formState.countryCode}
-                  onChange={(e) => setFormState(prev => ({ ...prev, countryCode: e.target.value }))}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700 bg-slate-50 focus:outline-none focus:border-teal-500 min-h-[44px]"
-                >
-                  <option value="+91">+91 (IN)</option>
-                </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Mobile Number */}
+              <div className="space-y-1.5" data-error={!!errors.mobileNumber}>
+                <label htmlFor="mobileNumber" className="text-[13px] font-bold text-slate-700">Mobile Number *</label>
+                <div className="flex gap-2">
+                  <select
+                    value={formState.countryCode}
+                    onChange={(e) => setFormState(prev => ({ ...prev, countryCode: e.target.value }))}
+                    className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-teal-500 min-h-[44px]"
+                  >
+                    <option value="+91">+91 (IN)</option>
+                  </select>
+                  <input 
+                    id="mobileNumber"
+                    type="tel"
+                    value={formState.mobileNumber}
+                    onChange={(e) => {
+                      setFormState(prev => ({ ...prev, mobileNumber: e.target.value }));
+                      if (errors.mobileNumber) setErrors(prev => ({ ...prev, mobileNumber: null }));
+                    }}
+                    placeholder="10-digit mobile number"
+                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
+                      errors.mobileNumber 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                        : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
+                    }`}
+                  />
+                </div>
+                {errors.mobileNumber && <p className="text-xs text-red-500 font-semibold">{errors.mobileNumber}</p>}
+              </div>
+
+              {/* Email Address */}
+              <div className="space-y-1.5" data-error={!!errors.email}>
+                <label htmlFor="email" className="text-[13px] font-bold text-slate-700">Email Address *</label>
                 <input 
-                  id="mobileNumber"
-                  type="tel"
-                  value={formState.mobileNumber}
+                  id="email"
+                  type="email"
+                  value={formState.email}
                   onChange={(e) => {
-                    setFormState(prev => ({ ...prev, mobileNumber: e.target.value }));
-                    if (errors.mobileNumber) setErrors(prev => ({ ...prev, mobileNumber: null }));
+                    setFormState(prev => ({ ...prev, email: e.target.value }));
+                    if (errors.email) setErrors(prev => ({ ...prev, email: null }));
                   }}
-                  placeholder="10-digit mobile number"
+                  placeholder="candidate@example.com"
                   className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
-                    errors.mobileNumber 
+                    errors.email 
                       ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
                       : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
                   }`}
                 />
+                {errors.email && <p className="text-xs text-red-500 font-semibold">{errors.email}</p>}
               </div>
-              {errors.mobileNumber && <p className="text-xs text-red-500 font-semibold">{errors.mobileNumber}</p>}
-            </div>
 
-            {/* Email Address */}
-            <div className="space-y-1.5" data-error={!!errors.email}>
-              <label htmlFor="email" className="text-[13px] font-bold text-slate-700">Email Address *</label>
-              <input 
-                id="email"
-                type="email"
-                value={formState.email}
-                onChange={(e) => {
-                  setFormState(prev => ({ ...prev, email: e.target.value }));
-                  if (errors.email) setErrors(prev => ({ ...prev, email: null }));
-                }}
-                placeholder="candidate@example.com"
-                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
-                  errors.email 
-                    ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
-                    : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
-                }`}
-              />
-              {errors.email && <p className="text-xs text-red-500 font-semibold">{errors.email}</p>}
+              {/* Password */}
+              <div className="space-y-1.5" data-error={!!errors.password}>
+                <label htmlFor="password" className="text-[13px] font-bold text-slate-700">Password *</label>
+                <div className="relative">
+                  <input 
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formState.password}
+                    onChange={(e) => {
+                      setFormState(prev => ({ ...prev, password: e.target.value }));
+                      if (errors.password) setErrors(prev => ({ ...prev, password: null }));
+                    }}
+                    placeholder="Minimum 8 characters"
+                    className={`w-full rounded-xl border px-3.5 py-2.5 pr-10 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
+                      errors.password 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                        : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-red-500 font-semibold">{errors.password}</p>}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5" data-error={!!errors.confirmPassword}>
+                <label htmlFor="confirmPassword" className="text-[13px] font-bold text-slate-700">Confirm Password *</label>
+                <div className="relative">
+                  <input 
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formState.confirmPassword}
+                    onChange={(e) => {
+                      setFormState(prev => ({ ...prev, confirmPassword: e.target.value }));
+                      if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: null }));
+                    }}
+                    placeholder="Re-enter password"
+                    className={`w-full rounded-xl border px-3.5 py-2.5 pr-10 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
+                      errors.confirmPassword 
+                        ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                        : 'border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="text-xs text-red-500 font-semibold">{errors.confirmPassword}</p>}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Initial Candidate Profile */}
-        <div className="space-y-5">
-          <h2 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-2">Initial Candidate Profile</h2>
+        {/* Initial Candidate Profile Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 space-y-5 shadow-xs">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">
+            Initial Candidate Profile
+          </h2>
 
           {/* Profile Photo */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-[13px] font-bold text-slate-700 block">Profile Photo (Optional)</label>
             <div className="flex items-center gap-4">
-              {photoPreview ? (
-                <div className="relative h-16 w-16 rounded-full overflow-hidden border border-slate-200">
-                  <img src={photoPreview} alt="Candidate Preview" className="h-full w-full object-cover" />
-                  <button 
-                    type="button" 
-                    onClick={removePhoto} 
-                    className="absolute inset-0 bg-slate-900/40 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                    aria-label="Remove photo"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+              <div className="h-16 w-16 rounded-2xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center relative overflow-hidden shrink-0">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Photo preview" className="h-full w-full object-cover" />
+                ) : (
                   <Upload className="h-5 w-5 text-slate-400" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>{photoPreview ? 'Change Photo' : 'Choose Photo'}</span>
                   <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
                 </label>
-              )}
-              <span className="text-xs text-slate-450 font-medium">JPG, PNG, or WebP up to 2MB.</span>
+                {photoPreview && (
+                  <button type="button" onClick={removePhoto} className="ml-2 text-xs font-bold text-red-500 hover:underline">
+                    Remove
+                  </button>
+                )}
+                <p className="text-[11px] text-slate-400 font-semibold">JPG, PNG, or WebP up to 2MB.</p>
+              </div>
             </div>
-            {errors.profilePhoto && <p className="text-xs text-red-500 font-semibold">{errors.profilePhoto}</p>}
+            {errors.profilePhoto && <p className="text-xs text-red-500 font-semibold mt-1">{errors.profilePhoto}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date of Birth */}
             <div className="space-y-1.5">
               <label htmlFor="dob" className="text-[13px] font-bold text-slate-700">Date of Birth</label>
@@ -299,11 +470,14 @@ export default function AddCandidateForm() {
                 <label htmlFor="state" className="text-xs font-semibold text-slate-500 block mb-1">State</label>
                 <select
                   id="state"
-                  value={formState.state}
-                  onChange={(e) => setFormState(prev => ({ ...prev, state: e.target.value, district: '', city: '', locality: '' }))}
+                  value={formState.stateId}
+                  onChange={(e) => setFormState(prev => ({ ...prev, stateId: e.target.value, districtId: '', cityId: '', localityId: '' }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 min-h-[44px]"
                 >
                   <option value="">Select State</option>
+                  {states.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -311,12 +485,15 @@ export default function AddCandidateForm() {
                 <label htmlFor="district" className="text-xs font-semibold text-slate-500 block mb-1">District</label>
                 <select
                   id="district"
-                  disabled={!formState.state}
-                  value={formState.district}
-                  onChange={(e) => setFormState(prev => ({ ...prev, district: e.target.value, city: '', locality: '' }))}
+                  disabled={!formState.stateId}
+                  value={formState.districtId}
+                  onChange={(e) => setFormState(prev => ({ ...prev, districtId: e.target.value, cityId: '', localityId: '' }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
                 >
                   <option value="">Select District</option>
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -324,12 +501,15 @@ export default function AddCandidateForm() {
                 <label htmlFor="city" className="text-xs font-semibold text-slate-500 block mb-1">City / Town</label>
                 <select
                   id="city"
-                  disabled={!formState.district}
-                  value={formState.city}
-                  onChange={(e) => setFormState(prev => ({ ...prev, city: e.target.value, locality: '' }))}
+                  disabled={!formState.districtId}
+                  value={formState.cityId}
+                  onChange={(e) => setFormState(prev => ({ ...prev, cityId: e.target.value, localityId: '' }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
                 >
                   <option value="">Select City/Town</option>
+                  {cities.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -337,16 +517,23 @@ export default function AddCandidateForm() {
                 <label htmlFor="locality" className="text-xs font-semibold text-slate-500 block mb-1">Locality</label>
                 <select
                   id="locality"
-                  disabled={!formState.city}
-                  value={formState.locality}
-                  onChange={(e) => setFormState(prev => ({ ...prev, locality: e.target.value }))}
+                  disabled={!formState.cityId}
+                  value={formState.localityId}
+                  onChange={(e) => setFormState(prev => ({ ...prev, localityId: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
                 >
                   <option value="">Select Locality</option>
+                  {localities.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
-            <p className="text-[11px] text-slate-450 italic">Location data will load from taxonomy after backend connection.</p>
+            {states.length === 0 && (
+              <p className="text-[11px] text-amber-600 font-semibold">
+                No location records configured yet. Populate location catalog under Location Management.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

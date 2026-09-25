@@ -29,6 +29,8 @@ import SuperAdminAddLocation from './pages/superAdmin/SuperAdminAddLocation';
 import SuperAdminAddSkill from './pages/superAdmin/SuperAdminAddSkill';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import EmployerOverview from './pages/employer/employerOverview/EmployerOverview';
 import EmployerJobs from './pages/employer/employerJobs/EmployerJobs';
 import EmployerApplications from './pages/employer/employerApplications/EmployerApplications';
@@ -229,6 +231,14 @@ export default function App() {
       <Route 
         path="/signup" 
         element={<Signup />} 
+      />
+      <Route 
+        path="/forgot-password" 
+        element={<ForgotPasswordPage />} 
+      />
+      <Route 
+        path="/reset-password/:uid/:token" 
+        element={<ResetPasswordPage />} 
       />
 
       {/* Employer Routes */}

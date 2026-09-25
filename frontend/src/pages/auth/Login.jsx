@@ -317,7 +317,7 @@ export default function Login() {
               />
               <span className="text-xs font-bold text-slate-600">Remember me</span>
             </label>
-            <a href="#forgot" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
+            <Link to="/forgot-password" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</Link>
           </div>
 
           {/* Sign In Primary Action */}

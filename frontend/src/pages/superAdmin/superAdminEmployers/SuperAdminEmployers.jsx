@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { fetchEmployersService } from '../../../services/superAdmin/superAdminService';
 import { useNavigate } from 'react-router-dom';
 import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/EmployerFilters';
 import EmployerTable from '../../../components/superAdmin/superAdminEmployers/EmployerTable';
@@ -11,11 +12,35 @@ import EmployerSidePanel from '../../../components/superAdmin/superAdminEmployer
 
 export default function SuperAdminEmployers() {
   const navigate = useNavigate();
+  const [employers, setEmployers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Filters dropdown state
-  const [selectedState, setSelectedState] = useState('Tamil Nadu');
+  const [selectedState, setSelectedState] = useState('All');
   const [verificationStatus, setVerificationStatus] = useState('All');
   const [trustLevel, setTrustLevel] = useState('All');
   const [jobStatus, setJobStatus] = useState('All');
+
+  const loadEmployers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchEmployersService({
+        search: searchQuery,
+        state: selectedState,
+        verification_status: verificationStatus,
+      });
+      setEmployers(data);
+    } catch (err) {
+      console.error("Failed to fetch employers:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedState, verificationStatus]);
+
+  useEffect(() => {
+    loadEmployers();
+  }, [loadEmployers]);
 
   // Sidebar Focus filters trigger
   const handleFiltersToggle = () => {
@@ -54,9 +79,10 @@ export default function SuperAdminEmployers() {
             </span>
             <input
               type="text"
-              placeholder="Search company / employer ID..."
+              placeholder="Search company / email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-850 focus:border-teal-500 focus:outline-none"
-              disabled
             />
           </div>
 
@@ -109,10 +135,10 @@ export default function SuperAdminEmployers() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Table main */}
         <div className="lg:col-span-2 space-y-6">
-          <EmployerTable />
+          <EmployerTable employers={employers} />
 
           <div className="flex items-center justify-between text-sm font-bold text-slate-500">
-            <span>Showing 0 of 0 employers</span>
+            <span>Showing 1 to {employers.length} of {employers.length} employers</span>
           </div>
 
           {/* Progressive trust model card */}
