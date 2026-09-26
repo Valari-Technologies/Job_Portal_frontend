@@ -1,10 +1,33 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminPortalLoginForm from '../../components/auth/admin/AdminPortalLoginForm';
 import saBg from '../../assets/login/SA-BG.png';
 
 export default function AdminPortalLogin() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const userStr = localStorage.getItem('auth_user');
+    let user;
+    try {
+      user = userStr ? JSON.parse(userStr) : null;
+    } catch {
+      user = null;
+    }
+    const role = user?.role || localStorage.getItem('auth_role');
+
+    if (token && user) {
+      if (role === 'SUPER_ADMIN') {
+        navigate('/super-admin/overview', { replace: true });
+      } else if (role === 'ADMIN') {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }
+  }, [navigate]);
+
   return (
     <main className="min-h-screen w-full bg-[#F4F7FE] flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden font-sans select-none">
-      
       {/* Super Admin Background Artwork Image (SA-BG.png) */}
       <img
         src={saBg}
@@ -27,7 +50,6 @@ export default function AdminPortalLogin() {
       <div className="relative z-10 w-full flex items-center justify-center">
         <AdminPortalLoginForm />
       </div>
-
     </main>
   );
 }

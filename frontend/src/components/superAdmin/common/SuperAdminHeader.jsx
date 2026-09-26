@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import SuperAdminBreadcrumbs from './SuperAdminBreadcrumbs';
+import { fetchLocations } from '../../../services/superAdmin/locationService';
 import { useSignOut } from '../../../context/SignOutContext';
 import { useSuperAdminUser } from '../../../context/SuperAdminUserContext';
 import { 
@@ -20,6 +21,19 @@ export default function SuperAdminHeader({
   const { profile, notifications, unreadCount, markAsRead, markAllAsRead } = useSuperAdminUser();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [headerStateName, setHeaderStateName] = useState('All Locations');
+
+  useEffect(() => {
+    let active = true;
+    async function loadStates() {
+      const data = await fetchLocations({ location_type: 'STATE' });
+      if (active && data.length > 0) {
+        setHeaderStateName(data[0].name);
+      }
+    }
+    loadStates();
+    return () => { active = false; };
+  }, []);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -233,7 +247,7 @@ export default function SuperAdminHeader({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>Tamil Nadu</span>
+            <span>{headerStateName || 'All Locations'}</span>
           </div>
         </div>
 

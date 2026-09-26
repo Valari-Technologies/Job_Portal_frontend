@@ -1,58 +1,48 @@
-// Temporary frontend-only persistence.
-// Replace this repository with the authenticated Django Recruiter profile API.
-// The backend response must remain the single source of truth in production.
+import { fetchEmployerProfileService, updateCompanyProfileService } from './recruiterCompanyService';
 
-const STORAGE_KEY = 'statejobz_recruiter_profile';
-
-const DEFAULT_PROFILE = {
-  identity: {
-    fullName: "Jane Doe",
-    email: "jane.doe@company.com",
-    mobileNumber: "+91 98765 43210",
-    mobileVerified: true,
-    role: "RECRUITER",
-    accountStatus: "Active",
-    lastLoginAt: "2026-09-03T09:30:00Z"
-  },
-  recruiterProfile: {
-    profilePhotoUrl: null,
-    designation: "Senior Talent Acquisition Manager",
-    department: "Human Resources"
-  },
-  companySummary: {
-    id: "comp_101",
-    name: "State Jobz Technologies",
-    verificationStatus: "Verified"
-  }
-};
-
-function loadStoredProfile() {
+function getStoredUser() {
   try {
-    const json = localStorage.getItem(STORAGE_KEY);
-    if (json) {
-      const parsed = JSON.parse(json);
-      return {
-        ...DEFAULT_PROFILE,
-        ...parsed,
-        identity: { ...DEFAULT_PROFILE.identity, ...(parsed.identity || {}) },
-        recruiterProfile: { ...DEFAULT_PROFILE.recruiterProfile, ...(parsed.recruiterProfile || {}) },
-        companySummary: parsed.companySummary !== undefined ? parsed.companySummary : DEFAULT_PROFILE.companySummary
-      };
-    }
-  } catch (err) {
-    console.error("Error reading stored recruiter profile:", err);
+    const userStr = localStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
   }
-  saveStoredProfile(DEFAULT_PROFILE);
-  return DEFAULT_PROFILE;
 }
 
-function saveStoredProfile(profile) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-  } catch (err) {
-    console.error("Error saving recruiter profile to localStorage:", err);
-    throw err;
-  }
+export function buildProfileFromData(data) {
+  const user = getStoredUser();
+  const fullName = data?.full_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : '') || user?.full_name || user?.name || data?.email?.split('@')[0] || '';
+  const email = data?.email || user?.email || '';
+  const mobileNumber = data?.company_phone || data?.phone_number || user?.company_phone || user?.phone_number || '';
+  const role = data?.role || user?.role || 'RECRUITER';
+  const status = data?.status || user?.status || 'Active';
+  const companyName = data?.company_name || user?.company_name || 'My Company';
+  const logo = data?.company_logo || user?.company_logo || null;
+  const designation = data?.designation || user?.designation || 'HR Manager';
+
+  return {
+    identity: {
+      fullName,
+      email,
+      mobileNumber,
+      mobileVerified: true,
+      role: role === 'HR' ? 'RECRUITER' : role,
+      accountStatus: status === 'ACTIVE' || status === 'Active' ? 'Active' : status,
+      lastLoginAt: data?.updated_at || data?.created_at || null
+    },
+    recruiterProfile: {
+      profilePhotoUrl: logo,
+      designation: designation,
+      department: 'Human Resources'
+    },
+    companySummary: {
+      id: data?.id || data?.user_id || user?.id,
+      name: companyName,
+      verificationStatus: data?.verification_status || user?.verification_status || 'PENDING',
+      logo: logo
+    },
+    raw: data
+  };
 }
 
 // Convert image File/Blob to compressed JPEG Data URL (max 400x400)
@@ -102,68 +92,76 @@ function blobToCompressedDataUrl(blob, maxWidth = 400, maxHeight = 400, quality 
 }
 
 export async function getCurrentRecruiterProfile() {
-  return loadStoredProfile();
+  try {
+    const data = await fetchEmployerProfileService();
+    if (data && (data.email || data.company_name)) {
+      return buildProfileFromData(data);
+    }
+  } catch (err) {
+    console.error("Error fetching live recruiter profile:", err);
+  }
+  const user = getStoredUser();
+  if (user) {
+    return buildProfileFromData(user);
+  }
+  return null;
 }
 
 export async function updateCurrentRecruiterProfile(payload) {
-  const current = loadStoredProfile();
-  const updated = {
-    ...current,
-    identity: {
-      ...current.identity,
-      ...(payload.fullName !== undefined && { fullName: payload.fullName }),
-      ...(payload.mobileNumber !== undefined && { mobileNumber: payload.mobileNumber })
-    },
-    recruiterProfile: {
-      ...current.recruiterProfile,
-      ...(payload.designation !== undefined && { designation: payload.designation }),
-      ...(payload.department !== undefined && { department: payload.department })
+  try {
+    const patchPayload = {
+      designation: payload.designation,
+      company_phone: payload.mobileNumber,
+      company_logo: payload.company_logo || payload.profilePhotoUrl
+    };
+    if (payload.fullName) {
+      const names = payload.fullName.trim().split(' ', 2);
+      patchPayload.first_name = names[0];
+      patchPayload.last_name = names[1] || '';
     }
-  };
-  saveStoredProfile(updated);
-  return {
-    success: true,
-    data: updated
-  };
+    const res = await updateCompanyProfileService(patchPayload);
+    if (res.success) {
+      return { success: true, data: buildProfileFromData(res.company) };
+    }
+    return res;
+  } catch (err) {
+    console.error("Error updating recruiter profile:", err);
+    return { success: false, message: "Failed to update profile." };
+  }
 }
 
 export async function uploadRecruiterProfilePhoto(fileOrBlob) {
   try {
     const dataUrl = await blobToCompressedDataUrl(fileOrBlob);
-    const current = loadStoredProfile();
-    const updated = {
-      ...current,
-      recruiterProfile: {
-        ...current.recruiterProfile,
+    const res = await updateCompanyProfileService({ company_logo: dataUrl });
+    if (res.success) {
+      return {
+        success: true,
         profilePhotoUrl: dataUrl
-      }
-    };
-    saveStoredProfile(updated);
-    return {
-      success: true,
-      profilePhotoUrl: dataUrl
-    };
+      };
+    }
+    return { success: false, error: res.message || 'Failed to update logo.' };
   } catch (err) {
-    console.error("Failed to upload/compress recruiter profile photo:", err);
+    console.error("Failed to upload recruiter profile photo:", err);
     return {
       success: false,
-      error: err.name === 'QuotaExceededError' ? 'Storage limit exceeded. Please choose a smaller image.' : 'Failed to save profile photo.'
+      error: 'Failed to save profile photo.'
     };
   }
 }
 
 export async function removeRecruiterProfilePhoto() {
-  const current = loadStoredProfile();
-  const updated = {
-    ...current,
-    recruiterProfile: {
-      ...current.recruiterProfile,
-      profilePhotoUrl: null
+  try {
+    const res = await updateCompanyProfileService({ company_logo: '' });
+    if (res.success) {
+      return {
+        success: true,
+        profilePhotoUrl: null
+      };
     }
-  };
-  saveStoredProfile(updated);
-  return {
-    success: true,
-    profilePhotoUrl: null
-  };
+    return { success: false, error: res.message || 'Failed to remove logo.' };
+  } catch (err) {
+    console.error("Failed to remove recruiter profile photo:", err);
+    return { success: false, error: 'Failed to remove photo.' };
+  }
 }

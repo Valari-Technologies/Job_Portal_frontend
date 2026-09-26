@@ -1,7 +1,7 @@
 export default function EmployerTable({ employers = [], onSelectEmployer }) {
   if (!employers || employers.length === 0) {
     return (
-      <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs">
+      <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -40,7 +40,7 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs">
+    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -55,7 +55,13 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm font-bold text-slate-800">
             {employers.map((emp) => {
-              const locationPath = emp.location?.full_path || emp.company_address || 'Tamil Nadu';
+              const locationState = emp.location?.state || 
+                                    (emp.location?.full_path ? emp.location.full_path.split('->')[0].trim() : null) || 
+                                    (emp.company_address ? emp.company_address.split('->')[0].trim() : null) || 
+                                    emp.location?.name || 
+                                    'All Locations';
+              const companyInitial = emp.company_name ? emp.company_name.charAt(0).toUpperCase() : (emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E');
+              
               return (
                 <tr 
                   key={emp.id} 
@@ -64,9 +70,17 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-extrabold text-base shrink-0">
-                        {emp.company_name ? emp.company_name.charAt(0).toUpperCase() : (emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E')}
-                      </div>
+                      {emp.company_logo ? (
+                        <img 
+                          src={emp.company_logo} 
+                          alt={emp.company_name || 'Logo'} 
+                          className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" 
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-extrabold text-base shrink-0">
+                          {companyInitial}
+                        </div>
+                      )}
                       <div>
                         <p className="font-extrabold text-slate-900 leading-snug">{emp.company_name || emp.full_name}</p>
                         <p className="text-xs text-slate-500 font-medium">{emp.company_email || emp.email}</p>
@@ -74,10 +88,16 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold text-slate-600 max-w-[200px] truncate">
-                    {locationPath}
+                    {locationState}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-amber-700 text-[10px] font-extrabold uppercase">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                      emp.verification_status === 'APPROVED' 
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' 
+                        : emp.verification_status === 'REJECTED' 
+                        ? 'bg-rose-50 border border-rose-200 text-rose-700' 
+                        : 'bg-amber-50 border border-amber-200 text-amber-700'
+                    }`}>
                       {emp.verification_status || 'PENDING'}
                     </span>
                   </td>
@@ -90,9 +110,16 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
                     {emp.designation || 'HR Manager'}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-xs font-extrabold text-teal-600 hover:text-teal-800">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onSelectEmployer) onSelectEmployer(emp);
+                      }}
+                      className="text-xs font-extrabold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer"
+                    >
                       View
-                    </span>
+                    </button>
                   </td>
                 </tr>
               );

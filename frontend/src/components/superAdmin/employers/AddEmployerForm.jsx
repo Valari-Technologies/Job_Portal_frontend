@@ -4,6 +4,18 @@ import { Upload, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { createEmployerService } from '../../../services/superAdmin/superAdminService';
 import { fetchLocations } from '../../../services/superAdmin/locationService';
 
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (typeof file === 'string') return resolve(file);
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AddEmployerForm() {
   const navigate = useNavigate();
 
@@ -201,9 +213,23 @@ export default function AddEmployerForm() {
 
     setIsSubmitting(true);
     try {
+      const selectedStateObj = states.find(s => String(s.id) === String(formState.stateId));
+      const selectedDistrictObj = districts.find(d => String(d.id) === String(formState.districtId));
+      const selectedCityObj = cities.find(c => String(c.id) === String(formState.cityId));
+      const selectedLocalityObj = localities.find(l => String(l.id) === String(formState.localityId));
+
+      const locationAddressStr = [
+        selectedLocalityObj?.name,
+        selectedCityObj?.name,
+        selectedDistrictObj?.name,
+        selectedStateObj?.name
+      ].filter(Boolean).join(', ');
+
       const selectedLocationId = formState.localityId || formState.cityId || formState.districtId || formState.stateId || null;
+      const logoDataUrl = formState.companyLogo ? await fileToDataUrl(formState.companyLogo) : null;
 
       const payload = {
+        company_logo: logoDataUrl,
         account_email: formState.accountEmail.trim(),
         password: formState.password,
         confirmPassword: formState.confirmPassword,
@@ -215,6 +241,7 @@ export default function AddEmployerForm() {
         company_phone: formState.companyPhone.trim(),
         company_email: formState.companyEmail.trim(),
         website: formState.website.trim() || null,
+        company_address: locationAddressStr || null,
         location_id: selectedLocationId ? Number(selectedLocationId) : null,
         verification_status: 'PENDING',
         trust_level: 'NEW'

@@ -9,6 +9,14 @@ export async function fetchEmployerProfileService() {
       throw new Error(`Failed to fetch employer profile: ${response.statusText}`);
     }
     const data = await response.json();
+    try {
+      const userStr = localStorage.getItem('auth_user');
+      const user = userStr ? JSON.parse(userStr) : {};
+      const updatedUser = { ...user, ...data };
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+    } catch {
+      // ignore
+    }
     return data;
   } catch (error) {
     console.error("fetchEmployerProfileService error:", error);
@@ -16,22 +24,33 @@ export async function fetchEmployerProfileService() {
   }
 }
 
-export function getRecruiterCompanyProfileData() {
+export function getRecruiterCompanyProfileData(dataFromApi = null) {
   try {
     const userStr = localStorage.getItem('auth_user');
     const user = userStr ? JSON.parse(userStr) : null;
+    const data = dataFromApi || user || {};
+
+    const loc = data.location;
+    let locationStr = data.company_address || null;
+    if (!locationStr && loc) {
+      if (typeof loc === 'string') locationStr = loc;
+      else if (typeof loc === 'object') locationStr = loc.full_path || [loc.name, loc.district, loc.state].filter(Boolean).join(', ');
+    }
+
     return {
-      id: user?.id || null,
-      company_name: user?.company_name || "",
-      company_description: user?.company_description || "",
-      company_logo: user?.company_logo || null,
-      company_phone: user?.company_phone || user?.phone_number || "",
-      company_email: user?.company_email || user?.email || "",
-      website: user?.company_website || user?.website || "",
-      location: user?.company_address || user?.location || null,
-      verification_status: user?.verification_status || "PENDING",
-      trust_level: user?.trust_level || "NEW",
-      designation: user?.designation || "",
+      id: data.id || data.user_id || null,
+      company_name: data.company_name || "",
+      company_description: data.company_description || "",
+      company_logo: data.company_logo || data.logo || null,
+      company_phone: data.company_phone || data.phone_number || "",
+      company_email: data.company_email || data.email || "",
+      website: data.company_website || data.website || "",
+      company_website: data.company_website || data.website || "",
+      location: locationStr,
+      company_address: locationStr,
+      verification_status: data.verification_status || "PENDING",
+      trust_level: data.trust_level || "NEW",
+      designation: data.designation || "",
       active_jobs_count: 0,
       recruiting_team: []
     };
@@ -44,7 +63,9 @@ export function getRecruiterCompanyProfileData() {
       company_phone: "",
       company_email: "",
       website: "",
+      company_website: "",
       location: null,
+      company_address: null,
       verification_status: "PENDING",
       trust_level: "NEW",
       designation: "",

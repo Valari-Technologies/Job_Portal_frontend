@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getCurrentRecruiterProfile, updateCurrentRecruiterProfile, uploadRecruiterProfilePhoto, removeRecruiterProfilePhoto } from '../services/recruiter/recruiterProfileService';
+import { getCurrentRecruiterProfile, updateCurrentRecruiterProfile, uploadRecruiterProfilePhoto, removeRecruiterProfilePhoto, buildProfileFromData } from '../services/recruiter/recruiterProfileService';
 import { getRecruiterNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/recruiter/recruiterNotificationsService';
 
 const RecruiterUserContext = createContext(null);
@@ -36,26 +36,17 @@ const defaultFallbackContext = {
 };
 
 export function RecruiterUserProvider({ children }) {
-  const [profile, setProfile] = useState({
-    identity: {
-      fullName: "Jane Doe",
-      email: "jane.doe@company.com",
-      mobileNumber: "+91 98765 43210",
-      mobileVerified: true,
-      role: "RECRUITER",
-      accountStatus: "Active",
-      lastLoginAt: "2026-09-03T09:30:00Z"
-    },
-    recruiterProfile: {
-      profilePhotoUrl: null,
-      designation: "Senior Talent Acquisition Manager",
-      department: "Human Resources"
-    },
-    companySummary: {
-      id: "comp_101",
-      name: "State Jobz Technologies",
-      verificationStatus: "Verified"
+  const [profile, setProfile] = useState(() => {
+    try {
+      const userStr = localStorage.getItem('auth_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return buildProfileFromData(user);
+      }
+    } catch {
+      // fallback
     }
+    return defaultFallbackContext.profile;
   });
 
   const [notifications, setNotifications] = useState([]);
@@ -122,7 +113,9 @@ export function RecruiterUserProvider({ children }) {
   // Update profile handler
   const handleUpdateProfile = async (changes) => {
     const res = await updateCurrentRecruiterProfile(changes);
-    if (res.success) {
+    if (res.success && res.data) {
+      setProfile(res.data);
+    } else {
       setProfile((prev) => ({
         ...prev,
         identity: {
@@ -149,6 +142,10 @@ export function RecruiterUserProvider({ children }) {
         recruiterProfile: {
           ...prev.recruiterProfile,
           profilePhotoUrl: res.profilePhotoUrl
+        },
+        companySummary: {
+          ...prev.companySummary,
+          logo: res.profilePhotoUrl
         }
       }));
     }
@@ -164,6 +161,10 @@ export function RecruiterUserProvider({ children }) {
         recruiterProfile: {
           ...prev.recruiterProfile,
           profilePhotoUrl: null
+        },
+        companySummary: {
+          ...prev.companySummary,
+          logo: null
         }
       }));
     }

@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import CompanyProfileHeader from '../../components/recruiter/companyProfile/CompanyProfileHeader';
 import CompanySummaryCard from '../../components/recruiter/companyProfile/CompanySummaryCard';
 import CompanyContactCard from '../../components/recruiter/companyProfile/CompanyContactCard';
 import CompanyAboutCard from '../../components/recruiter/companyProfile/CompanyAboutCard';
 import RecruitingTeamSection from '../../components/recruiter/companyProfile/RecruitingTeamSection';
-import { getRecruiterCompanyProfileData } from '../../services/recruiter/recruiterCompanyService';
+import { getRecruiterCompanyProfileData, fetchEmployerProfileService } from '../../services/recruiter/recruiterCompanyService';
 
 export default function RecruiterCompanyProfile() {
-  const [profile] = useState(() => getRecruiterCompanyProfileData());
+  const [profile, setProfile] = useState(() => getRecruiterCompanyProfileData());
+
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      const data = await fetchEmployerProfileService();
+      if (active && data) {
+        setProfile(getRecruiterCompanyProfileData(data));
+      }
+    }
+    loadData();
+    return () => { active = false; };
+  }, []);
 
   return (
     <RecruiterLayout activeTab="company-profile">
@@ -29,7 +41,7 @@ export default function RecruiterCompanyProfile() {
         {/* 3. About Us Section */}
         <CompanyAboutCard description={profile.company_description} />
 
-        {/* 4. Recruiting Team Section (Rendered ONLY if team members exist) */}
+        {/* 4. Recruiting Team Section */}
         <RecruitingTeamSection team={profile.recruiting_team} />
       </main>
     </RecruiterLayout>

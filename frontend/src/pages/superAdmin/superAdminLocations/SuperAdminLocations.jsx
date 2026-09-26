@@ -97,13 +97,14 @@ export default function SuperAdminLocations() {
             </div>
           ) : (
             <LocationHierarchy 
-              locations={filteredLocations}
+              locations={locations}
               selectedLocation={selectedLocation}
               onSelectLocation={setSelectedLocation}
+              searchTerm={searchTerm}
             />
           )}
           <div className="text-sm font-bold text-slate-500">
-            Showing {filteredLocations.length} of {locations.length} locations
+            Total configured locations: {locations.length}
           </div>
         </div>
 
@@ -111,6 +112,7 @@ export default function SuperAdminLocations() {
         <div className="space-y-6">
           <LocationDetailsPanel 
             selectedLocation={selectedLocation}
+            allLocations={locations}
           />
         </div>
       </div>

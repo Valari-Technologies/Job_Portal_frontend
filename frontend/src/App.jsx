@@ -27,6 +27,7 @@ import SuperAdminAddEmployer from './pages/superAdmin/SuperAdminAddEmployer';
 import SuperAdminAddCategory from './pages/superAdmin/SuperAdminAddCategory';
 import SuperAdminAddLocation from './pages/superAdmin/SuperAdminAddLocation';
 import SuperAdminAddSkill from './pages/superAdmin/SuperAdminAddSkill';
+import AdminPortalLogin from './pages/auth/AdminPortalLogin';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -300,19 +301,8 @@ export default function App() {
         <Route path="/recruiter/my-profile" element={<Navigate to="/recruiter/profile" replace />} />
       </Route>
 
-      {/* Admin Portal Login / Super Admin Route */}
-      <Route 
-        path="/admin" 
-        element={
-          <SuperAdminRouteGuard renderLoginWhenUnauthenticated={true}>
-            <SuperAdminOverview 
-              globalDetailsRecord={globalDetailsRecord} 
-              setGlobalDetailsRecord={setGlobalDetailsRecord}
-              onToast={handleToast}
-            />
-          </SuperAdminRouteGuard>
-        } 
-      />
+      {/* Admin Portal Login Route */}
+      <Route path="/admin" element={<AdminPortalLogin />} />
       <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
 
       {/* Persistent Admin Layout routing container */}
@@ -424,30 +414,21 @@ function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const token = localStorage.getItem('access_token');
-  const userStr = localStorage.getItem('auth_user');
-  let user;
-  try {
-    user = userStr ? JSON.parse(userStr) : null;
-  } catch {
-    user = null;
-  }
-  const role = user?.role || localStorage.getItem('auth_role');
+  const isSuperAdminRoute = currentPath.startsWith('/super-admin');
 
-  const isSuperAdminRoute = currentPath === '/admin' || currentPath.startsWith('/super-admin');
-  const isSuperAdminAuthenticated = Boolean(token && user && role === 'SUPER_ADMIN');
-
-  if (isSuperAdminRoute && isSuperAdminAuthenticated) {
+  if (isSuperAdminRoute) {
     return (
       <SuperAdminUserProvider>
-        <SuperAdminLayout 
-          onToast={handleToast} 
-          notifications={notifications}
-          setNotifications={setNotifications}
-          onOpenDrawerDetails={setGlobalDetailsRecord}
-        >
-          {routeContent}
-        </SuperAdminLayout>
+        <SuperAdminRouteGuard>
+          <SuperAdminLayout 
+            onToast={handleToast} 
+            notifications={notifications}
+            setNotifications={setNotifications}
+            onOpenDrawerDetails={setGlobalDetailsRecord}
+          >
+            {routeContent}
+          </SuperAdminLayout>
+        </SuperAdminRouteGuard>
       </SuperAdminUserProvider>
     );
   }

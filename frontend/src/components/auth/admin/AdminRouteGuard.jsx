@@ -13,11 +13,11 @@ export default function AdminRouteGuard({ children }) {
   const status = user?.status || 'ACTIVE';
 
   if (!token || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   if (role === 'SUPER_ADMIN') {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/super-admin/overview" replace />;
   }
 
   if (role === 'HR') {
@@ -29,7 +29,7 @@ export default function AdminRouteGuard({ children }) {
   }
 
   if (role !== 'ADMIN' || status !== 'ACTIVE') {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   return children ? children : <Outlet />;

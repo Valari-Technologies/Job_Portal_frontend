@@ -1,3 +1,6 @@
+import { useState, useEffect } from 'react';
+import { fetchLocations } from '../../../services/superAdmin/locationService';
+
 export default function EmployerFilters({ 
   selectedState, 
   setSelectedState, 
@@ -8,8 +11,20 @@ export default function EmployerFilters({
   jobStatus, 
   setJobStatus 
 }) {
+  const [states, setStates] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadStates() {
+      const data = await fetchLocations({ location_type: 'STATE' });
+      if (active) setStates(data);
+    }
+    loadStates();
+    return () => { active = false; };
+  }, []);
+
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
+    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs font-sans">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {/* State */}
         <div className="space-y-2">
@@ -22,7 +37,12 @@ export default function EmployerFilters({
             onChange={(e) => setSelectedState(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
           >
-            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="All">All States</option>
+            {states.map((st) => (
+              <option key={st.id || st.name} value={st.name}>
+                {st.name}
+              </option>
+            ))}
           </select>
         </div>
 

@@ -181,6 +181,8 @@ export async function createEmployerService(payload) {
         company_website: payload.website || payload.company_website,
         company_address: payload.company_address || [payload.locality, payload.city, payload.district, payload.state].filter(Boolean).join(', '),
         company_description: payload.company_description,
+        company_logo: payload.company_logo,
+        location_id: payload.location_id,
         designation: payload.designation,
         phone_number: payload.mobile_number || payload.phone_number,
       }),

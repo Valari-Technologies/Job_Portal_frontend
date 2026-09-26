@@ -120,15 +120,15 @@ export default function AdminPortalLoginForm() {
       if (response.success) {
         const role = response.role;
         if (role === 'SUPER_ADMIN') {
-          navigate('/admin', { replace: true });
+          window.location.href = '/super-admin/overview';
         } else if (role === 'ADMIN') {
-          navigate('/admin/dashboard', { replace: true });
-        } else if (role === 'HR') {
-          navigate('/recruiter/dashboard', { replace: true });
-        } else if (role === 'CANDIDATE') {
-          navigate('/candidate/dashboard', { replace: true });
+          window.location.href = '/admin/dashboard';
         } else {
-          triggerAuthError('Unauthorized account role.');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('auth_user');
+          localStorage.removeItem('auth_role');
+          triggerAuthError('Access denied. Candidate and HR users must log in at /login.');
         }
       } else {
         triggerAuthError(response.message || 'Invalid email or password.');

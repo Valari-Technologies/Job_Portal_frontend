@@ -5,11 +5,6 @@ import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/
 import EmployerTable from '../../../components/superAdmin/superAdminEmployers/EmployerTable';
 import EmployerSidePanel from '../../../components/superAdmin/superAdminEmployers/EmployerSidePanel';
 
-// TODO: Replace empty employers array with Django API:
-// GET /api/admin/employers/
-// Data source: users, employers, employer_verifications,
-// employer_trust, jobs and locations.
-
 export default function SuperAdminEmployers() {
   const navigate = useNavigate();
   const [employers, setEmployers] = useState([]);
@@ -22,6 +17,14 @@ export default function SuperAdminEmployers() {
   const [trustLevel, setTrustLevel] = useState('All');
   const [jobStatus, setJobStatus] = useState('All');
 
+  // Selected Employer for detail panel
+  const [selectedEmployer, setSelectedEmployer] = useState(null);
+
+  // Side Drawer details trigger
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelType, setPanelType] = useState('EMPTY_PROFILE');
+  const [panelTitle, setPanelTitle] = useState('');
+
   const loadEmployers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -31,6 +34,9 @@ export default function SuperAdminEmployers() {
         verification_status: verificationStatus,
       });
       setEmployers(data);
+      if (data.length > 0 && !selectedEmployer) {
+        setSelectedEmployer(data[0]);
+      }
     } catch (err) {
       console.error("Failed to fetch employers:", err);
     } finally {
@@ -48,70 +54,73 @@ export default function SuperAdminEmployers() {
     if (el) el.focus();
   };
 
-  // Side Drawer details trigger
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [panelType, setPanelType] = useState('EMPTY_PROFILE');
-  const [panelTitle, setPanelTitle] = useState('Employer Workspace');
-
   const handleOpenSignal = (type, title) => {
     setPanelType(type);
     setPanelTitle(title);
     setPanelOpen(true);
   };
 
+  const handleSelectEmployer = (emp) => {
+    setSelectedEmployer(emp);
+    setPanelType('EMPLOYER_DETAILS');
+    setPanelTitle(emp.company_name || emp.full_name);
+    setPanelOpen(true);
+  };
+
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Page Header */}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-6 font-sans">
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-805 tracking-tight">Employer management</h1>
-          <p className="text-base font-bold text-slate-500 mt-1.5">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">
+            Employer management
+          </h1>
+          <p className="mt-1 text-sm font-bold text-slate-500">
             Monitor employers, verification and trust status.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search Input */}
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg className="h-4.5 w-4.5 text-slate-450" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 sm:w-64">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
               type="text"
-              placeholder="Search company / email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-850 focus:border-teal-500 focus:outline-none"
+              placeholder="Search company / email"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9.5 pr-4 text-xs font-bold text-slate-800 placeholder-slate-400 shadow-2xs focus:border-teal-500 focus:outline-none transition-colors"
             />
           </div>
 
           <button
             onClick={handleFiltersToggle}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-extrabold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <svg className="h-4.5 w-4.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <span>Filters</span>
           </button>
 
-          <button
-            disabled
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed"
+          <button 
+            disabled 
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-400 shadow-2xs cursor-not-allowed"
           >
-            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Export</span>
           </button>
 
-          <button
+          <button 
             onClick={() => navigate('/super-admin/employers/create')}
-            aria-label="Add employer"
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-colors cursor-pointer"
           >
-            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
             </svg>
             <span>Add employer</span>
@@ -119,7 +128,7 @@ export default function SuperAdminEmployers() {
         </div>
       </div>
 
-      {/* Dropdown Filters */}
+      {/* Filters section */}
       <EmployerFilters
         selectedState={selectedState}
         setSelectedState={setSelectedState}
@@ -131,26 +140,36 @@ export default function SuperAdminEmployers() {
         setJobStatus={setJobStatus}
       />
 
-      {/* Grid Dashboard items */}
+      {/* Main Layout Content */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Table main */}
-        <div className="lg:col-span-2 space-y-6">
-          <EmployerTable employers={employers} />
+        {/* Table column */}
+        <div className="lg:col-span-2 space-y-4">
+          {isLoading ? (
+            <div className="w-full bg-white rounded-2xl border border-slate-150 p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent align-[-0.125em]"></div>
+              <p className="mt-3 text-sm font-bold text-slate-500">Loading employers...</p>
+            </div>
+          ) : (
+            <EmployerTable 
+              employers={employers} 
+              onSelectEmployer={handleSelectEmployer} 
+            />
+          )}
 
           <div className="flex items-center justify-between text-sm font-bold text-slate-500">
-            <span>Showing 1 to {employers.length} of {employers.length} employers</span>
+            <span>Showing {employers.length > 0 ? 1 : 0} to {employers.length} of {employers.length} employers</span>
           </div>
 
           {/* Progressive trust model card */}
           <div className="rounded-2xl border border-slate-150 bg-white p-5 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-3.5">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-50 text-teal-600 shrink-0">
-                <svg className="h-5.5 w-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4" />
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <div className="space-y-0.5">
-                <h4 className="text-base font-extrabold text-slate-800">Progressive trust model</h4>
+              <div>
+                <h4 className="text-base font-extrabold text-slate-850">Progressive trust model</h4>
                 <p className="text-sm font-bold text-slate-500">
                   Employers build trust over time based on document verification, job quality, compliance, and platform activity.
                 </p>
@@ -187,7 +206,9 @@ export default function SuperAdminEmployers() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
+                  <span className="text-base font-extrabold text-slate-800">
+                    {employers.filter(e => e.verification_status === 'PENDING').length}
+                  </span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
@@ -233,7 +254,9 @@ export default function SuperAdminEmployers() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
+                  <span className="text-base font-extrabold text-slate-800">
+                    {employers.filter(e => e.trust_level === 'TRUSTED').length}
+                  </span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
@@ -242,32 +265,66 @@ export default function SuperAdminEmployers() {
             </div>
           </div>
 
-          {/* Selected Employer preview */}
-          <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs text-center py-12 space-y-4">
-            <div className="h-12 w-12 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
-              </svg>
+          {/* Selected Employer preview card */}
+          {selectedEmployer ? (
+            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
+              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
+                {selectedEmployer.company_logo ? (
+                  <img src={selectedEmployer.company_logo} alt="" className="h-12 w-12 rounded-xl object-cover border border-slate-200 shrink-0" />
+                ) : (
+                  <div className="h-12 w-12 rounded-xl bg-teal-50 border border-teal-100 text-teal-700 font-extrabold text-lg flex items-center justify-center shrink-0">
+                    {(selectedEmployer.company_name || selectedEmployer.full_name || 'E').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-base font-extrabold text-slate-900 truncate">{selectedEmployer.company_name || selectedEmployer.full_name}</h4>
+                  <p className="text-xs text-slate-500 font-medium truncate">{selectedEmployer.company_email || selectedEmployer.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs font-semibold text-slate-700">
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Designation</span>
+                  <span className="font-extrabold text-slate-800">{selectedEmployer.designation || 'HR Manager'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Location</span>
+                  <span className="font-extrabold text-slate-800 truncate max-w-[180px]">{selectedEmployer.location?.full_path || selectedEmployer.location?.name || selectedEmployer.company_address || 'All Locations'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Verification</span>
+                  <span className="font-extrabold uppercase text-amber-700">{selectedEmployer.verification_status || 'PENDING'}</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => handleSelectEmployer(selectedEmployer)}
+                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs py-3 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
+              >
+                View full profile
+              </button>
             </div>
-            <div className="space-y-1.5">
-              <h4 className="text-base font-extrabold text-slate-800">No employer selected</h4>
-              <p className="text-sm font-bold text-slate-500">
-                Select an employer from the list to view verification, trust and job activity.
-              </p>
+          ) : (
+            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs text-center py-12 space-y-4">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
+                </svg>
+              </div>
+              <div className="space-y-1.5">
+                <h4 className="text-base font-extrabold text-slate-800">No employer selected</h4>
+                <p className="text-sm font-bold text-slate-500">
+                  Select an employer from the list to view verification, trust and job activity.
+                </p>
+              </div>
+              <button 
+                disabled 
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed"
+              >
+                View full profile
+              </button>
             </div>
-            <div className="border-t border-slate-100 pt-4 text-left space-y-2">
-              <span className="text-xs font-black text-slate-500 block uppercase">Trust progress</span>
-              <p className="text-xs font-bold text-slate-450 leading-relaxed">
-                Trust progress will appear after employer verification and platform activity.
-              </p>
-            </div>
-            <button 
-              disabled 
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed"
-            >
-              View full profile
-            </button>
-          </div>
+          )}
 
           {/* Recent Approved Jobs Card */}
           <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
@@ -296,6 +353,7 @@ export default function SuperAdminEmployers() {
         onClose={() => setPanelOpen(false)}
         panelType={panelType}
         panelTitle={panelTitle}
+        selectedEmployer={selectedEmployer}
       />
     </div>
   );

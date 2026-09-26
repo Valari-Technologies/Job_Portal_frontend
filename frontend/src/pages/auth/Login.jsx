@@ -1,10 +1,31 @@
 import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
 import { loginAdmin } from '../../services/auth/adminAuthService';
 
 export default function Login() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const userStr = localStorage.getItem('auth_user');
+    let user;
+    try {
+      user = userStr ? JSON.parse(userStr) : null;
+    } catch {
+      user = null;
+    }
+    const role = user?.role || localStorage.getItem('auth_role');
+
+    if (token && user) {
+      if (role === 'HR') {
+        navigate('/recruiter/dashboard', { replace: true });
+      } else if (role === 'CANDIDATE') {
+        navigate('/candidate/dashboard', { replace: true });
+      }
+    }
+  }, [navigate]);
   const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,14 +143,16 @@ export default function Login() {
 
         if (response.success) {
           const role = response.role;
-          if (role === 'SUPER_ADMIN') {
-            window.location.href = '/admin';
-          } else if (role === 'ADMIN') {
-            window.location.href = '/admin/dashboard';
-          } else if (role === 'HR') {
+          if (role === 'HR') {
             window.location.href = '/recruiter/dashboard';
           } else if (role === 'CANDIDATE') {
             window.location.href = '/candidate/dashboard';
+          } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_role');
+            triggerAuthError('Access denied. Super Admin and Admin users must log in at /admin.');
           } else {
             triggerAuthError('Unauthorized account role.');
           }

@@ -1,4 +1,14 @@
-export default function LocationDetailsPanel({ selectedLocation }) {
+export default function LocationDetailsPanel({ selectedLocation, allLocations = [] }) {
+  // Helper to look up parent location name
+  const getParentName = () => {
+    if (!selectedLocation) return 'None';
+    const parentVal = selectedLocation.parent_id !== undefined ? selectedLocation.parent_id : selectedLocation.parent;
+    if (parentVal === null || parentVal === undefined) return 'None';
+    if (typeof parentVal === 'object') return parentVal.name || 'None';
+    const parentObj = allLocations.find(l => l.id === Number(parentVal));
+    return parentObj ? `${parentObj.name} (${parentObj.location_type})` : `ID: ${parentVal}`;
+  };
+
   return (
     <div className="rounded-2xl border border-slate-155 bg-white p-6 shadow-2xs">
       <h3 className="text-base font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-6">Location details</h3>
@@ -13,14 +23,21 @@ export default function LocationDetailsPanel({ selectedLocation }) {
             </div>
             <div>
               <h4 className="text-base font-extrabold text-slate-800 leading-snug">{selectedLocation.name}</h4>
-              <span className="text-xs font-bold text-slate-450 uppercase">{selectedLocation.location_type}</span>
+              <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">{selectedLocation.location_type}</span>
             </div>
           </div>
 
+          {selectedLocation.full_path && (
+            <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs font-medium text-slate-600">
+              <span className="text-[10px] font-black text-slate-400 uppercase block mb-0.5">Hierarchy Path</span>
+              <span className="font-bold text-slate-800">{selectedLocation.full_path}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4.5">
             <div className="space-y-1">
-              <span className="text-xs font-black text-slate-450 uppercase block">Parent ID</span>
-              <span className="font-bold text-slate-805">{selectedLocation.parent_id || 'None'}</span>
+              <span className="text-xs font-black text-slate-450 uppercase block">Parent Location</span>
+              <span className="font-bold text-slate-805">{getParentName()}</span>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-black text-slate-450 uppercase block">Jobs / Candidates</span>
@@ -41,12 +58,6 @@ export default function LocationDetailsPanel({ selectedLocation }) {
               Select a location from the hierarchy to view its parent path, status and future job/candidate activity.
             </p>
           </div>
-          <button 
-            disabled 
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed mt-4"
-          >
-            Edit location
-          </button>
         </div>
       )}
     </div>
