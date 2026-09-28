@@ -7,15 +7,29 @@ export default function AdminPortalLogin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userStr = localStorage.getItem('auth_user');
-    let user;
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch {
-      user = null;
+    const adminToken = localStorage.getItem('admin_access_token');
+    const adminUserStr = localStorage.getItem('admin_auth_user');
+    let adminUser = null;
+    if (adminUserStr) {
+      try {
+        adminUser = JSON.parse(adminUserStr);
+      } catch {
+        adminUser = null;
+      }
     }
-    const role = user?.role || localStorage.getItem('auth_role');
+
+    const token = adminToken || localStorage.getItem('access_token');
+    let user = adminUser;
+    if (!user) {
+      const userStr = localStorage.getItem('auth_user');
+      try {
+        user = userStr ? JSON.parse(userStr) : null;
+      } catch {
+        user = null;
+      }
+    }
+
+    const role = user?.role || localStorage.getItem('admin_auth_role') || localStorage.getItem('auth_role');
 
     if (token && user) {
       if (role === 'SUPER_ADMIN') {
@@ -39,15 +53,14 @@ export default function AdminPortalLogin() {
       {/* Decorative Corner Ambient Glow */}
       <div 
         aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-200/30 blur-3xl z-0" 
+        className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"
       />
       <div 
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-purple-200/30 blur-3xl z-0" 
+        className="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"
       />
 
-      {/* Centered Login Card Container */}
-      <div className="relative z-10 w-full flex items-center justify-center">
+      <div className="relative z-10 w-full max-w-md">
         <AdminPortalLoginForm />
       </div>
     </main>

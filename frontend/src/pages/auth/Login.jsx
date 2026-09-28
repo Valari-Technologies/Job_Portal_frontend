@@ -8,15 +8,29 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userStr = localStorage.getItem('auth_user');
-    let user;
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch {
-      user = null;
+    const publicToken = localStorage.getItem('public_access_token');
+    const publicUserStr = localStorage.getItem('public_auth_user');
+    let publicUser = null;
+    if (publicUserStr) {
+      try {
+        publicUser = JSON.parse(publicUserStr);
+      } catch {
+        publicUser = null;
+      }
     }
-    const role = user?.role || localStorage.getItem('auth_role');
+
+    const token = publicToken || localStorage.getItem('access_token');
+    let user = publicUser;
+    if (!user) {
+      const userStr = localStorage.getItem('auth_user');
+      try {
+        user = userStr ? JSON.parse(userStr) : null;
+      } catch {
+        user = null;
+      }
+    }
+
+    const role = user?.role || localStorage.getItem('public_auth_role') || localStorage.getItem('auth_role');
 
     if (token && user) {
       if (role === 'HR') {

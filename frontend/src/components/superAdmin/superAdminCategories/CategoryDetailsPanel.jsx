@@ -1,4 +1,4 @@
-export default function CategoryDetailsPanel({ selectedCategory }) {
+export default function CategoryDetailsPanel({ selectedCategory, onEditCategory, onToggleStatus }) {
   return (
     <div className="space-y-6">
       {/* Detail card */}
@@ -15,19 +15,51 @@ export default function CategoryDetailsPanel({ selectedCategory }) {
               </div>
               <div>
                 <h4 className="text-base font-extrabold text-slate-800 leading-snug">{selectedCategory.name}</h4>
-                <span className="text-xs font-bold text-slate-450 uppercase">Active</span>
+                <span className={`text-xs font-bold uppercase ${selectedCategory.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  {selectedCategory.is_active ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4.5">
-              <div className="space-y-1">
-                <span className="text-xs font-black text-slate-450 uppercase block">Parent Category</span>
-                <span className="font-bold text-slate-800">{selectedCategory.parent_id || 'None'}</span>
+            <div className="space-y-3 border-t border-slate-100 pt-4.5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs font-black text-slate-450 uppercase block">Parent category</span>
+                  <span className="font-bold text-slate-800">{selectedCategory.parent_name || 'None (Top Level)'}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-black text-slate-450 uppercase block">Sort order</span>
+                  <span className="font-bold text-slate-800">{selectedCategory.sort_order !== undefined ? selectedCategory.sort_order : 0}</span>
+                </div>
               </div>
-              <div className="space-y-1">
-                <span className="text-xs font-black text-slate-450 uppercase block">Linked Jobs</span>
-                <span className="font-bold text-slate-800">0 active</span>
-              </div>
+
+              {selectedCategory.description && (
+                <div className="space-y-1 pt-2">
+                  <span className="text-xs font-black text-slate-450 uppercase block">Description</span>
+                  <p className="text-xs font-medium text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    {selectedCategory.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-3 border-t border-slate-100">
+              <button 
+                onClick={() => onEditCategory && onEditCategory(selectedCategory)}
+                className="flex-1 rounded-xl bg-teal-600 hover:bg-teal-700 py-2.5 text-xs font-extrabold text-white transition-colors cursor-pointer shadow-xs"
+              >
+                Edit category
+              </button>
+              <button 
+                onClick={() => onToggleStatus && onToggleStatus(selectedCategory)}
+                className={`flex-1 rounded-xl border py-2.5 text-xs font-extrabold transition-colors cursor-pointer ${
+                  selectedCategory.is_active 
+                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' 
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                }`}
+              >
+                {selectedCategory.is_active ? 'Deactivate' : 'Activate'}
+              </button>
             </div>
           </div>
         ) : (
@@ -40,7 +72,7 @@ export default function CategoryDetailsPanel({ selectedCategory }) {
             <div className="space-y-1.5">
               <h4 className="text-base font-extrabold text-slate-800">No category selected</h4>
               <p className="text-sm font-bold text-slate-500 max-w-xs mx-auto leading-normal">
-                Select a category from the hierarchy to view its parent, subcategories, linked jobs and visibility details.
+                Select a category from the list to view its details, description, hierarchy and actions.
               </p>
             </div>
             <button 
@@ -55,21 +87,23 @@ export default function CategoryDetailsPanel({ selectedCategory }) {
 
       {/* Category health */}
       <div className="rounded-2xl border border-slate-155 bg-white p-6 shadow-2xs space-y-4">
-        <h3 className="text-base font-extrabold text-slate-850 border-b border-slate-100 pb-3">Category health</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-bold text-slate-700">Uncategorized jobs</span>
-            <span className="font-extrabold text-slate-800">0</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-bold text-slate-700">Review needed</span>
-            <span className="font-extrabold text-slate-800">0</span>
-          </div>
-          <p className="text-xs font-bold text-slate-450 leading-normal pt-2">
-            Category health insights will appear after jobs and categories are available.
-          </p>
-        </div>
+        <h3 className="text-base font-extrabold text-slate-855 border-b border-slate-100 pb-3">Category taxonomy principles</h3>
+        <ul className="text-xs font-semibold text-slate-500 space-y-2.5">
+          <li className="flex items-start gap-2">
+            <span className="text-teal-600 font-bold">•</span>
+            <span>Categories structure job discovery, filters, and employer job posting.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-teal-600 font-bold">•</span>
+            <span>Sub-categories belong to top-level parent categories without circular references.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-teal-600 font-bold">•</span>
+            <span>Categories with referenced jobs or active sub-categories cannot be hard-deleted.</span>
+          </li>
+        </ul>
       </div>
     </div>
   );
 }
+

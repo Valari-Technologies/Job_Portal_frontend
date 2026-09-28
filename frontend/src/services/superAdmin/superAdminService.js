@@ -218,9 +218,10 @@ export async function createEmployerService(payload) {
   }
 }
 
+import { createCategory, createSkill } from './categorySkillService';
+
 export async function createCategoryService(payload) {
-  console.log("Future Create Category POST payload:", payload);
-  return { success: true };
+  return await createCategory(payload);
 }
 
 export async function createLocationService(payload) {
@@ -229,6 +230,5 @@ export async function createLocationService(payload) {
 }
 
 export async function createSkillService(payload) {
-  console.log("Future Create Skill POST payload:", payload);
-  return { success: true };
+  return await createSkill(payload);
 }

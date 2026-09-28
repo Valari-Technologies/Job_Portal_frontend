@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSkillService } from '../../../services/superAdmin/superAdminService';
+import { createSkill, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
 
 export default function AddSkillForm() {
   const navigate = useNavigate();
+
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const [formState, setFormState] = useState({
     skillName: '',
@@ -12,13 +15,27 @@ export default function AddSkillForm() {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function loadCategories() {
+      setLoadingCategories(true);
+      const list = await fetchAllCategoriesForSelect();
+      setCategoryOptions(list);
+      setLoadingCategories(false);
+    }
+    loadCategories();
+  }, []);
 
   const validate = () => {
     const newErrors = {};
 
-    if (!formState.skillName.trim()) {
+    const name = formState.skillName.trim();
+    if (!name) {
       newErrors.skillName = 'Skill Name is required.';
+    } else if (name.length < 2) {
+      newErrors.skillName = 'Skill Name must be at least 2 characters long.';
     }
 
     if (!formState.status) {
@@ -31,6 +48,8 @@ export default function AddSkillForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError(null);
+
     if (!validate()) {
       setTimeout(() => {
         const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] select');
@@ -43,16 +62,25 @@ export default function AddSkillForm() {
     try {
       const payload = {
         name: formState.skillName.trim(),
-        category_id: formState.category || null,
+        category_id: formState.category ? Number(formState.category) : null,
         is_active: formState.status === 'Active'
       };
 
-      const res = await createSkillService(payload);
+      const res = await createSkill(payload);
       if (res.success) {
         navigate('/super-admin/skills');
+      } else {
+        setServerError(res.message || 'Failed to create skill.');
+        if (res.errors) {
+          const apiErrors = {};
+          if (res.errors.name) apiErrors.skillName = Array.isArray(res.errors.name) ? res.errors.name[0] : res.errors.name;
+          if (res.errors.category) apiErrors.category = Array.isArray(res.errors.category) ? res.errors.category[0] : res.errors.category;
+          setErrors(apiErrors);
+        }
       }
     } catch (err) {
       console.error("Failed to create skill", err);
+      setServerError('An unexpected error occurred while saving the skill.');
     } finally {
       setIsSubmitting(false);
     }
@@ -67,6 +95,12 @@ export default function AddSkillForm() {
         </p>
       </div>
 
+      {serverError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-bold">
+          {serverError}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border border-slate-150 p-6 sm:p-8">
         
         {/* Skill Name */}
@@ -79,6 +113,7 @@ export default function AddSkillForm() {
             onChange={(e) => {
               setFormState(prev => ({ ...prev, skillName: e.target.value }));
               if (errors.skillName) setErrors(prev => ({ ...prev, skillName: null }));
+              setServerError(null);
             }}
             placeholder="e.g. React.js, Python, or Front Desk Management"
             className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
@@ -91,17 +126,23 @@ export default function AddSkillForm() {
         </div>
 
         {/* Job Category */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" data-error={!!errors.category}>
           <label htmlFor="category" className="text-[13px] font-bold text-slate-700">Job Category (Optional)</label>
           <select
             id="category"
             value={formState.category}
             onChange={(e) => setFormState(prev => ({ ...prev, category: e.target.value }))}
+            disabled={loadingCategories}
             className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-teal-500 min-h-[44px]"
           >
             <option value="">None / Select Category</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.parent_name ? `${cat.parent_name} > ${cat.name}` : cat.name}
+              </option>
+            ))}
           </select>
-          <p className="text-[11px] text-slate-450 italic">Categories will load from backend API when connected.</p>
+          {errors.category && <p className="text-xs text-red-500 font-semibold">{errors.category}</p>}
         </div>
 
         {/* Active Status */}

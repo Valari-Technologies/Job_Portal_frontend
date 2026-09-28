@@ -1,4 +1,4 @@
-export default function SkillDetailsPanel({ selectedSkill }) {
+export default function SkillDetailsPanel({ selectedSkill, onEditSkill, onToggleStatus }) {
   return (
     <div className="rounded-2xl border border-slate-155 bg-white p-6 shadow-2xs">
       <h3 className="text-base font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-6">Skill details</h3>
@@ -13,19 +13,40 @@ export default function SkillDetailsPanel({ selectedSkill }) {
             </div>
             <div>
               <h4 className="text-base font-extrabold text-slate-800 leading-snug">{selectedSkill.name}</h4>
-              <span className="text-xs font-bold text-slate-455 uppercase">{selectedSkill.is_active ? 'Active' : 'Inactive'}</span>
+              <span className={`text-xs font-bold uppercase ${selectedSkill.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {selectedSkill.is_active ? 'Active' : 'Inactive'}
+              </span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4.5">
             <div className="space-y-1">
-              <span className="text-xs font-black text-slate-450 uppercase block">Category ID</span>
-              <span className="font-bold text-slate-800">{selectedSkill.category_id || 'Unassigned'}</span>
+              <span className="text-xs font-black text-slate-450 uppercase block">Job category</span>
+              <span className="font-bold text-slate-800">{selectedSkill.category_name || 'Uncategorized'}</span>
             </div>
             <div className="space-y-1">
-              <span className="text-xs font-black text-slate-450 uppercase block">Usage count</span>
-              <span className="font-bold text-slate-805">0</span>
+              <span className="text-xs font-black text-slate-450 uppercase block">Status</span>
+              <span className="font-bold text-slate-800">{selectedSkill.is_active ? 'Active' : 'Inactive'}</span>
             </div>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-slate-100">
+            <button 
+              onClick={() => onEditSkill && onEditSkill(selectedSkill)}
+              className="flex-1 rounded-xl bg-teal-600 hover:bg-teal-700 py-2.5 text-xs font-extrabold text-white transition-colors cursor-pointer shadow-xs"
+            >
+              Edit skill
+            </button>
+            <button 
+              onClick={() => onToggleStatus && onToggleStatus(selectedSkill)}
+              className={`flex-1 rounded-xl border py-2.5 text-xs font-extrabold transition-colors cursor-pointer ${
+                selectedSkill.is_active 
+                  ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' 
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              {selectedSkill.is_active ? 'Deactivate' : 'Activate'}
+            </button>
           </div>
         </div>
       ) : (
@@ -38,7 +59,7 @@ export default function SkillDetailsPanel({ selectedSkill }) {
           <div className="space-y-1.5">
             <h4 className="text-base font-extrabold text-slate-800">No skill selected</h4>
             <p className="text-sm font-bold text-slate-500 max-w-xs mx-auto leading-normal">
-              Select a skill from the list to view its category, status and future usage across candidates and jobs.
+              Select a skill from the list to view its category, status, and actions.
             </p>
           </div>
           <button 
@@ -52,3 +73,4 @@ export default function SkillDetailsPanel({ selectedSkill }) {
     </div>
   );
 }
+

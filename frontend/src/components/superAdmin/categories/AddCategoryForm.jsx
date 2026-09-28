@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createCategoryService } from '../../../services/superAdmin/superAdminService';
+import { createCategory, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
 
 export default function AddCategoryForm() {
   const navigate = useNavigate();
+
+  const [parentOptions, setParentOptions] = useState([]);
+  const [loadingParents, setLoadingParents] = useState(true);
 
   const [formState, setFormState] = useState({
     categoryName: '',
@@ -14,17 +17,34 @@ export default function AddCategoryForm() {
   });
 
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function loadParents() {
+      setLoadingParents(true);
+      const list = await fetchAllCategoriesForSelect();
+      setParentOptions(list);
+      setLoadingParents(false);
+    }
+    loadParents();
+  }, []);
 
   const validate = () => {
     const newErrors = {};
 
-    if (!formState.categoryName.trim()) {
+    const name = formState.categoryName.trim();
+    if (!name) {
       newErrors.categoryName = 'Category Name is required.';
+    } else if (name.length < 2) {
+      newErrors.categoryName = 'Category Name must be at least 2 characters long.';
     }
 
-    if (!formState.description.trim()) {
+    const desc = formState.description.trim();
+    if (!desc) {
       newErrors.description = 'Description is required.';
+    } else if (desc.length < 3) {
+      newErrors.description = 'Description must be at least 3 characters long.';
     }
 
     if (formState.sortOrder < 0 || isNaN(formState.sortOrder)) {
@@ -41,6 +61,8 @@ export default function AddCategoryForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError(null);
+
     if (!validate()) {
       setTimeout(() => {
         const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] textarea');
@@ -53,18 +75,29 @@ export default function AddCategoryForm() {
     try {
       const payload = {
         name: formState.categoryName.trim(),
-        parent_id: formState.parentCategory || null,
+        parent_id: formState.parentCategory ? Number(formState.parentCategory) : null,
         description: formState.description.trim(),
         is_active: formState.status === 'Active',
         sort_order: Number(formState.sortOrder) || 0
       };
 
-      const res = await createCategoryService(payload);
+      const res = await createCategory(payload);
       if (res.success) {
         navigate('/super-admin/categories');
+      } else {
+        setServerError(res.message || 'Failed to create category.');
+        if (res.errors) {
+          const apiErrors = {};
+          if (res.errors.name) apiErrors.categoryName = Array.isArray(res.errors.name) ? res.errors.name[0] : res.errors.name;
+          if (res.errors.description) apiErrors.description = Array.isArray(res.errors.description) ? res.errors.description[0] : res.errors.description;
+          if (res.errors.parent) apiErrors.parentCategory = Array.isArray(res.errors.parent) ? res.errors.parent[0] : res.errors.parent;
+          if (res.errors.sort_order) apiErrors.sortOrder = Array.isArray(res.errors.sort_order) ? res.errors.sort_order[0] : res.errors.sort_order;
+          setErrors(apiErrors);
+        }
       }
     } catch (err) {
       console.error("Failed to create category", err);
+      setServerError('An unexpected error occurred while saving the category.');
     } finally {
       setIsSubmitting(false);
     }
@@ -75,9 +108,15 @@ export default function AddCategoryForm() {
       <div className="border-b border-slate-100 pb-4">
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Add category</h1>
         <p className="text-sm font-medium text-slate-450 mt-1">
-          Create a top-level or sub-category in the job taxonomy.
+          Create a top-level or sub-category in the TN Jobz taxonomy.
         </p>
       </div>
+
+      {serverError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-bold">
+          {serverError}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border border-slate-150 p-6 sm:p-8">
         
@@ -91,6 +130,7 @@ export default function AddCategoryForm() {
             onChange={(e) => {
               setFormState(prev => ({ ...prev, categoryName: e.target.value }));
               if (errors.categoryName) setErrors(prev => ({ ...prev, categoryName: null }));
+              setServerError(null);
             }}
             placeholder="e.g. Information Technology"
             className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
@@ -103,17 +143,23 @@ export default function AddCategoryForm() {
         </div>
 
         {/* Parent Category */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" data-error={!!errors.parentCategory}>
           <label htmlFor="parentCategory" className="text-[13px] font-bold text-slate-700">Parent Category (Optional)</label>
           <select
             id="parentCategory"
             value={formState.parentCategory}
             onChange={(e) => setFormState(prev => ({ ...prev, parentCategory: e.target.value }))}
+            disabled={loadingParents}
             className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-teal-500 min-h-[44px]"
           >
             <option value="">None (Top Level Category)</option>
+            {parentOptions.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.parent_name ? `${cat.parent_name} > ${cat.name}` : cat.name}
+              </option>
+            ))}
           </select>
-          <p className="text-[11px] text-slate-450 italic">Categories will load from backend API when connected.</p>
+          {errors.parentCategory && <p className="text-xs text-red-500 font-semibold">{errors.parentCategory}</p>}
         </div>
 
         {/* Description */}
@@ -126,6 +172,7 @@ export default function AddCategoryForm() {
             onChange={(e) => {
               setFormState(prev => ({ ...prev, description: e.target.value }));
               if (errors.description) setErrors(prev => ({ ...prev, description: null }));
+              setServerError(null);
             }}
             placeholder="Brief explanation of jobs covered under this category..."
             className={`w-full rounded-xl border p-3 text-sm font-medium text-slate-800 focus:outline-none ${
