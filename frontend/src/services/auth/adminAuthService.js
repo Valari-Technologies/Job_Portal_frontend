@@ -71,27 +71,35 @@ export async function loginAdmin({ email, password }) {
   }
 }
 
-export function logoutAdmin() {
-  localStorage.removeItem('admin_access_token');
-  localStorage.removeItem('admin_refresh_token');
-  localStorage.removeItem('admin_auth_user');
-  localStorage.removeItem('admin_auth_role');
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('auth_user');
-  localStorage.removeItem('auth_role');
+export function clearAllAuthTokens() {
+  const keysToRemove = [
+    'admin_access_token',
+    'admin_refresh_token',
+    'admin_auth_user',
+    'admin_auth_role',
+    'public_access_token',
+    'public_refresh_token',
+    'public_auth_user',
+    'public_auth_role',
+    'access_token',
+    'refresh_token',
+    'auth_user',
+    'auth_role',
+    'recruiter_token',
+    'recruiter_user',
+    'candidate_token',
+    'candidate_user',
+  ];
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
   sessionStorage.clear();
 }
 
+export function logoutAdmin() {
+  clearAllAuthTokens();
+}
+
 export function logoutPublic() {
-  localStorage.removeItem('public_access_token');
-  localStorage.removeItem('public_refresh_token');
-  localStorage.removeItem('public_auth_user');
-  localStorage.removeItem('public_auth_role');
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('auth_user');
-  localStorage.removeItem('auth_role');
+  clearAllAuthTokens();
 }
 
 export function getAuthenticatedUser() {
@@ -168,21 +176,27 @@ export async function fetchWithAuth(url, options = {}) {
           headers['Authorization'] = `Bearer ${refreshData.access}`;
           response = await fetch(url, { ...options, headers });
         } else {
+          clearAllAuthTokens();
           if (useAdminToken) {
-            logoutAdmin();
             window.location.href = '/admin';
+          } else {
+            window.location.href = '/login';
           }
         }
       } catch {
+        clearAllAuthTokens();
         if (useAdminToken) {
-          logoutAdmin();
           window.location.href = '/admin';
+        } else {
+          window.location.href = '/login';
         }
       }
     } else {
+      clearAllAuthTokens();
       if (useAdminToken) {
-        logoutAdmin();
         window.location.href = '/admin';
+      } else {
+        window.location.href = '/login';
       }
     }
   }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import logoJobz from '../../../assets/logo-jobz.png';
-import { loginAdmin } from '../../../services/auth/adminAuthService';
+import { loginAdmin, clearAllAuthTokens } from '../../../services/auth/adminAuthService';
 
 export default function AdminPortalLoginForm() {
   const navigate = useNavigate();
@@ -124,10 +124,7 @@ export default function AdminPortalLoginForm() {
         } else if (role === 'ADMIN') {
           window.location.href = '/admin/dashboard';
         } else {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('auth_user');
-          localStorage.removeItem('auth_role');
+          clearAllAuthTokens();
           triggerAuthError('Access denied. Candidate and HR users must log in at /login.');
         }
       } else {

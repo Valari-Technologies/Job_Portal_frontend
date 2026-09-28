@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignOutConfirmationModal from '../components/shared/auth/SignOutConfirmationModal';
-import { logoutAdmin } from '../services/auth/adminAuthService';
+import { clearAllAuthTokens } from '../services/auth/adminAuthService';
 
 const SignOutContext = createContext(null);
 
@@ -13,7 +13,8 @@ export function SignOutProvider({ children }) {
   const [portalType, setPortalType] = useState('recruiter');
 
   const requestSignOut = useCallback((portal = 'recruiter') => {
-    setPortalType(portal);
+    const targetPortal = typeof portal === 'string' ? portal : 'recruiter';
+    setPortalType(targetPortal);
     setError(null);
     setIsOpen(true);
   }, []);
@@ -31,7 +32,7 @@ export function SignOutProvider({ children }) {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
-      logoutAdmin();
+      clearAllAuthTokens();
 
       setIsSigningOut(false);
       setIsOpen(false);

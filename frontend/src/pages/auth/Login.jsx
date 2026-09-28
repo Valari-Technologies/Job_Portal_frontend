@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
-import { loginAdmin } from '../../services/auth/adminAuthService';
+import { loginAdmin, clearAllAuthTokens } from '../../services/auth/adminAuthService';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -32,12 +32,15 @@ export default function Login() {
 
     const role = user?.role || localStorage.getItem('public_auth_role') || localStorage.getItem('auth_role');
 
-    if (token && user) {
+    if (token && user && (user.id || user.email || user.role)) {
       if (role === 'HR') {
         navigate('/recruiter/dashboard', { replace: true });
       } else if (role === 'CANDIDATE') {
         navigate('/candidate/dashboard', { replace: true });
       }
+    } else if (token || user) {
+      // Clean up corrupt/partial token state
+      clearAllAuthTokens();
     }
   }, [navigate]);
   const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
@@ -162,10 +165,7 @@ export default function Login() {
           } else if (role === 'CANDIDATE') {
             window.location.href = '/candidate/dashboard';
           } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('auth_user');
-            localStorage.removeItem('auth_role');
+            clearAllAuthTokens();
             triggerAuthError('Access denied. Super Admin and Admin users must log in at /admin.');
           } else {
             triggerAuthError('Unauthorized account role.');

@@ -1,4 +1,64 @@
-import { Edit2, Power, Trash2, Wrench } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Edit2, Power, Trash2, Wrench, MoreVertical } from 'lucide-react';
+
+function ActionMenu({ item, onEdit, onToggleStatus, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        aria-label="Actions menu"
+      >
+        <MoreVertical className="h-4.5 w-4.5" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onEdit && onEdit(item); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-teal-600 rounded-lg transition-colors cursor-pointer"
+          >
+            <Edit2 className="h-3.5 w-3.5 text-slate-400" />
+            <span>Edit</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onToggleStatus && onToggleStatus(item); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+          >
+            <Power className={`h-3.5 w-3.5 ${item.is_active ? 'text-amber-500' : 'text-emerald-500'}`} />
+            <span>{item.is_active ? 'Deactivate' : 'Activate'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onDelete && onDelete(item); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SkillsTable({ 
   skills = [], 
@@ -44,18 +104,18 @@ export default function SkillsTable({
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-visible shadow-2xs">
+      <div className="w-full">
+        <table className="w-full text-left border-collapse table-fixed">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
-              <th className="px-6 py-4">Skill</th>
-              <th className="px-6 py-4">Job Category</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-5 py-4 w-[40%]">Skill</th>
+              <th className="px-4 py-4 w-[28%]">Job Category</th>
+              <th className="px-4 py-4 w-[16%] text-center">Status</th>
+              <th className="px-5 py-4 w-[16%] text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {skills.length === 0 ? (
               <tr>
                 <td colSpan="4" className="px-6 py-16 text-center">
@@ -81,13 +141,13 @@ export default function SkillsTable({
                 <tr 
                   key={s.id} 
                   onClick={() => onSelectSkill && onSelectSkill(s)}
-                  className={`cursor-pointer transition-colors border-b border-slate-100/80 hover:bg-slate-50/60 ${selectedSkill?.id === s.id ? 'bg-teal-50/30' : ''}`}
+                  className={`cursor-pointer transition-colors hover:bg-slate-50/60 ${selectedSkill?.id === s.id ? 'bg-teal-50/30' : ''}`}
                 >
-                  <td className="px-6 py-4 font-extrabold text-slate-850 text-sm">{s.name}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-slate-600">
+                  <td className="px-5 py-4 font-extrabold text-slate-850 text-sm truncate">{s.name}</td>
+                  <td className="px-4 py-4 text-xs font-bold text-slate-600">
                     {s.category_name ? (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-slate-700 font-bold">
-                        {s.category_name}
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-slate-700 font-bold max-w-full truncate">
+                        <span className="truncate">{s.category_name}</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-amber-700 font-semibold border border-amber-100">
@@ -95,7 +155,7 @@ export default function SkillsTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 text-center">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
                       s.is_active 
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
@@ -104,34 +164,13 @@ export default function SkillsTable({
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => onEditSkill && onEditSkill(s)}
-                        title="Edit skill"
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onToggleStatus && onToggleStatus(s)}
-                        title={s.is_active ? "Deactivate skill" : "Activate skill"}
-                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                          s.is_active 
-                            ? 'text-emerald-600 hover:text-amber-600 hover:bg-amber-50' 
-                            : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                      >
-                        <Power className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteSkill && onDeleteSkill(s)}
-                        title="Delete skill"
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <td className="px-5 py-4 text-right">
+                    <ActionMenu 
+                      item={s}
+                      onEdit={onEditSkill}
+                      onToggleStatus={onToggleStatus}
+                      onDelete={onDeleteSkill}
+                    />
                   </td>
                 </tr>
               ))
@@ -142,4 +181,6 @@ export default function SkillsTable({
     </div>
   );
 }
+
+
 

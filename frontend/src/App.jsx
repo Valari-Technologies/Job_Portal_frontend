@@ -5,6 +5,8 @@ import { CandidateUserProvider } from './context/CandidateUserContext';
 import { RecruiterUserProvider } from './context/RecruiterUserContext';
 import { SuperAdminUserProvider } from './context/SuperAdminUserContext';
 import SuperAdminRouteGuard from './components/auth/superAdmin/SuperAdminRouteGuard';
+import CandidateRouteGuard from './components/auth/candidate/CandidateRouteGuard';
+import RecruiterRouteGuard from './components/auth/recruiter/RecruiterRouteGuard';
 import SuperAdminLayout from './components/superAdmin/common/SuperAdminLayout';
 import SuperAdminOverview from './pages/superAdmin/superAdminOverview/SuperAdminOverview';
 import SuperAdminCandidates from './pages/superAdmin/superAdminCandidates/SuperAdminCandidates';
@@ -396,17 +398,21 @@ export default function App() {
 
 function CandidatePortalWrapper() {
   return (
-    <CandidateUserProvider>
-      <Outlet />
-    </CandidateUserProvider>
+    <CandidateRouteGuard>
+      <CandidateUserProvider>
+        <Outlet />
+      </CandidateUserProvider>
+    </CandidateRouteGuard>
   );
 }
 
 function RecruiterPortalWrapper() {
   return (
-    <RecruiterUserProvider>
-      <Outlet />
-    </RecruiterUserProvider>
+    <RecruiterRouteGuard>
+      <RecruiterUserProvider>
+        <Outlet />
+      </RecruiterUserProvider>
+    </RecruiterRouteGuard>
   );
 }
 
