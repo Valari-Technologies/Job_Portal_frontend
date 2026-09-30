@@ -1,20 +1,21 @@
 import { Navigate } from 'react-router-dom';
+import { getAuthItem } from '../../../services/auth/adminAuthService';
 
 export default function SuperAdminRouteGuard({ children }) {
-  const adminToken = localStorage.getItem('admin_access_token') || localStorage.getItem('access_token');
-  const adminUserStr = localStorage.getItem('admin_auth_user') || localStorage.getItem('auth_user');
-  let adminUser = null;
-  if (adminUserStr) {
+  const superAdminToken = getAuthItem('super_admin_access_token') || getAuthItem('admin_access_token');
+  const superAdminUserStr = getAuthItem('super_admin_auth_user') || getAuthItem('admin_auth_user');
+  let superAdminUser = null;
+  if (superAdminUserStr) {
     try {
-      adminUser = JSON.parse(adminUserStr);
+      superAdminUser = JSON.parse(superAdminUserStr);
     } catch {
-      adminUser = null;
+      superAdminUser = null;
     }
   }
 
-  const token = adminToken;
-  const user = adminUser;
-  const role = user?.role || localStorage.getItem('admin_auth_role') || localStorage.getItem('auth_role');
+  const token = superAdminToken;
+  const user = superAdminUser;
+  const role = user?.role || getAuthItem('super_admin_auth_role');
 
   if (!token || !user || role !== 'SUPER_ADMIN') {
     return <Navigate to="/admin" replace />;

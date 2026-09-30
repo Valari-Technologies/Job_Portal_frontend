@@ -1,3 +1,5 @@
+import { getAuthenticatedUser } from '../auth/adminAuthService';
+
 const listeners = new Set();
 
 export function subscribeProfilePhoto(listener) {
@@ -7,9 +9,18 @@ export function subscribeProfilePhoto(listener) {
   };
 }
 
-export function getProfilePhotoFromStorage(adminId = 'current-admin') {
+function resolveUserStorageKey(adminId) {
+  if (adminId && adminId !== 'current-admin') {
+    return adminId;
+  }
+  const user = getAuthenticatedUser();
+  return user?.email || (user?.id ? `id_${user.id}` : 'guest');
+}
+
+export function getProfilePhotoFromStorage(adminId) {
   try {
-    const key = `statejobz:admin:${adminId}:profile-photo:v1`;
+    const userKey = resolveUserStorageKey(adminId);
+    const key = `statejobz:admin:${userKey}:profile-photo:v1`;
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved)?.dataUrl || null : null;
   } catch (e) {
@@ -18,9 +29,10 @@ export function getProfilePhotoFromStorage(adminId = 'current-admin') {
   }
 }
 
-export function saveProfilePhotoToStorage(dataUrl, adminId = 'current-admin') {
+export function saveProfilePhotoToStorage(dataUrl, adminId) {
   try {
-    const key = `statejobz:admin:${adminId}:profile-photo:v1`;
+    const userKey = resolveUserStorageKey(adminId);
+    const key = `statejobz:admin:${userKey}:profile-photo:v1`;
     if (dataUrl) {
       localStorage.setItem(key, JSON.stringify({ dataUrl, updatedAt: Date.now() }));
     } else {

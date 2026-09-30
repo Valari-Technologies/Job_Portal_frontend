@@ -1,5 +1,40 @@
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
+export function setAuthItem(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.error("Failed to write auth storage item", e);
+  }
+}
+
+export function getAuthItem(key) {
+  try {
+    const sessionVal = sessionStorage.getItem(key);
+    if (sessionVal !== null && sessionVal !== undefined) {
+      return sessionVal;
+    }
+    const localVal = localStorage.getItem(key);
+    if (localVal !== null && localVal !== undefined) {
+      try { sessionStorage.setItem(key, localVal); } catch {}
+      return localVal;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function removeAuthItem(key) {
+  try {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore
+  }
+}
+
 export async function loginAdmin({ email, password }) {
   try {
     const response = await fetch(`${API_BASE_URL}/accounts/login/`, {
@@ -38,23 +73,27 @@ export async function loginAdmin({ email, password }) {
       };
     }
 
-    if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
-      localStorage.setItem('admin_access_token', access);
-      localStorage.setItem('admin_refresh_token', refresh);
-      localStorage.setItem('admin_auth_user', JSON.stringify(user));
-      localStorage.setItem('admin_auth_role', user.role);
-    } else {
-      localStorage.setItem('public_access_token', access);
-      localStorage.setItem('public_refresh_token', refresh);
-      localStorage.setItem('public_auth_user', JSON.stringify(user));
-      localStorage.setItem('public_auth_role', user.role);
+    if (user.role === 'SUPER_ADMIN') {
+      setAuthItem('super_admin_access_token', access);
+      setAuthItem('super_admin_refresh_token', refresh);
+      setAuthItem('super_admin_auth_user', JSON.stringify(user));
+      setAuthItem('super_admin_auth_role', user.role);
+    } else if (user.role === 'ADMIN') {
+      setAuthItem('admin_access_token', access);
+      setAuthItem('admin_refresh_token', refresh);
+      setAuthItem('admin_auth_user', JSON.stringify(user));
+      setAuthItem('admin_auth_role', user.role);
+    } else if (user.role === 'HR' || user.role === 'RECRUITER') {
+      setAuthItem('public_access_token', access);
+      setAuthItem('public_refresh_token', refresh);
+      setAuthItem('public_auth_user', JSON.stringify(user));
+      setAuthItem('public_auth_role', user.role);
+    } else if (user.role === 'CANDIDATE') {
+      setAuthItem('candidate_access_token', access);
+      setAuthItem('candidate_refresh_token', refresh);
+      setAuthItem('candidate_auth_user', JSON.stringify(user));
+      setAuthItem('candidate_auth_role', user.role);
     }
-
-    // Default fallback keys
-    localStorage.setItem('access_token', access);
-    localStorage.setItem('refresh_token', refresh);
-    localStorage.setItem('auth_user', JSON.stringify(user));
-    localStorage.setItem('auth_role', user.role);
 
     return {
       success: true,
@@ -73,6 +112,10 @@ export async function loginAdmin({ email, password }) {
 
 export function clearAllAuthTokens() {
   const keysToRemove = [
+    'super_admin_access_token',
+    'super_admin_refresh_token',
+    'super_admin_auth_user',
+    'super_admin_auth_role',
     'admin_access_token',
     'admin_refresh_token',
     'admin_auth_user',
@@ -81,16 +124,16 @@ export function clearAllAuthTokens() {
     'public_refresh_token',
     'public_auth_user',
     'public_auth_role',
+    'candidate_access_token',
+    'candidate_refresh_token',
+    'candidate_auth_user',
+    'candidate_auth_role',
     'access_token',
     'refresh_token',
     'auth_user',
     'auth_role',
-    'recruiter_token',
-    'recruiter_user',
-    'candidate_token',
-    'candidate_user',
   ];
-  keysToRemove.forEach((key) => localStorage.removeItem(key));
+  keysToRemove.forEach((key) => removeAuthItem(key));
   sessionStorage.clear();
 }
 
@@ -104,16 +147,23 @@ export function logoutPublic() {
 
 export function getAuthenticatedUser() {
   try {
-    const isAdminPath = typeof window !== 'undefined' && (window.location.pathname.startsWith('/super-admin') || window.location.pathname.startsWith('/admin'));
-    if (isAdminPath) {
-      const adminStored = localStorage.getItem('admin_auth_user');
-      if (adminStored) return JSON.parse(adminStored);
-    } else {
-      const publicStored = localStorage.getItem('public_auth_user');
-      if (publicStored) return JSON.parse(publicStored);
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (pathname.startsWith('/super-admin')) {
+      const stored = getAuthItem('super_admin_auth_user');
+      if (stored) return JSON.parse(stored);
+    } else if (pathname.startsWith('/admin')) {
+      const stored = getAuthItem('admin_auth_user');
+      if (stored) return JSON.parse(stored);
+    } else if (pathname.startsWith('/recruiter') || pathname.startsWith('/employer')) {
+      const stored = getAuthItem('public_auth_user');
+      if (stored) return JSON.parse(stored);
+    } else if (pathname.startsWith('/candidate')) {
+      const stored = getAuthItem('candidate_auth_user') || getAuthItem('public_auth_user');
+      if (stored) return JSON.parse(stored);
     }
-    const stored = localStorage.getItem('auth_user');
-    return stored ? JSON.parse(stored) : null;
+
+    const fallback = getAuthItem('admin_auth_user') || getAuthItem('super_admin_auth_user') || getAuthItem('public_auth_user') || getAuthItem('candidate_auth_user');
+    return fallback ? JSON.parse(fallback) : null;
   } catch {
     return null;
   }
@@ -122,24 +172,50 @@ export function getAuthenticatedUser() {
 export function getAuthenticatedRole() {
   const user = getAuthenticatedUser();
   if (user?.role) return user.role;
-  const isAdminPath = typeof window !== 'undefined' && (window.location.pathname.startsWith('/super-admin') || window.location.pathname.startsWith('/admin'));
-  if (isAdminPath) {
-    return localStorage.getItem('admin_auth_role') || localStorage.getItem('auth_role');
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  if (pathname.startsWith('/super-admin')) {
+    return getAuthItem('super_admin_auth_role') || 'SUPER_ADMIN';
+  } else if (pathname.startsWith('/admin')) {
+    return getAuthItem('admin_auth_role') || 'ADMIN';
   }
-  return localStorage.getItem('public_auth_role') || localStorage.getItem('auth_role');
+  return getAuthItem('public_auth_role') || getAuthItem('candidate_auth_role');
 }
 
 export async function fetchWithAuth(url, options = {}) {
-  const isAdminPath = typeof window !== 'undefined' && (window.location.pathname.startsWith('/super-admin') || window.location.pathname.startsWith('/admin'));
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
-  let token = null;
-  let refreshToken = null;
-  if (isAdminPath) {
-    token = localStorage.getItem('admin_access_token') || localStorage.getItem('access_token');
-    refreshToken = localStorage.getItem('admin_refresh_token') || localStorage.getItem('refresh_token');
-  } else {
-    token = localStorage.getItem('public_access_token') || localStorage.getItem('access_token') || localStorage.getItem('admin_access_token');
-    refreshToken = localStorage.getItem('public_refresh_token') || localStorage.getItem('refresh_token') || localStorage.getItem('admin_refresh_token');
+  let tokenKey = 'admin_access_token';
+  let refreshKey = 'admin_refresh_token';
+
+  if (pathname.startsWith('/super-admin')) {
+    tokenKey = 'super_admin_access_token';
+    refreshKey = 'super_admin_refresh_token';
+  } else if (pathname.startsWith('/admin')) {
+    tokenKey = 'admin_access_token';
+    refreshKey = 'admin_refresh_token';
+  } else if (pathname.startsWith('/recruiter') || pathname.startsWith('/employer')) {
+    tokenKey = 'public_access_token';
+    refreshKey = 'public_refresh_token';
+  } else if (pathname.startsWith('/candidate')) {
+    tokenKey = 'candidate_access_token';
+    refreshKey = 'candidate_refresh_token';
+  }
+
+  let token = getAuthItem(tokenKey);
+  let refreshToken = getAuthItem(refreshKey);
+
+  // Fallback for paths if role-specific key is not set
+  if (!token) {
+    if (pathname.startsWith('/super-admin')) {
+      token = getAuthItem('super_admin_access_token') || getAuthItem('admin_access_token');
+      refreshToken = getAuthItem('super_admin_refresh_token') || getAuthItem('admin_refresh_token');
+    } else if (pathname.startsWith('/admin')) {
+      token = getAuthItem('admin_access_token');
+      refreshToken = getAuthItem('admin_refresh_token');
+    } else {
+      token = getAuthItem('public_access_token') || getAuthItem('candidate_access_token');
+      refreshToken = getAuthItem('public_refresh_token') || getAuthItem('candidate_refresh_token');
+    }
   }
 
   const headers = {
@@ -163,12 +239,7 @@ export async function fetchWithAuth(url, options = {}) {
 
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
-        if (isAdminPath) {
-          localStorage.setItem('admin_access_token', refreshData.access);
-        } else {
-          localStorage.setItem('public_access_token', refreshData.access);
-        }
-        localStorage.setItem('access_token', refreshData.access);
+        setAuthItem(tokenKey, refreshData.access);
         headers['Authorization'] = `Bearer ${refreshData.access}`;
         response = await fetch(url, { ...options, headers });
       }

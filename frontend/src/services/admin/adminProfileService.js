@@ -7,16 +7,39 @@ export async function getAdminProfile() {
     const response = await fetchWithAuth(`${API_BASE_URL}/accounts/me/`);
     if (response.ok) {
       const data = await response.json();
-      return {
+      const displayName = data.full_name || data.name || data.fullName || (data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : null) || data.username;
+      
+      const profileData = {
         id: data.id,
-        fullName: data.full_name || data.name || data.fullName || data.username,
-        name: data.full_name || data.name || data.fullName || data.username,
+        fullName: displayName,
+        name: displayName,
         email: data.email,
         username: data.username,
         role: data.role,
         status: data.status,
         phoneNumber: data.phone_number || '',
       };
+
+      // Ensure authenticated user object in localStorage stays in sync with API payload
+      const userObj = {
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        role: data.role,
+        full_name: displayName,
+        fullName: displayName,
+        name: displayName,
+        status: data.status,
+        phone_number: data.phone_number
+      };
+
+      if (data.role === 'SUPER_ADMIN') {
+        localStorage.setItem('super_admin_auth_user', JSON.stringify(userObj));
+      } else if (data.role === 'ADMIN') {
+        localStorage.setItem('admin_auth_user', JSON.stringify(userObj));
+      }
+
+      return profileData;
     }
   } catch {
     // Fallback to local user state
