@@ -131,14 +131,15 @@ export function getAuthenticatedRole() {
 
 export async function fetchWithAuth(url, options = {}) {
   const isAdminPath = typeof window !== 'undefined' && (window.location.pathname.startsWith('/super-admin') || window.location.pathname.startsWith('/admin'));
-  const isAdminUrl = url.includes('/admin/') || url.includes('/locations/');
-  const useAdminToken = isAdminPath || isAdminUrl;
 
   let token = null;
-  if (useAdminToken) {
+  let refreshToken = null;
+  if (isAdminPath) {
     token = localStorage.getItem('admin_access_token') || localStorage.getItem('access_token');
+    refreshToken = localStorage.getItem('admin_refresh_token') || localStorage.getItem('refresh_token');
   } else {
-    token = localStorage.getItem('public_access_token') || localStorage.getItem('access_token');
+    token = localStorage.getItem('public_access_token') || localStorage.getItem('access_token') || localStorage.getItem('admin_access_token');
+    refreshToken = localStorage.getItem('public_refresh_token') || localStorage.getItem('refresh_token') || localStorage.getItem('admin_refresh_token');
   }
 
   const headers = {
@@ -152,52 +153,27 @@ export async function fetchWithAuth(url, options = {}) {
 
   let response = await fetch(url, { ...options, headers });
 
-  if (response.status === 401) {
-    const refreshToken = useAdminToken
-      ? (localStorage.getItem('admin_refresh_token') || localStorage.getItem('refresh_token'))
-      : (localStorage.getItem('public_refresh_token') || localStorage.getItem('refresh_token'));
+  if (response.status === 401 && refreshToken) {
+    try {
+      const refreshResponse = await fetch(`${API_BASE_URL}/accounts/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
 
-    if (refreshToken) {
-      try {
-        const refreshResponse = await fetch(`${API_BASE_URL}/accounts/token/refresh/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh: refreshToken }),
-        });
-
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
-          if (useAdminToken) {
-            localStorage.setItem('admin_access_token', refreshData.access);
-          } else {
-            localStorage.setItem('public_access_token', refreshData.access);
-          }
-          localStorage.setItem('access_token', refreshData.access);
-          headers['Authorization'] = `Bearer ${refreshData.access}`;
-          response = await fetch(url, { ...options, headers });
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        if (isAdminPath) {
+          localStorage.setItem('admin_access_token', refreshData.access);
         } else {
-          clearAllAuthTokens();
-          if (useAdminToken) {
-            window.location.href = '/admin';
-          } else {
-            window.location.href = '/login';
-          }
+          localStorage.setItem('public_access_token', refreshData.access);
         }
-      } catch {
-        clearAllAuthTokens();
-        if (useAdminToken) {
-          window.location.href = '/admin';
-        } else {
-          window.location.href = '/login';
-        }
+        localStorage.setItem('access_token', refreshData.access);
+        headers['Authorization'] = `Bearer ${refreshData.access}`;
+        response = await fetch(url, { ...options, headers });
       }
-    } else {
-      clearAllAuthTokens();
-      if (useAdminToken) {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/login';
-      }
+    } catch {
+      // Do not clear tokens or force redirect here; return response for caller handling
     }
   }
 

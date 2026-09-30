@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 
-export default function CreateRecruiterStepper({ currentStep }) {
+export default function CreateRecruiterStepper({ currentStep, onStepClick }) {
   const steps = [
     { id: 1, label: 'Recruiter Information' },
     { id: 2, label: 'Company Information' },
@@ -15,7 +15,11 @@ export default function CreateRecruiterStepper({ currentStep }) {
         
         return (
           <div key={step.id} className="flex items-center flex-1 last:flex-initial">
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onStepClick && onStepClick(step.id)}
+              className="flex items-center gap-3 focus:outline-none cursor-pointer group text-left"
+            >
               {/* Stepper Circle */}
               <div 
                 className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-150 shrink-0 ${
@@ -23,7 +27,7 @@ export default function CreateRecruiterStepper({ currentStep }) {
                     ? 'bg-emerald-600 text-white' 
                     : isCurrent 
                     ? 'bg-[#4A1DDF] text-white shadow-md shadow-[#4A1DDF]/20' 
-                    : 'bg-slate-200 text-slate-600'
+                    : 'bg-slate-200 text-slate-600 group-hover:bg-slate-300'
                 }`}
               >
                 {isCompleted ? <Check className="h-4.5 w-4.5 stroke-[3]" /> : step.id}
@@ -36,12 +40,12 @@ export default function CreateRecruiterStepper({ currentStep }) {
                     ? 'font-extrabold text-[#4A1DDF]' 
                     : isCompleted
                     ? 'font-bold text-slate-800'
-                    : 'font-semibold text-slate-500'
+                    : 'font-semibold text-slate-500 group-hover:text-slate-700'
                 }`}
               >
                 {step.label}
               </span>
-            </div>
+            </button>
 
             {/* Stepper Line Connectors */}
             {idx < steps.length - 1 && (

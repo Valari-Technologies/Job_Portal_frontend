@@ -6,43 +6,6 @@ import { loginAdmin, clearAllAuthTokens } from '../../services/auth/adminAuthSer
 
 export default function Login() {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const publicToken = localStorage.getItem('public_access_token');
-    const publicUserStr = localStorage.getItem('public_auth_user');
-    let publicUser = null;
-    if (publicUserStr) {
-      try {
-        publicUser = JSON.parse(publicUserStr);
-      } catch {
-        publicUser = null;
-      }
-    }
-
-    const token = publicToken || localStorage.getItem('access_token');
-    let user = publicUser;
-    if (!user) {
-      const userStr = localStorage.getItem('auth_user');
-      try {
-        user = userStr ? JSON.parse(userStr) : null;
-      } catch {
-        user = null;
-      }
-    }
-
-    const role = user?.role || localStorage.getItem('public_auth_role') || localStorage.getItem('auth_role');
-
-    if (token && user && (user.id || user.email || user.role)) {
-      if (role === 'HR') {
-        navigate('/recruiter/dashboard', { replace: true });
-      } else if (role === 'CANDIDATE') {
-        navigate('/candidate/dashboard', { replace: true });
-      }
-    } else if (token || user) {
-      // Clean up corrupt/partial token state
-      clearAllAuthTokens();
-    }
-  }, [navigate]);
   const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

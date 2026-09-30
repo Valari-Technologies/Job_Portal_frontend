@@ -3,24 +3,25 @@ import { AlertCircle, Camera } from 'lucide-react';
 import { getAdminProfile } from '../../services/admin/adminProfileService';
 import { getProfilePhotoFromStorage, saveProfilePhotoToStorage, subscribeProfilePhoto } from '../../services/admin/profilePhotoSync';
 
+import { getAuthenticatedUser } from '../../services/auth/adminAuthService';
+
 export default function AdminProfile() {
   const [loading, setLoading] = useState(true);
   
-  // Future Django integration:
-  // Name and email initially come from the Super Admin-created account.
-  // Other profile fields are initially empty.
-  // Load and save the authenticated Admin's profile here.
-  // Replace confirmed UI data only after backend success.
-  const [profile, setProfile] = useState({
-    fullName: 'Alice Smith',
-    email: 'alice.smith@tnjobz.gov.in',
-    phoneNumber: '',
-    addressLine: '',
-    city: '',
-    district: '',
-    state: '',
-    pinCode: '',
-    profilePhoto: null
+  const [profile, setProfile] = useState(() => {
+    const adminUser = getAuthenticatedUser();
+    const nameStr = adminUser?.full_name || adminUser?.fullName || adminUser?.name || (adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : null) || adminUser?.username || 'Admin';
+    return {
+      fullName: nameStr,
+      email: adminUser?.email || '',
+      phoneNumber: adminUser?.phone_number || '',
+      addressLine: '',
+      city: '',
+      district: '',
+      state: '',
+      pinCode: '',
+      profilePhoto: null
+    };
   });
 
   const [isEditing, setIsEditing] = useState(false);

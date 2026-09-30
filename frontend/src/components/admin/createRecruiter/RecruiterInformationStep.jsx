@@ -1,7 +1,10 @@
-import { AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import ProfilePhotoUpload from './ProfilePhotoUpload';
 
 export default function RecruiterInformationStep({ formState, setFormState, errors, setErrors, touched, setTouched }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const validateField = (name, value) => {
     let err = null;
@@ -9,10 +12,24 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
       if (name === 'fullName') err = "Full Name is required.";
       if (name === 'email') err = "Email Address is required.";
       if (name === 'phone') err = "Phone Number is required.";
-    } else if (name === 'email') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value.trim())) {
-        err = "Invalid email format.";
+      if (name === 'password') err = "Password is required.";
+      if (name === 'confirmPassword') err = "Confirm Password is required.";
+    } else {
+      if (name === 'email') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value.trim())) {
+          err = "Invalid email format.";
+        }
+      }
+      if (name === 'password') {
+        if (value.length < 8) {
+          err = "Password must be at least 8 characters long.";
+        }
+      }
+      if (name === 'confirmPassword') {
+        if (value !== formState.password) {
+          err = "Passwords do not match.";
+        }
       }
     }
     setErrors(prev => ({ ...prev, [name]: err }));
@@ -25,6 +42,13 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
 
   const handleChange = (name, val) => {
     setFormState(prev => ({ ...prev, [name]: val }));
+    if (name === 'password' && touched.confirmPassword && formState.confirmPassword) {
+      if (formState.confirmPassword !== val) {
+        setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match." }));
+      } else {
+        setErrors(prev => ({ ...prev, confirmPassword: null }));
+      }
+    }
     if (touched[name]) {
       validateField(name, val);
     }
@@ -78,6 +102,69 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
         </div>
       </div>
 
+      {/* Password & Confirm Password row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5.5">
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-semibold text-slate-700">Password *</label>
+          <div className="relative">
+            <input 
+              type={showPassword ? "text" : "password"}
+              value={formState.password || ''}
+              onChange={(e) => handleChange('password', e.target.value)}
+              onBlur={() => handleBlur('password')}
+              placeholder="Enter password"
+              aria-invalid={!!errors.password}
+              className={`w-full rounded-lg border px-3.5 py-2.5 pr-10 text-[14px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#4A1DDF] focus:ring-1 focus:ring-[#4A1DDF] focus:outline-none min-h-[46px] ${
+                errors.password && touched.password ? 'border-red-300 ring-1 ring-red-300' : 'border-slate-200'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {errors.password && touched.password && (
+            <div className="flex items-center gap-1 text-[12px] text-red-500 font-medium min-h-[16px]">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{errors.password}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-semibold text-slate-700">Confirm Password *</label>
+          <div className="relative">
+            <input 
+              type={showConfirmPassword ? "text" : "password"}
+              value={formState.confirmPassword || ''}
+              onChange={(e) => handleChange('confirmPassword', e.target.value)}
+              onBlur={() => handleBlur('confirmPassword')}
+              placeholder="Confirm password"
+              aria-invalid={!!errors.confirmPassword}
+              className={`w-full rounded-lg border px-3.5 py-2.5 pr-10 text-[14px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#4A1DDF] focus:ring-1 focus:ring-[#4A1DDF] focus:outline-none min-h-[46px] ${
+                errors.confirmPassword && touched.confirmPassword ? 'border-red-300 ring-1 ring-red-300' : 'border-slate-200'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {errors.confirmPassword && touched.confirmPassword && (
+            <div className="flex items-center gap-1 text-[12px] text-red-500 font-medium min-h-[16px]">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{errors.confirmPassword}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Phone input grid */}
       <div className="space-y-1.5">
         <label className="text-[13px] font-semibold text-slate-700">Phone Number *</label>
@@ -116,7 +203,7 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
         )}
       </div>
 
-      {/* File photo upload component */}
+      {/* Profile photo upload component */}
       <ProfilePhotoUpload 
         file={formState.profilePhoto}
         setFile={(file) => handleChange('profilePhoto', file)}

@@ -4,6 +4,7 @@ import CreateRecruiterStepper from '../../components/admin/createRecruiter/Creat
 import RecruiterInformationStep from '../../components/admin/createRecruiter/RecruiterInformationStep';
 import CompanyInformationStep from '../../components/admin/createRecruiter/CompanyInformationStep';
 import ReviewRecruiterStep from '../../components/admin/createRecruiter/ReviewRecruiterStep';
+import { createEmployerService } from '../../services/superAdmin/superAdminService';
 
 export default function AdminCreateRecruiter() {
   const navigate = useNavigate();
@@ -15,13 +16,20 @@ export default function AdminCreateRecruiter() {
   const [formState, setFormState] = useState({
     fullName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phoneCountryCode: '+91',
     phone: '',
     profilePhoto: null,
     companyName: '',
     industry: '',
     companyType: '',
+    stateId: '',
+    districtId: '',
+    cityId: '',
+    localityId: '',
     location: '',
+    location_id: null,
     companyEmail: '',
     companyPhoneCountryCode: '+91',
     companyPhone: ''
@@ -54,6 +62,16 @@ export default function AdminCreateRecruiter() {
         newErrors.email = "Invalid email format.";
       }
     }
+    if (!formState.password || !formState.password.trim()) {
+      newErrors.password = "Password is required.";
+    } else if (formState.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long.";
+    }
+    if (!formState.confirmPassword || !formState.confirmPassword.trim()) {
+      newErrors.confirmPassword = "Confirm Password is required.";
+    } else if (formState.password !== formState.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
     if (!formState.phone || !formState.phone.trim()) {
       newErrors.phone = "Phone Number is required.";
     }
@@ -62,6 +80,8 @@ export default function AdminCreateRecruiter() {
     setTouched({
       fullName: true,
       email: true,
+      password: true,
+      confirmPassword: true,
       phone: true
     });
 
@@ -73,7 +93,7 @@ export default function AdminCreateRecruiter() {
     const requiredFields = ['companyName', 'industry', 'companyType', 'location', 'companyEmail', 'companyPhone'];
     
     requiredFields.forEach(f => {
-      if (!formState[f] || !formState[f].trim()) {
+      if (!formState[f] || (typeof formState[f] === 'string' && !formState[f].trim())) {
         newErrors[f] = `${f.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
       }
     });
@@ -106,23 +126,70 @@ export default function AdminCreateRecruiter() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    
-    // Future Django integration:
-    // Submit to the actual Admin-created Employer endpoint.
-    // The backend must create an EMPLOYER account and associate it
-    // with the authenticated Admin.
-    // The backend—not the frontend—must set role, owner/created_by,
-    // activation status, and invitation state.
+  const handleStepClick = (targetStep) => {
+    if (targetStep === 1) {
+      setStep(1);
+    } else if (targetStep === 2) {
+      if (validateStep1()) {
+        setStep(2);
+      }
+    } else if (targetStep === 3) {
+      if (validateStep1() && validateStep2()) {
+        setStep(3);
+      }
+    }
+  };
 
-    setTimeout(() => {
+  const fileToDataUrl = (file) => {
+    return new Promise((resolve) => {
+      if (!file) return resolve(null);
+      if (typeof file === 'string') return resolve(file);
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCreateRecruiter = async (e) => {
+    if (e) e.preventDefault();
+    if (step !== 3) return;
+    if (isSubmitting) return;
+    setSubmitMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const photoDataUrl = formState.profilePhoto ? await fileToDataUrl(formState.profilePhoto) : null;
+      const payload = {
+        fullName: formState.fullName.trim(),
+        email: formState.email.trim(),
+        password: formState.password,
+        confirmPassword: formState.confirmPassword,
+        phone_number: `${formState.phoneCountryCode}${formState.phone}`.trim(),
+        company_name: formState.companyName.trim(),
+        industry: formState.industry.trim(),
+        company_type: formState.companyType.trim(),
+        locality: formState.location.trim(),
+        location_id: formState.location_id || null,
+        company_email: formState.companyEmail.trim(),
+        company_phone: `${formState.companyPhoneCountryCode}${formState.companyPhone}`.trim(),
+        designation: 'HR Manager',
+        status: 'ACTIVE',
+        profile_photo: photoDataUrl,
+        company_logo: photoDataUrl
+      };
+
+      const res = await createEmployerService(payload);
+      if (res.success) {
+        navigate('/admin/recruiters');
+      } else {
+        setSubmitMessage(res.message || "Failed to create Recruiter account.");
+      }
+    } catch {
+      setSubmitMessage("An unexpected network error occurred while creating recruiter.");
+    } finally {
       setIsSubmitting(false);
-      setSubmitMessage("Backend integration not yet available. Database submission is bypassed currently.");
-    }, 1200);
+    }
   };
 
   return (
@@ -134,11 +201,21 @@ export default function AdminCreateRecruiter() {
       </div>
 
       {/* Stepper Status tracker */}
-      <CreateRecruiterStepper currentStep={step} />
+      <CreateRecruiterStepper currentStep={step} onStepClick={handleStepClick} />
 
       {/* Main Wizard Form Card */}
       <div className="bg-white rounded-lg border border-slate-200 p-6 md:p-8 max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (step === 3) {
+              handleCreateRecruiter(e);
+            } else {
+              handleNext();
+            }
+          }} 
+          className="space-y-8"
+        >
           
           <h2 className="text-[17px] font-semibold text-slate-905 border-b border-slate-100 pb-3">
             {step === 1 && "Recruiter Information"}
@@ -222,7 +299,8 @@ export default function AdminCreateRecruiter() {
                 </button>
               ) : (
                 <button 
-                  type="submit" 
+                  type="button" 
+                  onClick={handleCreateRecruiter}
                   disabled={isSubmitting}
                   className="rounded-lg bg-[#4A1DDF] hover:bg-[#3B15CA] disabled:bg-indigo-400 disabled:cursor-not-allowed px-6.5 py-2.5 text-[14px] font-semibold text-white transition-colors cursor-pointer min-h-[44px]"
                 >

@@ -18,6 +18,13 @@ export default function ReviewRecruiterStep({ formState }) {
           </div>
 
           <div className="grid grid-cols-3 gap-2">
+            <span className="text-[13px] font-medium text-slate-500">Password</span>
+            <span className="text-[13px] font-semibold text-slate-805 col-span-2">
+              {formState.password ? '••••••••' : 'Not provided'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
             <span className="text-[13px] font-medium text-slate-500">Phone Number</span>
             <span className="text-[13px] font-semibold text-slate-805 col-span-2">
               {formState.phone ? `${formState.phoneCountryCode} ${formState.phone}` : 'Not provided'}
@@ -30,11 +37,13 @@ export default function ReviewRecruiterStep({ formState }) {
               {formState.profilePhoto ? (
                 <>
                   <img 
-                    src={URL.createObjectURL(formState.profilePhoto)} 
+                    src={typeof formState.profilePhoto === 'string' ? formState.profilePhoto : URL.createObjectURL(formState.profilePhoto)} 
                     alt="Preview Profile" 
                     className="h-8 w-8 rounded-full object-cover border border-slate-200"
                   />
-                  <span className="text-[12px] font-semibold text-slate-705 truncate max-w-[120px]">{formState.profilePhoto.name}</span>
+                  <span className="text-[12px] font-semibold text-slate-705 truncate max-w-[120px]">
+                    {formState.profilePhoto.name || 'Photo selected'}
+                  </span>
                 </>
               ) : (
                 <span className="text-[13px] font-semibold text-slate-450 italic">Not provided</span>

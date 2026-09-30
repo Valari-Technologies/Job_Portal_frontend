@@ -139,8 +139,8 @@ export default function SuperAdminSkills({ onToast }) {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto flex-wrap">
+          <div className="relative w-full sm:w-auto flex-1 sm:flex-none">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3">
               <svg className="h-4.5 w-4.5 text-slate-450" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -151,15 +151,15 @@ export default function SuperAdminSkills({ onToast }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search skills..."
-              className="rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-teal-500 transition-colors"
+              className="w-full sm:w-56 rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
 
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
+              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
             >
               <option value="all">All status</option>
               <option value="active">Active</option>
@@ -167,11 +167,11 @@ export default function SuperAdminSkills({ onToast }) {
             </select>
           </div>
 
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
+              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
             >
               <option value="all">All categories</option>
               <option value="uncategorized">Uncategorized</option>
@@ -186,7 +186,7 @@ export default function SuperAdminSkills({ onToast }) {
           <button
             onClick={() => navigate('/super-admin/skills/create')}
             aria-label="Add skill"
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer min-h-[42px]"
           >
             <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />

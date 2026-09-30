@@ -70,9 +70,9 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      {emp.company_logo ? (
+                      {emp.company_logo || emp.profile_photo ? (
                         <img 
-                          src={emp.company_logo} 
+                          src={emp.company_logo || emp.profile_photo} 
                           alt={emp.company_name || 'Logo'} 
                           className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" 
                         />

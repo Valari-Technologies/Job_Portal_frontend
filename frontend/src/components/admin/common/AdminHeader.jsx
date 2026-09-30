@@ -2,20 +2,14 @@ import { Search, Bell, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getProfilePhotoFromStorage, subscribeProfilePhoto } from '../../../services/admin/profilePhotoSync';
+import { getAuthenticatedUser } from '../../../services/auth/adminAuthService';
 
 export default function AdminHeader({ onMobileMenuToggle, searchPlaceholder = "Search anything..." }) {
   const [photo, setPhoto] = useState(() => getProfilePhotoFromStorage('current-admin'));
 
-  const userStr = localStorage.getItem('auth_user');
-  let user;
-  try {
-    user = userStr ? JSON.parse(userStr) : null;
-  } catch {
-    user = null;
-  }
-
-  const displayName = user?.fullName || user?.name || user?.username || 'Admin';
-  const displayRole = user?.role === 'ADMIN' ? 'Administrator' : (user?.role || 'System Admin');
+  const user = getAuthenticatedUser();
+  const displayName = user?.full_name || user?.fullName || user?.name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) || user?.username || 'Admin';
+  const displayRole = user?.role === 'ADMIN' ? 'Administrator' : (user?.role === 'SUPER_ADMIN' ? 'Super Admin' : (user?.role || 'System Admin'));
   const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
 
   useEffect(() => {

@@ -199,56 +199,56 @@ export default function SuperAdminAccountSettings() {
       )}
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 overflow-x-auto pb-0.5 no-scrollbar scroll-smooth">
         <button
           type="button"
           onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-extrabold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`-mb-px shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'general'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/40 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-xl shadow-2xs'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50/50 rounded-t-xl'
           }`}
         >
-          <Sliders className="h-4 w-4" />
+          <Sliders className="h-4 w-4 shrink-0" />
           <span>General</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-extrabold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`-mb-px shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'security'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/40 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-xl shadow-2xs'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50/50 rounded-t-xl'
           }`}
         >
-          <ShieldCheck className="h-4 w-4" />
+          <ShieldCheck className="h-4 w-4 shrink-0" />
           <span>Security & 2FA</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('notifications')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-extrabold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`-mb-px shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'notifications'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/40 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-xl shadow-2xs'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50/50 rounded-t-xl'
           }`}
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-4 w-4 shrink-0" />
           <span>Notifications</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('sessions')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-extrabold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`-mb-px shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-extrabold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
             activeTab === 'sessions'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/40 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-xl shadow-2xs'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50/50 rounded-t-xl'
           }`}
         >
-          <Laptop className="h-4 w-4" />
+          <Laptop className="h-4 w-4 shrink-0" />
           <span>Sessions & Devices</span>
         </button>
       </div>
