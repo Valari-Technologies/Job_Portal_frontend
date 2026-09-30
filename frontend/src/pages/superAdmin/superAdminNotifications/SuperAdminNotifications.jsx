@@ -32,22 +32,24 @@ export default function SuperAdminNotifications() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Icon mapping for event types
-  const getEventIcon = (referenceType) => {
-    switch (referenceType) {
-      case 'employer_verification':
-        return <UserCheck className="h-5 w-5 text-teal-600" />;
-      case 'job_review':
-        return <FileText className="h-5 w-5 text-blue-600" />;
-      case 'security':
-        return <ShieldAlert className="h-5 w-5 text-amber-600" />;
-      case 'admin':
-        return <Users className="h-5 w-5 text-purple-600" />;
-      case 'report':
-      case 'query':
-        return <AlertTriangle className="h-5 w-5 text-rose-600" />;
-      default:
-        return <Bell className="h-5 w-5 text-slate-600" />;
+  const getEventIcon = (referenceType, notificationType) => {
+    const typeStr = `${referenceType || ''} ${notificationType || ''}`.toUpperCase();
+    if (typeStr.includes('EMPLOYER')) {
+      return <UserCheck className="h-5 w-5 text-teal-600" />;
     }
+    if (typeStr.includes('JOB') && !typeStr.includes('REPORT')) {
+      return <FileText className="h-5 w-5 text-blue-600" />;
+    }
+    if (typeStr.includes('REPORT')) {
+      return <AlertTriangle className="h-5 w-5 text-rose-600" />;
+    }
+    if (typeStr.includes('SECURITY')) {
+      return <ShieldAlert className="h-5 w-5 text-amber-600" />;
+    }
+    if (typeStr.includes('ADMIN')) {
+      return <Users className="h-5 w-5 text-purple-600" />;
+    }
+    return <Bell className="h-5 w-5 text-slate-600" />;
   };
 
   // Safe navigation mapping
@@ -55,37 +57,34 @@ export default function SuperAdminNotifications() {
     e.stopPropagation();
     markAsRead(notification.id);
 
-    const refType = notification.reference_type;
-    switch (refType) {
-      case 'employer_verification':
-        navigate('/super-admin/employer-verification');
-        break;
-      case 'job_review':
-        navigate('/super-admin/job-review');
-        break;
-      case 'admin':
-        navigate('/super-admin/admins');
-        break;
-      case 'security':
-        navigate('/super-admin/audit-security');
-        break;
-      case 'report':
-      case 'query':
-        navigate('/super-admin/reports');
-        break;
-      default:
-        break;
+    const refType = (notification.reference_type || '').toLowerCase();
+    const notifType = (notification.notification_type || '').toLowerCase();
+
+    if (refType.includes('employer') || notifType.includes('employer')) {
+      navigate('/super-admin/employer-verification');
+    } else if (refType === 'job' || notifType.includes('job_submission') || notifType.includes('job_review')) {
+      navigate('/super-admin/job-review');
+    } else if (refType.includes('report') || notifType.includes('report')) {
+      navigate('/super-admin/reports');
+    } else if (refType.includes('admin') || notifType.includes('admin')) {
+      navigate('/super-admin/admins');
+    } else if (refType.includes('security') || notifType.includes('security')) {
+      navigate('/super-admin/audit-security');
     }
   };
 
   // Filter logic
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(item => {
+    const notifList = Array.isArray(notifications) ? notifications : [];
+    return notifList.filter(item => {
       // 1. Tab filter
       if (activeTab === 'unread' && item.is_read) return false;
 
       // 2. Category filter
-      if (categoryFilter !== 'ALL' && item.reference_type !== categoryFilter) return false;
+      if (categoryFilter !== 'ALL') {
+        const itemCat = `${item.reference_type || ''} ${item.notification_type || ''}`.toUpperCase();
+        if (!itemCat.includes(categoryFilter.toUpperCase())) return false;
+      }
 
       // 3. Search query
       if (searchQuery.trim()) {
@@ -99,14 +98,15 @@ export default function SuperAdminNotifications() {
     });
   }, [notifications, activeTab, categoryFilter, searchQuery]);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const notifArray = Array.isArray(notifications) ? notifications : [];
+  const unreadCount = notifArray.filter(n => !n.is_read).length;
 
   return (
     <div className="space-y-8 font-sans animate-fadeIn max-w-5xl mx-auto">
       {/* Title Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-150 pb-5">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Notifications</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">TN Jobz Notifications</h1>
           <p className="text-sm font-semibold text-slate-500 mt-1">
             Review platform, moderation, account, and security updates.
           </p>
@@ -137,7 +137,7 @@ export default function SuperAdminNotifications() {
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            All ({notifications.length})
+            All ({notifArray.length})
           </button>
 
           <button
@@ -180,11 +180,9 @@ export default function SuperAdminNotifications() {
               className="rounded-xl border border-slate-200 bg-white py-2.5 pl-3.5 pr-8 text-xs font-bold text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer"
             >
               <option value="ALL">All Categories</option>
-              <option value="employer_verification">Employer Verification</option>
-              <option value="job_review">Job Moderation</option>
-              <option value="security">Security Alerts</option>
-              <option value="admin">Admin Events</option>
-              <option value="report">Reports & Queries</option>
+              <option value="EMPLOYER">Employer Verification</option>
+              <option value="JOB">Job Moderation</option>
+              <option value="REPORT">Job Reports</option>
             </select>
           </div>
         </div>
@@ -248,7 +246,7 @@ export default function SuperAdminNotifications() {
                 <div className={`p-3 rounded-2xl shrink-0 border ${
                   !item.is_read ? 'bg-white border-teal-200 shadow-2xs' : 'bg-slate-100 border-slate-200'
                 }`}>
-                  {getEventIcon(item.reference_type)}
+                  {getEventIcon(item.reference_type, item.notification_type)}
                 </div>
 
                 {/* Content Details */}
@@ -265,7 +263,7 @@ export default function SuperAdminNotifications() {
                     {item.message}
                   </p>
                   <p className="text-[11px] font-semibold text-slate-400">
-                    {item.formatted_time || new Date(item.created_at).toLocaleString()}
+                    {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
                   </p>
                 </div>
               </div>

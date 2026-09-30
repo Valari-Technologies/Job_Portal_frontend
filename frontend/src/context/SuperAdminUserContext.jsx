@@ -37,7 +37,7 @@ export function SuperAdminUserProvider({ children }) {
         ]);
         if (isMounted) {
           setProfile(profData);
-          setNotifications(notifData);
+          setNotifications(notifData.results || (Array.isArray(notifData) ? notifData : []));
         }
       } catch (err) {
         console.error('Failed to load Super Admin state:', err);
@@ -69,7 +69,7 @@ export function SuperAdminUserProvider({ children }) {
         getSuperAdminNotifications()
       ]);
       setProfile(profData);
-      setNotifications(notifData);
+      setNotifications(notifData.results || (Array.isArray(notifData) ? notifData : []));
     } catch (err) {
       console.error('Failed to refresh Super Admin state:', err);
       setError('Unable to load account data.');
@@ -106,13 +106,13 @@ export function SuperAdminUserProvider({ children }) {
 
   // Notification actions
   const handleMarkAsRead = async (id) => {
-    const updated = await markNotificationAsRead(id);
-    setNotifications(updated);
+    await markNotificationAsRead(id);
+    setNotifications(prev => (Array.isArray(prev) ? prev : []).map(n => n.id === id ? { ...n, is_read: true } : n));
   };
 
   const handleMarkAllAsRead = async () => {
-    const updated = await markAllNotificationsAsRead();
-    setNotifications(updated);
+    await markAllNotificationsAsRead();
+    setNotifications(prev => (Array.isArray(prev) ? prev : []).map(n => ({ ...n, is_read: true })));
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
