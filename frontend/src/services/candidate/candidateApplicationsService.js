@@ -12,6 +12,8 @@
  * - POST /api/v1/candidates/applications/{id}/withdraw/ -> Withdraw application
  */
 
+import { getAuthenticatedUser } from '../auth/adminAuthService';
+
 const STORAGE_APPLICATIONS_KEY = 'statejobz_candidate_applications';
 const STORAGE_RESUMES_KEY = 'statejobz_candidate_resumes';
 
@@ -237,18 +239,20 @@ function saveStoredApplications(apps) {
     console.error('Error saving Candidate applications storage:', err);
   }
 }
-
 function getStoredResumes() {
   try {
     const raw = localStorage.getItem(STORAGE_RESUMES_KEY);
     if (raw) return JSON.parse(raw);
     
+    const user = getAuthenticatedUser();
+    const candidateName = (user?.first_name || user?.fullName?.split(' ')[0] || 'Candidate').replace(/[^a-zA-Z0-9]/g, '_');
+
     const defaultResume = [
       {
         id: 'res_default_1',
-        fileName: 'Alex_Developer_Resume.pdf',
+        fileName: `${candidateName}_Resume.pdf`,
         fileUrl: '#',
-        updatedAt: '2026-08-20',
+        updatedAt: new Date().toISOString().split('T')[0],
         isPrimary: true
       }
     ];

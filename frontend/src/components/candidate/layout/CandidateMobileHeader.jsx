@@ -16,7 +16,7 @@ export default function CandidateMobileHeader() {
     return 'Good Evening!';
   };
 
-  const firstName = profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Alex');
+  const firstName = profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Candidate');
 
   return (
     <header className="lg:hidden flex items-center justify-between px-4 sm:px-6 py-4 bg-white border-b border-slate-150 sticky top-0 z-30 font-sans">

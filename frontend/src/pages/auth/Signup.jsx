@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
+import { registerCandidate } from '../../services/auth/adminAuthService';
 
 export default function Signup() {
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -15,6 +17,8 @@ export default function Signup() {
 
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [apiError, setApiError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Unicode-aware Name Sanitizer
   const sanitizeName = (val) => {
@@ -80,8 +84,9 @@ export default function Signup() {
     validateField(name, value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError(null);
 
     const normalizedName = fullName.trim().replace(/\s+/g, ' ');
     const normalizedEmail = email.trim();
@@ -105,7 +110,35 @@ export default function Signup() {
     const v5 = validateField('confirmPassword', confirmPassword);
 
     if (v1 && v2 && v3 && v4 && v5) {
-      alert('Candidate account validation passed! Ready for backend submission.');
+      setIsSubmitting(true);
+      try {
+        const response = await registerCandidate({
+          fullName: normalizedName,
+          mobileNumber,
+          email: normalizedEmail,
+          password,
+          confirmPassword
+        });
+
+        if (response.success) {
+          // Clear any stored onboarding from local storage for previous candidate
+          localStorage.removeItem('statejobz_candidate_onboarding');
+          navigate('/login', {
+            state: {
+              email: normalizedEmail,
+              registered: true,
+              role: 'candidate',
+              message: 'Account created successfully! Please login to continue.'
+            }
+          });
+        } else {
+          setApiError(response.message || 'Failed to create candidate account.');
+        }
+      } catch (err) {
+        setApiError(err.message || 'An unexpected error occurred.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -137,6 +170,13 @@ export default function Signup() {
 
         {/* Action Form */}
         <form onSubmit={handleSubmit} noValidate className="space-y-2.5">
+
+          {apiError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              <span>{apiError}</span>
+            </div>
+          )}
 
           {/* Full Name */}
           <div className="space-y-0.5 text-left">
@@ -358,9 +398,10 @@ export default function Signup() {
           {/* Create Account Primary Action */}
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 text-sm md:text-base shadow-md hover:shadow-lg transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer mt-1"
+            disabled={isSubmitting}
+            className={`w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 text-sm md:text-base shadow-md hover:shadow-lg transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer mt-1 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            Create Account
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 

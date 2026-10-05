@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logoJobz from '../../assets/logo-jobz.png';
 import { loginAdmin, clearAllAuthTokens } from '../../services/auth/adminAuthService';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [activeRole, setActiveRole] = useState('candidate'); // 'candidate' or 'hr'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,11 +17,22 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [authError, setAuthError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [isErrorVisible, setIsErrorVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const authErrorRef = useRef(null);
   const authErrorTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+    if (location.state?.registered) {
+      setActiveRole(location.state.role || 'candidate');
+      setSuccessMessage(location.state.message || 'Account created successfully! Please sign in to continue.');
+    }
+  }, [location.state]);
 
   const triggerAuthError = (msg) => {
     if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
@@ -218,6 +231,17 @@ export default function Login() {
             <p className="text-xs font-bold text-slate-500 mt-0.5">Welcome back! Please login to continue.</p>
           </div>
         </div>
+
+        {/* Form-level Success Banner */}
+        {successMessage && (
+          <div className="mb-3.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+            <button type="button" onClick={() => setSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-700 font-bold ml-2">✕</button>
+          </div>
+        )}
 
         {/* Form-level Authentication Error Alert */}
         {authError && (

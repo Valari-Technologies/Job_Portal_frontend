@@ -116,14 +116,14 @@ export default function CandidateSettingsPage() {
   const initProfileForm = useCallback((prof) => {
     if (!prof) return;
     setProfileForm({
-      firstName: prof.firstName || 'Alex',
-      lastName: prof.lastName || 'Rivers',
-      fullName: prof.fullName || 'Alex Rivers',
-      email: prof.email || 'alex.rivers@example.com',
-      headline: prof.headline || 'Senior Product Designer',
-      summary: prof.summary || 'Product Designer with 5+ years of experience building intuitive user interfaces for tech startups. Passionate about translating complex business requirements into elegant, user-centric solutions.',
-      linkedin: prof.links?.linkedin || 'https://linkedin.com/in/alexrivers',
-      portfolio: prof.links?.portfolio || 'https://alexrivers.design'
+      firstName: prof.firstName || (prof.fullName ? prof.fullName.split(' ')[0] : 'Candidate'),
+      lastName: prof.lastName || (prof.fullName ? prof.fullName.split(' ').slice(1).join(' ') : ''),
+      fullName: prof.fullName || 'Candidate',
+      email: prof.email || '',
+      headline: prof.headline || 'Candidate',
+      summary: prof.summary || '',
+      linkedin: prof.links?.linkedin || '',
+      portfolio: prof.links?.portfolio || ''
     });
   }, []);
 
@@ -354,7 +354,7 @@ export default function CandidateSettingsPage() {
   }
 
   const activeAvatar = settings?.profile?.avatarUrl || contextProfile?.avatarUrl;
-  const fullName = profileForm.fullName || contextProfile?.fullName || 'Alex Rivers';
+  const fullName = profileForm.fullName || contextProfile?.fullName || 'Candidate';
   const headline = profileForm.headline || 'Senior Product Designer';
   const completionPct = settings?.profile?.completionPercentage ?? 85;
 

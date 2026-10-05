@@ -17,7 +17,21 @@
  * - POST /api/v1/candidates/onboarding/select/ -> Save candidate industry & specialization payload
  */
 
+import { getAuthenticatedUser } from '../auth/adminAuthService';
+
 const ONBOARDING_STORAGE_KEY = 'statejobz_candidate_onboarding';
+
+function getOnboardingStorageKey() {
+  try {
+    const user = getAuthenticatedUser();
+    if (user && user.email) {
+      return `${ONBOARDING_STORAGE_KEY}_${user.email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    }
+  } catch {
+    // Fallback
+  }
+  return ONBOARDING_STORAGE_KEY;
+}
 
 // Exact Industry Catalog matching Figma reference design (Step 1)
 const DEV_INDUSTRIES_CATALOG = [
@@ -78,7 +92,8 @@ const DEV_SPECIALIZATIONS_CATALOG = {
 
 function loadStoredOnboarding() {
   try {
-    const raw = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    const key = getOnboardingStorageKey();
+    const raw = localStorage.getItem(key);
     if (!raw) {
       return {
         industry: null,
@@ -96,9 +111,10 @@ function loadStoredOnboarding() {
 
 function saveOnboardingToStorage(data) {
   try {
+    const key = getOnboardingStorageKey();
     const current = loadStoredOnboarding();
     const updated = { ...current, ...data, updatedAt: new Date().toISOString() };
-    localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(updated));
+    localStorage.setItem(key, JSON.stringify(updated));
     return updated;
   } catch (err) {
     console.error('Error saving Candidate onboarding storage:', err);

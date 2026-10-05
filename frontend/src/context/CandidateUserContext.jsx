@@ -8,22 +8,12 @@ import {
   markAllNotificationsAsRead
 } from '../services/candidate/candidateDashboardService';
 import { getCandidateOnboardingStatus } from '../services/candidate/candidateOnboardingService';
+import { getInitialProfileForCurrentUser } from '../services/candidate/candidateProfileService';
 
 const CandidateUserContext = createContext(null);
 
 export function CandidateUserProvider({ children }) {
-  const [profile, setProfile] = useState({
-    firstName: "Alex",
-    lastName: "Morgan",
-    fullName: "Alex Morgan",
-    email: "alex.morgan@example.com",
-    avatarUrl: null,
-    completionPercentage: 80,
-    headline: "Senior UX Designer / Frontend Specialist",
-    location: "Bengaluru, India",
-    industry: { id: "ind_it", title: "Information Technology" },
-    specialization: { id: "spec_dev", title: "Software Development" }
-  });
+  const [profile, setProfile] = useState(() => getInitialProfileForCurrentUser());
 
   const [onboardingStatus, setOnboardingStatus] = useState({
     isCompleted: true,

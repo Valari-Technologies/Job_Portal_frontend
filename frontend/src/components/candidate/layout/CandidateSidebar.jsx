@@ -53,8 +53,8 @@ export default function CandidateSidebar() {
           )}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-base font-black text-[#3B00FF] tracking-tight truncate leading-tight">
-            Job Portal
+          <span className="text-base font-black text-slate-900 tracking-tight truncate leading-tight">
+            {profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Job Portal')}
           </span>
           <span className="text-[11px] font-semibold text-slate-400">
             Premium Tier

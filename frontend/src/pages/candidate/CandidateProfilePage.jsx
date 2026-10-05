@@ -408,7 +408,7 @@ export default function CandidateProfilePage() {
   }
 
   const activeAvatar = profile?.avatarUrl || contextProfile?.avatarUrl;
-  const fullName = profile?.fullName || contextProfile?.fullName || 'Alex Chen';
+  const fullName = profile?.fullName || contextProfile?.fullName || 'Candidate';
   const headline = profile?.headline || 'Senior Software Developer';
   const location = profile?.location || 'San Francisco, CA';
   const completionPct = profile?.completionPercentage ?? 80;

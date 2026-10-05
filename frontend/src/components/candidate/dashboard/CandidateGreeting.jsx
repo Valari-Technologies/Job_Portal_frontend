@@ -2,7 +2,7 @@ import { useCandidateUser } from '../../../context/CandidateUserContext';
 
 export default function CandidateGreeting() {
   const { profile } = useCandidateUser();
-  const firstName = profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Alex');
+  const firstName = profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Candidate');
 
   return (
     <div className="space-y-1 font-sans">

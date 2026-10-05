@@ -336,11 +336,13 @@ export default function CandidateResumePage() {
       if (res.success) {
         setAnalysis(res.updatedAnalysis);
 
-        // Update current resume draft section text in real time
-        const updatedExp = (currentResume.sections?.experience || []).map(exp => {
-          if (exp.id === suggestion.sectionId) {
+        const targetExpIdx = suggestion.experienceIndex ?? 0;
+        const targetBulletIdx = suggestion.bulletIndex ?? 0;
+
+        const updatedExp = (currentResume.sections?.experience || []).map((exp, idx) => {
+          if (exp.id === suggestion.sectionId || idx === targetExpIdx) {
             const newBullets = [...(exp.bullets || [])];
-            newBullets[suggestion.bulletIndex] = textToApply;
+            newBullets[targetBulletIdx] = textToApply;
             return { ...exp, bullets: newBullets };
           }
           return exp;
@@ -352,8 +354,10 @@ export default function CandidateResumePage() {
         };
 
         setCurrentResume(updatedResume);
+        setResumes(prev => prev.map(r =>
+          (r.versionId === updatedResume.versionId || r.id === updatedResume.id) ? updatedResume : r
+        ));
 
-        // Save updated draft to service
         await updateResumeVersion(currentResume.versionId || currentResume.id, { sections: updatedResume.sections });
 
         setIsEditingSuggestion(false);
@@ -363,6 +367,50 @@ export default function CandidateResumePage() {
       console.error('Error applying suggestion:', err);
       triggerToast('Failed to apply suggestion.');
     }
+  };
+
+  // Action: Apply All Pending AI Suggestions
+  const handleApplyAllSuggestions = async () => {
+    if (!analysis || !currentResume || !analysis.suggestions?.length) return;
+    const pending = analysis.suggestions.filter(s => s.status !== 'ACCEPTED');
+    if (pending.length === 0) {
+      triggerToast('All AI suggestions have already been applied!');
+      return;
+    }
+
+    let updatedResume = { ...currentResume };
+    let latestAnalysis = { ...analysis };
+
+    for (const sug of pending) {
+      const res = await acceptResumeSuggestion(latestAnalysis.analysisId, sug.id, sug.proposedText);
+      if (res.success) {
+        latestAnalysis = res.updatedAnalysis;
+        const targetExpIdx = sug.experienceIndex ?? 0;
+        const targetBulletIdx = sug.bulletIndex ?? 0;
+
+        const updatedExp = (updatedResume.sections?.experience || []).map((exp, idx) => {
+          if (exp.id === sug.sectionId || idx === targetExpIdx) {
+            const newBullets = [...(exp.bullets || [])];
+            newBullets[targetBulletIdx] = sug.proposedText;
+            return { ...exp, bullets: newBullets };
+          }
+          return exp;
+        });
+
+        updatedResume = {
+          ...updatedResume,
+          sections: { ...updatedResume.sections, experience: updatedExp }
+        };
+      }
+    }
+
+    setAnalysis(latestAnalysis);
+    setCurrentResume(updatedResume);
+    setResumes(prev => prev.map(r =>
+      (r.versionId === updatedResume.versionId || r.id === updatedResume.id) ? updatedResume : r
+    ));
+    await updateResumeVersion(updatedResume.versionId || updatedResume.id, { sections: updatedResume.sections });
+    triggerToast('All AI suggestions applied to Current Draft!');
   };
 
   // Action: Reject Suggestion
@@ -493,7 +541,7 @@ export default function CandidateResumePage() {
         displayName: uploadDisplayName,
         setAsDefault: setAsDefaultUpload,
         candidateName: candidateDisplayName,
-        contactInfo: profile?.email ? `${profile.email} • San Francisco, CA` : undefined
+        contactInfo: profile?.email ? `${profile.email}${profile?.phone ? ` • ${profile.phone}` : ''} • Tamil Nadu, India` : undefined
       });
 
       clearInterval(progressTimer);

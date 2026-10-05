@@ -35,6 +35,57 @@ export function removeAuthItem(key) {
   }
 }
 
+export async function registerCandidate({ fullName, mobileNumber, email, password, confirmPassword }) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/register/candidate/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fullName: typeof fullName === 'string' ? fullName.trim() : '',
+        phoneNumber: typeof mobileNumber === 'string' ? mobileNumber.trim() : '',
+        mobileNumber: typeof mobileNumber === 'string' ? mobileNumber.trim() : '',
+        email: typeof email === 'string' ? email.trim() : '',
+        password: password,
+        confirmPassword: confirmPassword || password,
+        agreeToTerms: true,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage =
+        data?.detail ||
+        data?.fullName?.[0] ||
+        data?.email?.[0] ||
+        data?.phoneNumber?.[0] ||
+        data?.mobileNumber?.[0] ||
+        data?.password?.[0] ||
+        data?.non_field_errors?.[0] ||
+        'Candidate account creation failed.';
+
+      return {
+        success: false,
+        message: errorMessage,
+        errors: data,
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Account created successfully.',
+      user: data.user,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || 'Unable to connect to backend server. Please check your connection.',
+    };
+  }
+}
+
 export async function loginAdmin({ email, password }) {
   try {
     const response = await fetch(`${API_BASE_URL}/accounts/login/`, {

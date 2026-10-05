@@ -15,74 +15,63 @@
  * - POST /api/v1/candidates/profile/certifications/ -> Create/update certification records
  */
 
-const STORAGE_PROFILE_KEY = 'statejobz_candidate_full_profile';
-const STORAGE_AVATAR_KEY = 'statejobz_candidate_avatar';
+import { getAuthenticatedUser } from '../auth/adminAuthService';
 
-const DEFAULT_PROFILE = {
-  fullName: 'Alex Chen',
-  firstName: 'Alex',
-  lastName: 'Chen',
-  email: 'alex.chen@example.com',
-  headline: 'Senior Software Developer',
-  location: 'San Francisco, CA',
-  phone: '+1 (555) 019-2834',
-  summary: 'Passionate Senior Software Developer with over 6 years of experience building modern web applications, scalable APIs, and design systems.',
-  avatarUrl: null,
-  completionPercentage: 80,
-  industry: { id: 'ind_it', title: 'Information Technology' },
-  specialization: { id: 'spec_dev', title: 'Software Development' },
-  
-  programmingLanguages: ['JavaScript / TS', 'Python', 'Go'],
-  technologies: ['React', 'AWS', 'Docker', 'Kubernetes'],
-  
-  experiences: [
-    {
-      id: 'exp_01',
-      roleTitle: 'Senior Frontend Engineer',
-      companyName: 'TechCorp Solutions',
-      period: '2021 - Present',
-      location: 'San Francisco, CA',
-      description: 'Lead the development of the core customer portal using React and TypeScript. Improved load times by 40% and mentored junior developers.'
+function getProfileStorageKey() {
+  const user = getAuthenticatedUser();
+  return user?.email ? `statejobz_candidate_full_profile_${user.email.toLowerCase()}` : 'statejobz_candidate_full_profile_guest';
+}
+
+function getAvatarStorageKey() {
+  const user = getAuthenticatedUser();
+  return user?.email ? `statejobz_candidate_avatar_${user.email.toLowerCase()}` : 'statejobz_candidate_avatar_guest';
+}
+
+export function getInitialProfileForCurrentUser() {
+  const user = getAuthenticatedUser();
+  const fullName = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || (user?.email ? user.email.split('@')[0] : 'Candidate');
+  const nameParts = fullName.trim().split(' ');
+  const firstName = user?.first_name || nameParts[0] || 'Candidate';
+  const lastName = user?.last_name || nameParts.slice(1).join(' ') || '';
+  const email = user?.email || 'candidate@example.com';
+  const phone = user?.phone_number || user?.mobileNumber || '';
+
+  return {
+    fullName,
+    firstName,
+    lastName,
+    email,
+    phone,
+    headline: 'Candidate',
+    location: 'Tamil Nadu, India',
+    summary: 'Welcome! Complete your profile to get personalized job recommendations.',
+    avatarUrl: null,
+    completionPercentage: 80,
+    industry: { id: 'ind_it', title: 'Information Technology' },
+    specialization: { id: 'spec_dev', title: 'Software Development' },
+    
+    programmingLanguages: ['JavaScript / TS', 'Python', 'Go'],
+    technologies: ['React', 'AWS', 'Docker', 'Kubernetes'],
+    
+    experiences: [],
+
+    education: [],
+
+    certifications: [],
+
+    links: {
+      github: '',
+      linkedin: '',
+      portfolio: '',
+      expectedSalary: ''
     },
-    {
-      id: 'exp_02',
-      roleTitle: 'Full Stack Developer',
-      companyName: 'InnovateNow Inc.',
-      period: '2018 - 2021',
-      location: 'New York, NY',
-      description: 'Developed robust REST APIs in Node.js and managed cloud deployments on AWS. Implemented CI/CD pipelines reducing deployment errors.'
-    }
-  ],
 
-  education: [
-    {
-      id: 'edu_01',
-      degree: 'B.S. Computer Science',
-      institution: 'University of Technology',
-      period: '2014 - 2018'
-    }
-  ],
-
-  certifications: [
-    {
-      id: 'cert_01',
-      title: 'AWS Certified Solutions Architect',
-      issuedYear: 'Issued: 2022'
-    }
-  ],
-
-  links: {
-    github: '',
-    linkedin: 'https://linkedin.com/in/alexchen',
-    portfolio: 'https://alexchen.dev',
-    expectedSalary: ''
-  },
-
-  missingSections: [
-    { id: 'github', label: 'Add GitHub Portfolio', sectionKey: 'github' },
-    { id: 'salary', label: 'Set Salary Expectations', sectionKey: 'expectedSalary' }
-  ]
-};
+    missingSections: [
+      { id: 'github', label: 'Add GitHub Portfolio', sectionKey: 'github' },
+      { id: 'salary', label: 'Set Salary Expectations', sectionKey: 'expectedSalary' }
+    ]
+  };
+}
 
 function calculateCompletion(prof) {
   let score = 30; // base score for account
@@ -113,27 +102,46 @@ function getMissingSections(prof) {
 
 function getStoredProfile() {
   try {
-    const raw = localStorage.getItem(STORAGE_PROFILE_KEY);
-    const storedAvatar = localStorage.getItem(STORAGE_AVATAR_KEY);
+    const key = getProfileStorageKey();
+    const avatarKey = getAvatarStorageKey();
+    const raw = localStorage.getItem(key);
+    const storedAvatar = localStorage.getItem(avatarKey);
+    const initial = getInitialProfileForCurrentUser();
+
     if (!raw) {
-      const initial = {
-        ...DEFAULT_PROFILE,
+      const profileObj = {
+        ...initial,
         avatarUrl: storedAvatar || null
       };
-      localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(initial));
-      return initial;
+      localStorage.setItem(key, JSON.stringify(profileObj));
+      return profileObj;
     }
+
     const parsed = JSON.parse(raw);
+
+    // Sync authenticated user details to profile
+    const user = getAuthenticatedUser();
+    if (user) {
+      if (user.fullName) parsed.fullName = user.fullName;
+      else if (user.first_name || user.last_name) parsed.fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      if (user.first_name) parsed.firstName = user.first_name;
+      if (user.last_name) parsed.lastName = user.last_name;
+      if (user.email) parsed.email = user.email;
+      if (user.phone_number || user.mobileNumber) parsed.phone = user.phone_number || user.mobileNumber;
+    }
+
     if (storedAvatar) parsed.avatarUrl = storedAvatar;
     return parsed;
   } catch (err) {
     console.error('Error reading candidate full profile:', err);
-    return DEFAULT_PROFILE;
+    return getInitialProfileForCurrentUser();
   }
 }
 
 function saveStoredProfile(profileObj) {
   try {
+    const key = getProfileStorageKey();
+    const avatarKey = getAvatarStorageKey();
     const completionPercentage = calculateCompletion(profileObj);
     const missingSections = getMissingSections(profileObj);
     const updated = {
@@ -141,9 +149,9 @@ function saveStoredProfile(profileObj) {
       completionPercentage,
       missingSections
     };
-    localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(updated));
+    localStorage.setItem(key, JSON.stringify(updated));
     if (updated.avatarUrl) {
-      localStorage.setItem(STORAGE_AVATAR_KEY, updated.avatarUrl);
+      localStorage.setItem(avatarKey, updated.avatarUrl);
     }
     return updated;
   } catch (err) {
@@ -210,7 +218,7 @@ export async function uploadCandidateProfilePhoto(file) {
  */
 export async function removeCandidateProfilePhoto() {
   await new Promise(resolve => setTimeout(resolve, 100));
-  localStorage.removeItem(STORAGE_AVATAR_KEY);
+  localStorage.removeItem(getAvatarStorageKey());
   const current = getStoredProfile();
   current.avatarUrl = null;
   const updated = saveStoredProfile(current);

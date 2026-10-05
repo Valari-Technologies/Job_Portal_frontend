@@ -21,26 +21,32 @@
  * - GET /api/v1/candidates/resumes/{id}/export/?format=original -> Download original uploaded file
  */
 
+import { getAuthenticatedUser } from '../auth/adminAuthService';
+
 const STORAGE_RESUMES_KEY = 'statejobz_candidate_resumes';
 const STORAGE_ANALYSES_KEY = 'statejobz_candidate_resume_analyses';
 
 // In-memory store for blob URLs / uploaded files of the current session
 const sessionFileObjectUrls = new Map();
 
-/**
- * Initial base Candidate Resume structure
- */
-const DEFAULT_BASE_RESUME = {
-  id: 'res_base_01',
-  versionId: 'v1_original',
-  title: 'Alexandra_Chen_Resume.pdf',
-  fileName: 'Alexandra_Chen_Resume.pdf',
-  candidateName: 'ALEXANDRA CHEN',
-  contactInfo: 'San Francisco, CA • alex.chen@email.com • (555) 123-4567 • linkedin.com/in/alexc',
-  isBase: true,
-  isDefault: true,
-  updatedAt: new Date().toISOString(),
-  sections: {
+function getDefaultBaseResume() {
+  const user = getAuthenticatedUser();
+  const name = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || 'Candidate';
+  const email = user?.email || 'candidate@example.com';
+  const phone = user?.phone_number || user?.mobileNumber || '';
+  const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return {
+    id: 'res_base_01',
+    versionId: 'v1_original',
+    title: `${sanitizedName}_Resume.pdf`,
+    fileName: `${sanitizedName}_Resume.pdf`,
+    candidateName: name.toUpperCase(),
+    contactInfo: `Tamil Nadu, India • ${email}${phone ? ` • ${phone}` : ''}`,
+    isBase: true,
+    isDefault: true,
+    updatedAt: new Date().toISOString(),
+    sections: {
     experience: [
       {
         id: 'exp_01',
@@ -72,7 +78,8 @@ const DEFAULT_BASE_RESUME = {
       research: 'Usability Testing, User Interviews, A/B Testing, Persona Development.'
     }
   }
-};
+  };
+}
 
 /**
  * Initial sample AI analysis result for Senior Product Designer
@@ -133,10 +140,10 @@ function getStoredResumes() {
         unique.push(item);
       }
     }
-    return unique.length > 0 ? unique : [DEFAULT_BASE_RESUME];
+    return unique.length > 0 ? unique : [getDefaultBaseResume()];
   } catch (err) {
     console.error('Error reading stored resumes:', err);
-    return [DEFAULT_BASE_RESUME];
+    return [getDefaultBaseResume()];
   }
 }
 
@@ -194,6 +201,39 @@ export async function getResumeVersion(versionId) {
   return found || resumes[0];
 }
 
+function readFileAsDataURL(file) {
+  return new Promise((resolve) => {
+    if (!file) return resolve(null);
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function parseResumeFileText(file) {
+  try {
+    let rawText = '';
+    if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+      rawText = await file.text();
+    } else {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const textDecoder = new TextDecoder('utf-8', { fatal: false });
+      const decoded = textDecoder.decode(bytes);
+      const matches = decoded.match(/[A-Za-z0-9\s.,\-\+\(\)\/@:]{4,}/g) || [];
+      rawText = matches
+        .map(m => m.trim())
+        .filter(m => m.length > 5 && !m.includes('Stream') && !m.includes('Font') && !m.includes('Catalog') && !m.includes('Obj'))
+        .join(' ');
+    }
+    return rawText;
+  } catch (err) {
+    console.error('Error parsing resume file text:', err);
+    return '';
+  }
+}
+
 /**
  * Upload New Candidate Resume (simulating multipart/form-data upload & parser)
  */
@@ -226,27 +266,52 @@ export async function uploadCandidateResume(file, options = {}) {
     throw new Error('We couldn’t extract editable resume content. Upload a text-based PDF or DOCX.');
   }
 
-  // Create temporary in-memory Object URL for PDF rendering if browser supports
-  let pdfObjectUrl = null;
-  if (nameLower.endsWith('.pdf')) {
-    try {
-      pdfObjectUrl = URL.createObjectURL(file);
-    } catch {
-      pdfObjectUrl = null;
-    }
-  }
+  // Read file data URL as persistent Base64 string (prevents broken blob: ERR_FILE_NOT_FOUND)
+  const fileDataUrl = await readFileAsDataURL(file);
 
+  // Parse text content from uploaded file
+  const fileText = await parseResumeFileText(file);
+
+  const user = getAuthenticatedUser();
   const existingResumes = getStoredResumes();
   const baseName = file.name.replace(/\.[^/.]+$/, '');
   const cleanTitle = options.displayName?.trim() || file.name;
-  const candidateNameParsed = options.candidateName || baseName.replace(/_/g, ' ').toUpperCase();
+
+  // Extract Email from file text if present, else user.email
+  const emailMatch = fileText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const userEmail = emailMatch ? emailMatch[0] : (user?.email || 'candidate@example.com');
+
+  // Extract Phone from file text if present, else user.phone
+  const phoneMatch = fileText.match(/(\+\d{1,3}[- ]?)?\d{10}/);
+  const userPhone = phoneMatch ? phoneMatch[0] : (user?.phone_number || user?.mobileNumber || '');
+
+  const candidateNameParsed = user?.fullName ||
+    (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') ||
+    options.candidateName ||
+    baseName.replace(/_/g, ' ').toUpperCase();
+
+  const contactHeader = options.contactInfo || `${userEmail}${userPhone ? ` • ${userPhone}` : ''} • Tamil Nadu, India`;
 
   const newResumeId = `res_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const newVersionId = `v_uploaded_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-  if (pdfObjectUrl) {
-    sessionFileObjectUrls.set(newResumeId, pdfObjectUrl);
-    sessionFileObjectUrls.set(newVersionId, pdfObjectUrl);
+  // Extract readable bullet sentences from fileText
+  const rawSentences = fileText
+    .split(/[.\n;]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 15 && s.length < 200 && !s.includes('http') && !s.includes('Table') && !s.includes('Root'));
+
+  let extractedBullets = [];
+  if (rawSentences.length >= 2) {
+    extractedBullets = rawSentences.slice(0, 3).map(s => s.replace(/^[•\-\*\d.]+\s*/, '').trim());
+  }
+
+  if (extractedBullets.length === 0) {
+    extractedBullets = [
+      'Architected and delivered high-performance web solutions and responsive UI components.',
+      'Demonstrated track record of executing key technical and design deliverables with high velocity.',
+      'Collaborated with cross-functional engineering teams to optimize system architecture and release velocity.'
+    ];
   }
 
   const newResumeRecord = {
@@ -257,30 +322,26 @@ export async function uploadCandidateResume(file, options = {}) {
     fileSize: file.size,
     fileType: nameLower.endsWith('.pdf') ? 'pdf' : 'docx',
     candidateName: candidateNameParsed,
-    contactInfo: options.contactInfo || `${candidateNameParsed.toLowerCase().replace(/\s+/g, '.')}@email.com • San Francisco, CA`,
+    contactInfo: contactHeader,
     isBase: true,
     isDefault: options.setAsDefault || false,
     updatedAt: new Date().toISOString(),
-    pdfObjectUrl: pdfObjectUrl || null,
+    fileDataUrl: fileDataUrl || null,
     sections: {
       experience: [
         {
           id: `exp_up_${Date.now()}_1`,
-          roleTitle: 'Senior Specialist / Professional',
+          roleTitle: 'Software Development Specialist',
           companyName: 'Technology Enterprise',
-          location: 'San Francisco, CA',
-          period: '2021 - Present',
-          bullets: [
-            `Parsed content from uploaded document: ${file.name}.`,
-            'Demonstrated track record of executing key technical and design deliverables with high velocity.',
-            'Collaborated with cross-functional teams to deliver scalable platform features.'
-          ]
+          location: 'Tamil Nadu, India',
+          period: '2022 - Present',
+          bullets: extractedBullets
         }
       ],
       competencies: {
         design: 'Product Strategy, UX Design, Design Systems.',
-        tools: 'Figma, Modern Toolchains, Rapid Prototyping.',
-        research: 'Usability Testing, User Interviews, Data Analysis.'
+        tools: 'React, JavaScript/TS, Python, Git.',
+        research: 'Usability Testing, Code Optimization, Technical Specs.'
       }
     }
   };
@@ -406,7 +467,7 @@ export async function startResumeAnalysis(payload) {
   }
 
   const textContent = JSON.stringify(targetResume.sections || {});
-  const keywords = ['Figma', 'UI/UX', 'Design', 'React', 'Accessibility', 'Webflow', 'Architecture'];
+  const keywords = ['Figma', 'UI/UX', 'Design', 'React', 'Accessibility', 'Webflow', 'Architecture', 'Python', 'JavaScript'];
   const matched = keywords.filter(k => textContent.toLowerCase().includes(k.toLowerCase()));
   const missing = keywords.filter(k => !textContent.toLowerCase().includes(k.toLowerCase()));
 
@@ -415,6 +476,10 @@ export async function startResumeAnalysis(payload) {
   if (calculatedScore >= 85) scoreLabel = 'Excellent';
   else if (calculatedScore >= 75) scoreLabel = 'Strong';
   else if (calculatedScore < 65) scoreLabel = 'Needs Work';
+
+  const firstExp = targetResume.sections?.experience?.[0];
+  const bullet0 = firstExp?.bullets?.[0] || 'Architected and delivered high-performance web solutions and responsive UI components.';
+  const bullet1 = firstExp?.bullets?.[1] || 'Demonstrated track record of executing key technical and design deliverables with high velocity.';
 
   const newAnalysis = {
     analysisId: `an_${Date.now()}_${targetResume.id}`,
@@ -432,20 +497,22 @@ export async function startResumeAnalysis(payload) {
     suggestions: [
       {
         id: `sug_${Date.now()}_1`,
-        sectionId: targetResume.sections?.experience?.[0]?.id || 'exp_01',
-        bulletIndex: 1,
-        originalText: targetResume.sections?.experience?.[0]?.bullets?.[1] || 'Architected a scalable Figma design system, reducing engineering handoff time by 30%.',
-        proposedText: 'Architected a scalable Figma design system, reducing engineering handoff time by 30% and accelerating cross-functional sprint velocity.',
-        reason: 'Enhances impact verbs (Architected, Scalable) and quantifies team velocity benefits.',
+        sectionId: firstExp?.id || 'exp_01',
+        experienceIndex: 0,
+        bulletIndex: 0,
+        originalText: bullet0,
+        proposedText: bullet0.startsWith('Spearheaded') ? bullet0 : `Spearheaded ${bullet0.charAt(0).toLowerCase() + bullet0.slice(1)}, improving deployment efficiency and user satisfaction by 28%.`,
+        reason: 'Enhances impact verbs (Spearheaded) and quantifies deployment metrics.',
         status: 'PENDING'
       },
       {
         id: `sug_${Date.now()}_2`,
-        sectionId: targetResume.sections?.experience?.[0]?.id || 'exp_01',
-        bulletIndex: 0,
-        originalText: targetResume.sections?.experience?.[0]?.bullets?.[0] || 'Led end-to-end design for the flagship SaaS product.',
-        proposedText: 'Spearheaded end-to-end product design for flagship SaaS platform, driving a 24% boost in Q1 user retention through data-driven UX iterations.',
-        reason: 'Aligns retention metric with data-driven design practices highlighted in the job description.',
+        sectionId: firstExp?.id || 'exp_01',
+        experienceIndex: 0,
+        bulletIndex: 1,
+        originalText: bullet1,
+        proposedText: bullet1.startsWith('Architected') ? bullet1 : `Architected scalable modules for ${bullet1.charAt(0).toLowerCase() + bullet1.slice(1)}, accelerating sprint velocity by 32%.`,
+        reason: 'Aligns metrics with data-driven practices highlighted in the job description.',
         status: 'PENDING'
       }
     ],
@@ -487,6 +554,26 @@ export async function acceptResumeSuggestion(analysisId, suggestionId, customEdi
 
   analysesMap[analysisId] = analysis;
   saveStoredAnalyses(analysesMap);
+
+  // Automatically update target resume in storage
+  const resumes = getStoredResumes();
+  const targetIndex = resumes.findIndex(r => r.versionId === analysis.resumeVersionId || r.id === analysis.resumeVersionId);
+  if (targetIndex !== -1) {
+    const target = resumes[targetIndex];
+    const expList = target.sections?.experience || [];
+    const expIdx = suggestion.experienceIndex ?? 0;
+    const bulletIdx = suggestion.bulletIndex ?? 0;
+
+    if (expList[expIdx]) {
+      const updatedBullets = [...(expList[expIdx].bullets || [])];
+      updatedBullets[bulletIdx] = textToApply;
+      expList[expIdx].bullets = updatedBullets;
+      target.sections = { ...target.sections, experience: expList };
+      target.updatedAt = new Date().toISOString();
+      resumes[targetIndex] = target;
+      saveStoredResumes(resumes);
+    }
+  }
 
   return {
     success: true,
@@ -867,18 +954,19 @@ export async function downloadOriginalResume(versionId) {
   const target = resumes.find(r => r.versionId === versionId || r.id === versionId) || resumes[0];
 
   let blob;
-  const objectUrl = sessionFileObjectUrls.get(target.id) || sessionFileObjectUrls.get(target.versionId);
-
-  if (objectUrl) {
-    const res = await fetch(objectUrl);
-    blob = await res.blob();
-  } else {
-    // Generate original file fallback matching extension
-    if (target.fileType === 'docx' || target.fileName?.endsWith('.docx')) {
-      blob = generateResumeDocxBlob(target);
-    } else {
-      blob = generateResumePdfBlob(target);
+  if (target?.fileDataUrl) {
+    try {
+      const res = await fetch(target.fileDataUrl);
+      blob = await res.blob();
+    } catch {
+      blob = target.fileType === 'docx' || target.fileName?.endsWith('.docx')
+        ? generateResumeDocxBlob(target)
+        : generateResumePdfBlob(target);
     }
+  } else {
+    blob = target.fileType === 'docx' || target.fileName?.endsWith('.docx')
+      ? generateResumeDocxBlob(target)
+      : generateResumePdfBlob(target);
   }
 
   const downloadUrl = URL.createObjectURL(blob);
