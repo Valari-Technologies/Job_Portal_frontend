@@ -2,144 +2,142 @@
  * Candidate Jobs Service
  * 
  * Manages job discovery, search, filtering, mobile tabs (For You, Nearby, Recent, Saved),
- * job details retrieval, bookmarking/saving jobs, and quick application logic.
+ * job details retrieval, bookmarking/saving jobs, and application submission logic.
+ * 
+ * Django API Boundaries:
+ * - GET /accounts/candidate/jobs/ -> List published jobs
+ * - GET /accounts/candidate/jobs/{id}/ -> Fetch job detail
+ * - POST /accounts/candidate/jobs/{id}/save/ -> Toggle save job
+ * - GET /accounts/candidate/saved-jobs/ -> List saved jobs
  */
 
-import { getActiveIndustries, getSpecializationsByIndustry } from './candidateOnboardingService';
+import { authenticatedFetch } from '../auth/adminAuthService';
 
-const STORAGE_JOBS_KEY = 'statejobz_candidate_published_jobs';
-const STORAGE_SAVED_JOBS_KEY = 'statejobz_candidate_saved_jobs';
-const STORAGE_APPLICATIONS_KEY = 'statejobz_candidate_applications';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-function getStoredJobs() {
-  try {
-    const raw = localStorage.getItem(STORAGE_JOBS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    console.error('Error reading Candidate jobs storage:', err);
-    return [];
+export function normalizeJobRecord(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const id = String(raw.id || raw.pk || '');
+  const title = raw.title || 'Position';
+  const companyName = raw.company_name || 'Employer';
+  const companyLogo = raw.company_logo || null;
+  const companyInitials = companyName ? companyName.charAt(0).toUpperCase() : 'E';
+
+  const locationName = raw.location_name || (raw.locations && raw.locations.length > 0 ? raw.locations[0].full_path : 'Location Not Specified');
+  const workMode = raw.work_mode_name || 'On-site';
+  const applicationType = raw.application_type || 'PROFILE_RESUME';
+
+  const salaryMin = raw.salary_min ? Number(raw.salary_min) : null;
+  const salaryMax = raw.salary_max ? Number(raw.salary_max) : null;
+  let salaryDisplay = 'Salary not disclosed';
+  if (salaryMin && salaryMax) {
+    salaryDisplay = `₹${salaryMin.toLocaleString('en-IN')} - ₹${salaryMax.toLocaleString('en-IN')}`;
+  } else if (salaryMin) {
+    salaryDisplay = `₹${salaryMin.toLocaleString('en-IN')}`;
   }
-}
-
-function getStoredSavedJobIds() {
-  try {
-    const raw = localStorage.getItem(STORAGE_SAVED_JOBS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+  if (raw.salary_period) {
+    salaryDisplay += `/${raw.salary_period}`;
   }
-}
 
-function saveStoredSavedJobIds(ids) {
-  try {
-    localStorage.setItem(STORAGE_SAVED_JOBS_KEY, JSON.stringify(ids));
-  } catch (err) {
-    console.error('Error saving stored saved job IDs:', err);
-  }
-}
+  const skillsList = Array.isArray(raw.skills) ? raw.skills.map(s => typeof s === 'string' ? s : s.name) : [];
 
-function getStoredApplications() {
-  try {
-    const raw = localStorage.getItem(STORAGE_APPLICATIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredApplications(apps) {
-  try {
-    localStorage.setItem(STORAGE_APPLICATIONS_KEY, JSON.stringify(apps));
-  } catch (err) {
-    console.error('Error saving stored applications:', err);
-  }
+  return {
+    id,
+    title,
+    company: companyName,
+    companyName,
+    companyLogo,
+    companyInitials,
+    location: locationName,
+    locationName,
+    locations: raw.locations || [],
+    workMode,
+    applicationType,
+    salary: salaryDisplay,
+    salaryMin,
+    salaryMax,
+    salaryPeriod: raw.salary_period || '',
+    experienceMin: raw.experience_min || 0,
+    experienceMax: raw.experience_max || 0,
+    educationRequirement: raw.education_requirement || '',
+    skills: skillsList,
+    description: raw.description || '',
+    responsibilities: raw.responsibilities || '',
+    isSaved: Boolean(raw.is_saved),
+    hasApplied: Boolean(raw.is_applied),
+    publishedAt: raw.published_at || raw.created_at || new Date().toISOString()
+  };
 }
 
 /**
- * Fetch candidate jobs with search, filtering, and tab controls
+ * Fetch candidate jobs with search, filtering, and tab controls from Django API
  */
 export async function getCandidateJobs(params = {}) {
-  await new Promise(resolve => setTimeout(resolve, 120));
-
   const {
     search = '',
     tab = 'for-you',
-    industryId = '',
-    departmentId = '',
+    category = '',
     location = '',
     experience = '',
     jobType = '',
     workMode = ''
   } = params;
 
-  const catalog = getStoredJobs();
-  const savedJobIds = getStoredSavedJobIds();
-  const applications = getStoredApplications();
-
-  let jobs = catalog.map(job => {
-    const app = applications.find(a => a.jobId === job.id);
-    return {
-      ...job,
-      isSaved: savedJobIds.includes(job.id),
-      hasApplied: Boolean(app),
-      applicationId: app ? app.id : null
-    };
-  });
-
-  // Tab Filtering
   if (tab === 'saved') {
-    jobs = jobs.filter(j => j.isSaved);
-  } else if (tab === 'nearby') {
-    jobs = jobs.filter(j => (j.location || '').toLowerCase().includes('bengaluru') || (j.location || '').toLowerCase().includes('hyderabad') || (j.location || '').toLowerCase().includes('san francisco'));
-  } else if (tab === 'recent') {
-    jobs = [...jobs].sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-  } else if (tab === 'for-you') {
-    jobs = [...jobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    return getCandidateSavedJobs();
   }
 
-  // Search Filter
-  if (search.trim()) {
-    const term = search.trim().toLowerCase();
-    jobs = jobs.filter(j => 
-      (j.title || '').toLowerCase().includes(term) ||
-      (j.company || '').toLowerCase().includes(term) ||
-      (j.location || '').toLowerCase().includes(term) ||
-      (j.skills || []).some(s => s.toLowerCase().includes(term))
-    );
+  const query = new URLSearchParams();
+  if (search) query.append('search', search);
+  if (category) query.append('category', category);
+  if (location) query.append('location', location);
+  if (workMode) query.append('work_mode', workMode);
+
+  const url = `${API_BASE_URL}/accounts/candidate/jobs/?${query.toString()}`;
+  const response = await authenticatedFetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch jobs.');
   }
 
-  // Industry Filter
-  if (industryId) {
-    jobs = jobs.filter(j => j.industryId === industryId);
-  }
+  const data = await response.json();
+  const rawList = Array.isArray(data) ? data : (data.results || []);
+  let jobs = rawList.map(normalizeJobRecord).filter(Boolean);
 
-  // Department Filter
-  if (departmentId) {
-    jobs = jobs.filter(j => j.departmentId === departmentId);
-  }
-
-  // Location Filter
-  if (location) {
-    const locTerm = location.toLowerCase();
-    jobs = jobs.filter(j => (j.location || '').toLowerCase().includes(locTerm));
-  }
-
-  // Work Mode Filter
-  if (workMode) {
-    jobs = jobs.filter(j => (j.workMode || '').toLowerCase() === workMode.toLowerCase());
-  }
-
-  // Job Type / Employment Type Filter
+  // Client side extra filter refinements if provided
   if (jobType) {
-    jobs = jobs.filter(j => (j.employmentType || '').toLowerCase().includes(jobType.toLowerCase()));
+    jobs = jobs.filter(j => (j.applicationType || '').toLowerCase().includes(jobType.toLowerCase()));
+  }
+  if (experience === 'entry') {
+    jobs = jobs.filter(j => j.experienceMin <= 2);
+  } else if (experience === 'mid') {
+    jobs = jobs.filter(j => j.experienceMin >= 3 && j.experienceMin <= 5);
+  } else if (experience === 'senior') {
+    jobs = jobs.filter(j => j.experienceMin >= 6);
   }
 
-  // Experience Filter
-  if (experience) {
-    if (experience === 'entry') jobs = jobs.filter(j => j.experienceMin <= 2);
-    else if (experience === 'mid') jobs = jobs.filter(j => j.experienceMin >= 3 && j.experienceMin <= 5);
-    else if (experience === 'senior') jobs = jobs.filter(j => j.experienceMin >= 6);
+  return {
+    jobs,
+    totalCount: data.count || jobs.length,
+    hasRecommendations: Boolean(data.has_recommendations)
+  };
+}
+
+/**
+ * Fetch Saved Jobs for authenticated candidate
+ */
+export async function getCandidateSavedJobs() {
+  const url = `${API_BASE_URL}/accounts/candidate/saved-jobs/`;
+  const response = await authenticatedFetch(url);
+
+  if (!response.ok) {
+    return { jobs: [], totalCount: 0 };
   }
+
+  const data = await response.json();
+  const rawList = Array.isArray(data) ? data : (data.results || []);
+  const jobs = rawList.map(sj => normalizeJobRecord(sj.job)).filter(Boolean).map(j => ({ ...j, isSaved: true }));
 
   return {
     jobs,
@@ -148,109 +146,93 @@ export async function getCandidateJobs(params = {}) {
 }
 
 /**
- * Fetch Filter Options taxonomy for Industry, Department, Locations, etc.
+ * Fetch Filter Options taxonomy
  */
 export async function getJobFilterOptions() {
-  const industries = await getActiveIndustries();
-  return {
-    industries,
-    locations: [
-      { id: 'loc_sf', name: 'San Francisco, CA' },
-      { id: 'loc_ny', name: 'New York, NY' },
-      { id: 'loc_blr', name: 'Bengaluru, India' },
-      { id: 'loc_hyd', name: 'Hyderabad, India' },
-      { id: 'loc_pune', name: 'Pune, India' },
-      { id: 'loc_sea', name: 'Seattle, WA' }
-    ],
-    experienceRanges: [
-      { id: 'entry', label: '0–2 Years' },
-      { id: 'mid', label: '3–5 Years' },
-      { id: 'senior', label: '6+ Years' }
-    ],
-    jobTypes: [
-      { id: 'Full-Time', label: 'Full-Time' },
-      { id: 'Part-Time', label: 'Part-Time' },
-      { id: 'Contract', label: 'Contract' },
-      { id: 'Internship', label: 'Internship' }
-    ],
-    workModes: [
-      { id: 'Remote', label: 'Remote' },
-      { id: 'Hybrid', label: 'Hybrid' },
-      { id: 'On-site', label: 'On-site' }
-    ]
-  };
-}
+  try {
+    const [catRes, locRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/accounts/job-categories/`),
+      fetch(`${API_BASE_URL}/accounts/locations/`)
+    ]);
 
-/**
- * Fetch departments/specializations for a given industry ID
- */
-export async function getDepartmentsForIndustry(industryId) {
-  if (!industryId) return [];
-  return getSpecializationsByIndustry(industryId);
+    const categories = catRes.ok ? await catRes.json() : [];
+    const locations = locRes.ok ? await locRes.json() : [];
+
+    return {
+      categories: Array.isArray(categories) ? categories : (categories.results || []),
+      locations: Array.isArray(locations) ? locations : (locations.results || []),
+      experienceRanges: [
+        { id: 'entry', label: '0–2 Years' },
+        { id: 'mid', label: '3–5 Years' },
+        { id: 'senior', label: '6+ Years' }
+      ],
+      jobTypes: [
+        { id: 'PROFILE_RESUME', label: 'Professional (Resume Required)' },
+        { id: 'SIMPLE_LOCAL', label: 'Simple Local (No Resume)' }
+      ],
+      workModes: [
+        { id: 'Remote', label: 'Remote' },
+        { id: 'Hybrid', label: 'Hybrid' },
+        { id: 'On-site', label: 'On-site' }
+      ]
+    };
+  } catch {
+    return {
+      categories: [],
+      locations: [],
+      experienceRanges: [],
+      jobTypes: [],
+      workModes: []
+    };
+  }
 }
 
 /**
  * Fetch Job Details by ID
  */
 export async function getCandidateJobDetails(jobId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const catalog = getStoredJobs();
-  const job = catalog.find(j => j.id === jobId);
-  if (!job) return null;
+  const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/`;
+  const response = await authenticatedFetch(url);
 
-  const savedIds = getStoredSavedJobIds();
-  const applications = getStoredApplications();
-  const app = applications.find(a => a.jobId === job.id);
+  if (!response.ok) {
+    return null;
+  }
 
-  return {
-    ...job,
-    isSaved: savedIds.includes(job.id),
-    hasApplied: Boolean(app),
-    applicationId: app ? app.id : null
-  };
+  const data = await response.json();
+  return normalizeJobRecord(data);
 }
 
 /**
- * Toggle Save/Bookmark state for job
+ * Toggle Save/Bookmark state for job in Django API
  */
 export async function toggleSavedCandidateJob(jobId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredSavedJobIds();
-  let updated;
-  if (current.includes(jobId)) {
-    updated = current.filter(id => id !== jobId);
-  } else {
-    updated = [...current, jobId];
+  const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/save/`;
+  const response = await authenticatedFetch(url, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const resData = await response.json().catch(() => ({}));
+    throw new Error(resData.detail || 'Failed to toggle saved job.');
   }
-  saveStoredSavedJobIds(updated);
-  return { isSaved: updated.includes(jobId), savedJobIds: updated };
+
+  const data = await response.json();
+  return {
+    isSaved: data.isSaved,
+    savedJobIds: data.savedJobIds || []
+  };
 }
 
-/**
- * Apply to candidate job
- */
 export async function applyCandidateJob(jobId, payload = {}) {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const catalog = getStoredJobs();
-  const job = catalog.find(j => j.id === jobId);
-  const apps = getStoredApplications();
+  const { submitCandidateApplication } = await import('./candidateApplicationsService');
+  return submitCandidateApplication({ jobId, ...payload });
+}
 
-  const existing = apps.find(a => a.jobId === jobId);
-  if (existing) {
-    return { success: false, message: 'You have already applied for this position.' };
-  }
+export async function quickApplyJob(jobId, jobData = {}) {
+  const { submitCandidateApplication } = await import('./candidateApplicationsService');
+  return submitCandidateApplication({ jobId, ...jobData });
+}
 
-  const newApp = {
-    id: `app_${Date.now()}`,
-    jobId: jobId,
-    jobTitle: job ? job.title : (payload.title || 'Job Application'),
-    company: job ? job.company : (payload.company || 'Employer'),
-    companyInitials: (job ? job.company : (payload.company || 'E')).charAt(0),
-    status: 'APPLIED',
-    appliedAt: new Date().toISOString().split('T')[0]
-  };
-
-  const updated = [newApp, ...apps];
-  saveStoredApplications(updated);
-  return { success: true, application: newApp };
+export async function getDepartmentsForIndustry(industryId) {
+  return [];
 }

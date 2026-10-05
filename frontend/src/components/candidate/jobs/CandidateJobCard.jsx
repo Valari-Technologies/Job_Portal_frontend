@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bookmark, Zap, CheckCircle2, MapPin, DollarSign } from 'lucide-react';
+import { Bookmark, Zap, CheckCircle2, MapPin, Banknote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
@@ -35,17 +35,30 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
   };
 
   const formatSalary = () => {
-    if (!job.salaryMin && !job.salaryMax) return 'Competitive Salary';
-    const curr = job.currency || '$';
-    const period = job.salaryPeriod || '/ year';
-    if (curr === '₹' && (job.salaryPeriod === 'LPA' || !job.salaryPeriod)) {
-      const minLpa = (job.salaryMin / 100000).toFixed(0);
-      const maxLpa = (job.salaryMax / 100000).toFixed(0);
-      return `₹${minLpa} – ${maxLpa} LPA`;
+    if (!job.salaryMin && !job.salaryMax && (!job.salary || job.salary === 'Salary not disclosed')) {
+      return 'Salary not disclosed';
     }
-    const minK = Math.round(job.salaryMin / 1000);
-    const maxK = Math.round(job.salaryMax / 1000);
-    return `${curr}${minK}k - ${curr}${maxK}k ${period}`;
+    if (job.salary && job.salary !== 'Salary not disclosed') {
+      return job.salary;
+    }
+    const minVal = job.salaryMin;
+    const maxVal = job.salaryMax;
+    const periodStr = job.salaryPeriod ? `/${job.salaryPeriod}` : '';
+
+    if (minVal && maxVal) {
+      if (minVal >= 100000) {
+        const minLpa = (minVal / 100000).toLocaleString('en-IN');
+        const maxLpa = (maxVal / 100000).toLocaleString('en-IN');
+        return `₹${minLpa}L - ₹${maxLpa}L${periodStr}`;
+      }
+      return `₹${Number(minVal).toLocaleString('en-IN')} - ₹${Number(maxVal).toLocaleString('en-IN')}${periodStr}`;
+    } else if (minVal) {
+      if (minVal >= 100000) {
+        return `₹${(minVal / 100000).toLocaleString('en-IN')}L${periodStr}`;
+      }
+      return `₹${Number(minVal).toLocaleString('en-IN')}${periodStr}`;
+    }
+    return 'Salary not disclosed';
   };
 
   return (
@@ -57,16 +70,16 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
       <div className="hidden sm:flex flex-col justify-between h-full space-y-4">
         {/* Top Header: Logo + Title + Bookmark */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="h-12 w-12 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-lg shrink-0">
               {job.companyLogo ? (
                 <img src={job.companyLogo} alt={job.company} className="h-full w-full object-contain rounded-xl" />
               ) : (
-                <span>{job.companyInitials || (job.company ? job.company.charAt(0) : 'J')}</span>
+                <span>{job.companyInitials || (job.company ? job.company.charAt(0).toUpperCase() : 'J')}</span>
               )}
             </div>
 
-            <div className="space-y-0.5 min-w-0">
+            <div className="space-y-0.5 min-w-0 flex-1">
               <h3 className="text-base font-black text-slate-900 leading-snug group-hover:text-[#3B00FF] transition-colors truncate">
                 {job.title}
               </h3>
@@ -98,7 +111,7 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
             <span>{job.location}</span>
           </div>
           <div className="flex items-center gap-1">
-            <DollarSign className="h-3.5 w-3.5 text-slate-400" />
+            <Banknote className="h-3.5 w-3.5 text-slate-400" />
             <span>{formatSalary()}</span>
           </div>
         </div>
@@ -160,7 +173,7 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
       <div className="flex sm:hidden flex-col space-y-3">
         {/* Top Header: Logo + Title/Company + Save Icon */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="h-11 w-11 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-base shrink-0">
               {job.companyLogo ? (
                 <img src={job.companyLogo} alt={job.company} className="h-full w-full object-contain rounded-xl" />
@@ -169,11 +182,11 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
               )}
             </div>
 
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-black text-slate-900 leading-snug group-hover:text-[#3B00FF] transition-colors">
+            <div className="space-y-0.5 min-w-0 flex-1">
+              <h3 className="text-sm font-black text-slate-900 leading-snug group-hover:text-[#3B00FF] transition-colors truncate">
                 {job.title}
               </h3>
-              <p className="text-xs font-bold text-slate-400">
+              <p className="text-xs font-bold text-slate-400 truncate">
                 {job.company}
               </p>
             </div>

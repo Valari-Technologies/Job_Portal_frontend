@@ -32,28 +32,20 @@ export default function CandidateJobsPage() {
 
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
   const [jobs, setJobs] = useState([]);
+  const [hasRecommendations, setHasRecommendations] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [selectedJobForApply, setSelectedJobForApply] = useState(null);
 
-  // 1. Check Onboarding Guard
+  // 1. Check Onboarding Guard (Allow direct page access)
   useEffect(() => {
     let isMounted = true;
     async function checkGuard() {
       try {
-        const status = await getCandidateOnboardingStatus();
-        if (!isMounted) return;
-        if (!status.isCompleted) {
-          if (!status.industry) {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          } else {
-            navigate('/candidate/onboarding/specialization', { replace: true });
-          }
-          return;
-        }
-        setIsCheckingOnboarding(false);
+        await getCandidateOnboardingStatus();
+        if (isMounted) setIsCheckingOnboarding(false);
       } catch (err) {
         console.error('Failed to verify onboarding status:', err);
         if (isMounted) setIsCheckingOnboarding(false);
@@ -61,7 +53,7 @@ export default function CandidateJobsPage() {
     }
     checkGuard();
     return () => { isMounted = false; };
-  }, [navigate]);
+  }, []);
 
   // 2. Fetch Jobs based on active tab, search query, and filters
   const fetchJobsData = useCallback(async () => {
@@ -74,6 +66,7 @@ export default function CandidateJobsPage() {
         ...filters
       });
       setJobs(res.jobs || []);
+      setHasRecommendations(Boolean(res.hasRecommendations));
     } catch (err) {
       console.error('Failed to fetch candidate jobs:', err);
       setError("We couldn't load jobs. Please try again.");
@@ -95,7 +88,10 @@ export default function CandidateJobsPage() {
           tab: currentTab,
           ...filters
         });
-        if (isMounted) setJobs(res.jobs || []);
+        if (isMounted) {
+          setJobs(res.jobs || []);
+          setHasRecommendations(Boolean(res.hasRecommendations));
+        }
       } catch (err) {
         console.error('Failed to fetch candidate jobs:', err);
         if (isMounted) setError("We couldn't load jobs. Please try again.");
@@ -217,11 +213,15 @@ export default function CandidateJobsPage() {
         {/* Desktop Header & Subtitle (Visible on sm: and up matching Desktop Reference Image 1) */}
         <div className="hidden sm:block space-y-1">
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Recommended for You
+            {hasRecommendations ? 'Recommended for You' : 'Available Jobs'}
           </h2>
           <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-[#3B00FF]" />
-            <span>Based on your profile and recent activity</span>
+            <span>
+              {hasRecommendations
+                ? 'Based on your profile match and activity'
+                : 'Explore active job opportunities across Tamil Nadu'}
+            </span>
           </p>
         </div>
 

@@ -60,8 +60,9 @@ export default function CandidateQuickApplyPage() {
     e.preventDefault();
     if (!job || isSubmitting) return;
 
-    if (!selectedResumeId && resumes.length > 0) {
-      setErrorMsg('Please select a resume to attach.');
+    const isSimpleLocal = job.applicationType === 'SIMPLE_LOCAL';
+    if (!isSimpleLocal && !selectedResumeId && resumes.length > 0) {
+      setErrorMsg('Please select a resume to attach for professional jobs.');
       return;
     }
 
@@ -74,7 +75,8 @@ export default function CandidateQuickApplyPage() {
         jobTitle: job.title,
         company: job.company,
         companyInitials: job.companyInitials || (job.company ? job.company.charAt(0) : 'J'),
-        resumeId: selectedResumeId,
+        resumeId: isSimpleLocal ? null : (selectedResumeId || null),
+        applicationType: job.applicationType || 'PROFILE_RESUME',
         currentCtc,
         noticePeriod,
         candidateNote: candidateNote.trim()

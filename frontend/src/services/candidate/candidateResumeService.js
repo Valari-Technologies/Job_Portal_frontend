@@ -21,7 +21,9 @@
  * - GET /api/v1/candidates/resumes/{id}/export/?format=original -> Download original uploaded file
  */
 
-import { getAuthenticatedUser } from '../auth/adminAuthService';
+import { getAuthenticatedUser, authenticatedFetch } from '../auth/adminAuthService';
+
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const STORAGE_RESUMES_KEY = 'statejobz_candidate_resumes';
 const STORAGE_ANALYSES_KEY = 'statejobz_candidate_resume_analyses';
@@ -184,20 +186,48 @@ function saveStoredAnalyses(analysesMap) {
 }
 
 /**
- * Fetch candidate's available base resumes and tailored versions (deduplicated)
+ * Fetch candidate's available resumes from Django API
  */
 export async function getCandidateResumes() {
-  await new Promise(resolve => setTimeout(resolve, 80));
-  return getStoredResumes();
+  try {
+    const url = `${API_BASE_URL}/accounts/candidate/resumes/`;
+    const response = await authenticatedFetch(url);
+    if (!response.ok) {
+      return getStoredResumes();
+    }
+    const data = await response.json();
+    const rawList = Array.isArray(data) ? data : (data.results || []);
+
+    const user = getAuthenticatedUser();
+    const name = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || 'Candidate';
+    const email = user?.email || '';
+    const phone = user?.phone_number || '';
+
+    return rawList.map(r => ({
+      id: String(r.id),
+      versionId: String(r.id),
+      title: r.file_name,
+      fileName: r.file_name,
+      candidateName: name.toUpperCase(),
+      contactInfo: `${email}${phone ? ` • ${phone}` : ''}`,
+      isBase: true,
+      isDefault: Boolean(r.is_default),
+      updatedAt: r.created_at || r.uploaded_at || new Date().toISOString(),
+      fileDataUrl: r.file_path,
+      fileUrl: r.file_path
+    }));
+  } catch (err) {
+    console.error('Failed to fetch resumes from backend:', err);
+    return getStoredResumes();
+  }
 }
 
 /**
  * Fetch specific resume version by ID
  */
 export async function getResumeVersion(versionId) {
-  await new Promise(resolve => setTimeout(resolve, 60));
-  const resumes = getStoredResumes();
-  const found = resumes.find(r => r.versionId === versionId || r.id === versionId);
+  const resumes = await getCandidateResumes();
+  const found = resumes.find(r => r.versionId === String(versionId) || r.id === String(versionId));
   return found || resumes[0];
 }
 
@@ -235,176 +265,94 @@ async function parseResumeFileText(file) {
 }
 
 /**
- * Upload New Candidate Resume (simulating multipart/form-data upload & parser)
+ * Upload New Candidate Resume via Django FileField endpoint
  */
 export async function uploadCandidateResume(file, options = {}) {
-  await new Promise(resolve => setTimeout(resolve, 350));
-
   if (!file) {
     throw new Error('No file selected for upload.');
   }
 
-  // Validate size (max 5MB)
-  const MAX_SIZE = 5 * 1024 * 1024;
+  const MAX_SIZE = 10 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
-    throw new Error('File size exceeds the 5MB maximum limit. Please select a smaller document.');
+    throw new Error('File size exceeds 10MB limit. Please select a smaller document.');
   }
 
-  if (file.size === 0) {
-    throw new Error('The selected file is empty.');
-  }
-
-  const nameLower = file.name.toLowerCase();
-  const isValidExtension = nameLower.endsWith('.pdf') || nameLower.endsWith('.docx') || nameLower.endsWith('.doc');
-
-  if (!isValidExtension) {
-    throw new Error('Unsupported format. Please upload a PDF or DOCX file.');
-  }
-
-  // Scanned / uneditable file simulation check
-  if (nameLower.includes('scanned') || nameLower.includes('image_only') || nameLower.includes('unreadable')) {
-    throw new Error('We couldn’t extract editable resume content. Upload a text-based PDF or DOCX.');
-  }
-
-  // Read file data URL as persistent Base64 string (prevents broken blob: ERR_FILE_NOT_FOUND)
-  const fileDataUrl = await readFileAsDataURL(file);
-
-  // Parse text content from uploaded file
-  const fileText = await parseResumeFileText(file);
-
-  const user = getAuthenticatedUser();
-  const existingResumes = getStoredResumes();
-  const baseName = file.name.replace(/\.[^/.]+$/, '');
-  const cleanTitle = options.displayName?.trim() || file.name;
-
-  // Extract Email from file text if present, else user.email
-  const emailMatch = fileText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-  const userEmail = emailMatch ? emailMatch[0] : (user?.email || 'candidate@example.com');
-
-  // Extract Phone from file text if present, else user.phone
-  const phoneMatch = fileText.match(/(\+\d{1,3}[- ]?)?\d{10}/);
-  const userPhone = phoneMatch ? phoneMatch[0] : (user?.phone_number || user?.mobileNumber || '');
-
-  const candidateNameParsed = user?.fullName ||
-    (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') ||
-    options.candidateName ||
-    baseName.replace(/_/g, ' ').toUpperCase();
-
-  const contactHeader = options.contactInfo || `${userEmail}${userPhone ? ` • ${userPhone}` : ''} • Tamil Nadu, India`;
-
-  const newResumeId = `res_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const newVersionId = `v_uploaded_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-  // Extract readable bullet sentences from fileText
-  const rawSentences = fileText
-    .split(/[.\n;]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 15 && s.length < 200 && !s.includes('http') && !s.includes('Table') && !s.includes('Root'));
-
-  let extractedBullets = [];
-  if (rawSentences.length >= 2) {
-    extractedBullets = rawSentences.slice(0, 3).map(s => s.replace(/^[•\-\*\d.]+\s*/, '').trim());
-  }
-
-  if (extractedBullets.length === 0) {
-    extractedBullets = [
-      'Architected and delivered high-performance web solutions and responsive UI components.',
-      'Demonstrated track record of executing key technical and design deliverables with high velocity.',
-      'Collaborated with cross-functional engineering teams to optimize system architecture and release velocity.'
-    ];
-  }
-
-  const newResumeRecord = {
-    id: newResumeId,
-    versionId: newVersionId,
-    title: cleanTitle,
-    fileName: file.name,
-    fileSize: file.size,
-    fileType: nameLower.endsWith('.pdf') ? 'pdf' : 'docx',
-    candidateName: candidateNameParsed,
-    contactInfo: contactHeader,
-    isBase: true,
-    isDefault: options.setAsDefault || false,
-    updatedAt: new Date().toISOString(),
-    fileDataUrl: fileDataUrl || null,
-    sections: {
-      experience: [
-        {
-          id: `exp_up_${Date.now()}_1`,
-          roleTitle: 'Software Development Specialist',
-          companyName: 'Technology Enterprise',
-          location: 'Tamil Nadu, India',
-          period: '2022 - Present',
-          bullets: extractedBullets
-        }
-      ],
-      competencies: {
-        design: 'Product Strategy, UX Design, Design Systems.',
-        tools: 'React, JavaScript/TS, Python, Git.',
-        research: 'Usability Testing, Code Optimization, Technical Specs.'
-      }
-    }
-  };
-
-  // Remove any stale item with same id if any, then insert
-  let updatedList = existingResumes.filter(r => r.id !== newResumeRecord.id);
-
+  const formData = new FormData();
+  formData.append('file_path', file);
+  formData.append('file_name', options.displayName || file.name);
   if (options.setAsDefault) {
-    updatedList = updatedList.map(r => ({ ...r, isDefault: false }));
-    updatedList.unshift(newResumeRecord);
-  } else {
-    updatedList = [newResumeRecord, ...updatedList];
+    formData.append('is_default', 'true');
   }
 
-  saveStoredResumes(updatedList);
+  const url = `${API_BASE_URL}/accounts/candidate/resumes/`;
+  const response = await authenticatedFetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  const resData = await response.json();
+
+  if (!response.ok) {
+    const msg = resData.detail || resData.file_path?.[0] || 'Failed to upload resume to backend.';
+    throw new Error(msg);
+  }
+
+  const newRecord = {
+    id: String(resData.id),
+    versionId: String(resData.id),
+    title: resData.file_name,
+    fileName: resData.file_name,
+    isBase: true,
+    isDefault: Boolean(resData.is_default),
+    updatedAt: resData.created_at || new Date().toISOString(),
+    fileUrl: resData.file_path
+  };
 
   return {
     success: true,
-    resume: newResumeRecord,
-    message: 'Resume uploaded and parsed successfully!'
+    resume: newRecord,
+    message: 'Resume uploaded successfully!'
   };
 }
 
 /**
- * Delete a specific candidate resume by ID
+ * Delete a specific candidate resume by ID from Django API
  */
 export async function deleteCandidateResume(resumeId) {
-  await new Promise(resolve => setTimeout(resolve, 150));
   if (!resumeId) throw new Error('Resume ID is required for deletion.');
 
-  const resumes = getStoredResumes();
-  const filtered = resumes.filter(r => r.id !== resumeId && r.versionId !== resumeId);
+  const url = `${API_BASE_URL}/accounts/candidate/resumes/${resumeId}/`;
+  const response = await authenticatedFetch(url, {
+    method: 'DELETE'
+  });
 
-  // Clean object URLs from session cache
-  sessionFileObjectUrls.delete(resumeId);
+  const resData = await response.json().catch(() => ({}));
 
-  if (filtered.length === 0) {
-    localStorage.removeItem(STORAGE_RESUMES_KEY);
-  } else {
-    // If the deleted resume was default, set the first remaining resume as default
-    if (!filtered.some(r => r.isDefault)) {
-      filtered[0].isDefault = true;
-    }
-    saveStoredResumes(filtered);
+  if (!response.ok) {
+    throw new Error(resData.detail || 'Failed to delete resume.');
   }
 
+  const remaining = await getCandidateResumes();
   return {
     success: true,
-    remainingResumes: filtered
+    remainingResumes: remaining
   };
 }
 
 /**
- * Set active / default resume
+ * Set active / default resume in Django API
  */
 export async function setDefaultResume(resumeId) {
-  await new Promise(resolve => setTimeout(resolve, 80));
-  const resumes = getStoredResumes();
-  const updated = resumes.map(r => ({
-    ...r,
-    isDefault: r.id === resumeId || r.versionId === resumeId
-  }));
-  saveStoredResumes(updated);
+  const url = `${API_BASE_URL}/accounts/candidate/resumes/${resumeId}/set-default/`;
+  const response = await authenticatedFetch(url, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const resData = await response.json().catch(() => ({}));
+    throw new Error(resData.detail || 'Failed to set default resume.');
+  }
+
   return { success: true };
 }
 

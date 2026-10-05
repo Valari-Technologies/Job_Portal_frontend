@@ -3,193 +3,104 @@
  * 
  * Manages dashboard recommendations, candidate profile summary, recent applications,
  * notifications, quick-apply submissions, and saved job relationships.
+ * 
+ * Django DRF API Boundaries:
+ * - GET /accounts/candidate/dashboard/ -> Aggregate dashboard data
+ * - GET /accounts/notifications/ -> List notifications
+ * - POST /accounts/notifications/{id}/mark-read/ -> Mark read
+ * - POST /accounts/notifications/mark-all-read/ -> Mark all read
  */
 
-import { getCandidateProfile } from './candidateProfileService';
+import { getCandidateProfile, uploadCandidateProfilePhoto, removeCandidateProfilePhoto as removeCandidateProfilePhotoService } from './candidateProfileService';
+import { authenticatedFetch } from '../auth/adminAuthService';
 
-const STORAGE_SAVED_JOBS_KEY = 'statejobz_candidate_saved_jobs';
-const STORAGE_APPLICATIONS_KEY = 'statejobz_candidate_applications';
-const STORAGE_AVATAR_KEY = 'statejobz_candidate_avatar';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-const INITIAL_RECOMMENDED_JOBS = [];
-const INITIAL_RECENT_APPLICATIONS = [];
+export async function getCandidateDashboardData() {
+  const url = `${API_BASE_URL}/accounts/candidate/dashboard/`;
+  const response = await authenticatedFetch(url);
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif_01',
-    title: 'Application Shortlisted',
-    message: 'Your application for React Developer at Vercel has been shortlisted!',
-    timestamp: '2 hours ago',
-    is_read: false,
-    linkUrl: '/candidate/applications'
-  },
-  {
-    id: 'notif_02',
-    title: 'New Job Recommendation',
-    message: 'TechCorp Inc. posted a new Senior UX Designer role matching your profile.',
-    timestamp: '1 day ago',
-    is_read: false,
-    linkUrl: '/candidate/jobs'
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard data.');
   }
-];
 
-function getStoredSavedJobIds() {
-  try {
-    const raw = localStorage.getItem(STORAGE_SAVED_JOBS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return response.json();
 }
 
-function saveStoredSavedJobIds(ids) {
-  try {
-    localStorage.setItem(STORAGE_SAVED_JOBS_KEY, JSON.stringify(ids));
-  } catch (err) {
-    console.error('Error saving stored job IDs:', err);
-  }
-}
-
-function getStoredApplications() {
-  try {
-    const raw = localStorage.getItem(STORAGE_APPLICATIONS_KEY);
-    return raw ? JSON.parse(raw) : INITIAL_RECENT_APPLICATIONS;
-  } catch {
-    return INITIAL_RECENT_APPLICATIONS;
-  }
-}
-
-function saveStoredApplications(apps) {
-  try {
-    localStorage.setItem(STORAGE_APPLICATIONS_KEY, JSON.stringify(apps));
-  } catch (err) {
-    console.error('Error saving stored applications:', err);
-  }
-}
-
-/**
- * Fetch candidate dashboard profile summary
- */
 export async function getCandidateDashboardProfile() {
   return getCandidateProfile();
 }
 
-/**
- * Fetch candidate recommended jobs
- */
 export async function getRecommendedJobs() {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  const savedIds = getStoredSavedJobIds();
-  const applications = getStoredApplications();
-
-  return INITIAL_RECOMMENDED_JOBS.map(job => ({
-    ...job,
-    isSaved: savedIds.includes(job.id),
-    isApplied: applications.some(app => app.jobId === job.id || app.jobTitle === job.title)
-  }));
+  const dashData = await getCandidateDashboardData();
+  return dashData.recommendedJobs || [];
 }
 
-/**
- * Fetch candidate recent applications
- */
 export async function getRecentApplications() {
-  await new Promise(resolve => setTimeout(resolve, 120));
-  return getStoredApplications();
+  const dashData = await getCandidateDashboardData();
+  return dashData.recentApplications || [];
 }
 
-/**
- * Fetch candidate notification summary
- */
 export async function getCandidateNotificationSummary() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const unread = INITIAL_NOTIFICATIONS.filter(n => !n.is_read).length;
-  return {
-    notifications: INITIAL_NOTIFICATIONS,
-    unreadCount: unread
-  };
-}
+  const url = `${API_BASE_URL}/accounts/notifications/`;
+  const countUrl = `${API_BASE_URL}/accounts/notifications/unread-count/`;
 
-/**
- * Toggle saved job state for current candidate
- */
-export async function toggleSavedJob(jobId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredSavedJobIds();
-  let updated;
-  if (current.includes(jobId)) {
-    updated = current.filter(id => id !== jobId);
-  } else {
-    updated = [...current, jobId];
+  try {
+    const [listRes, countRes] = await Promise.all([
+      authenticatedFetch(url),
+      authenticatedFetch(countUrl)
+    ]);
+
+    const notifs = listRes.ok ? await listRes.json() : [];
+    const countData = countRes.ok ? await countRes.json() : { unread_count: 0 };
+
+    const rawList = Array.isArray(notifs) ? notifs : (notifs.results || []);
+
+    return {
+      notifications: rawList.map(n => ({
+        id: String(n.id),
+        title: n.title,
+        message: n.message,
+        timestamp: n.formatted_time || 'recently',
+        is_read: Boolean(n.is_read),
+        linkUrl: '/candidate/applications'
+      })),
+      unreadCount: countData.unread_count || 0
+    };
+  } catch {
+    return {
+      notifications: [],
+      unreadCount: 0
+    };
   }
-  saveStoredSavedJobIds(updated);
-  return { isSaved: updated.includes(jobId), savedJobIds: updated };
 }
 
-/**
- * Quick apply to a job
- */
-export async function quickApplyJob(jobId, jobData = {}) {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const apps = getStoredApplications();
-  const existing = apps.find(a => a.jobId === jobId || a.jobTitle === jobData.title);
-
-  if (existing) {
-    return { success: false, message: 'You have already applied for this position.' };
-  }
-
-  const newApp = {
-    id: `app_${Date.now()}`,
-    jobId: jobId,
-    jobTitle: jobData.title || 'Specialist Role',
-    company: jobData.company || 'Tech Employer',
-    companyInitials: (jobData.company || 'T').charAt(0),
-    iconType: 'code',
-    status: 'APPLIED',
-    appliedAt: new Date().toISOString().split('T')[0]
-  };
-
-  const updated = [newApp, ...apps];
-  saveStoredApplications(updated);
-  return { success: true, application: newApp };
-}
-
-/**
- * Upload candidate profile photo
- */
-export async function updateCandidateProfilePhoto(file) {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  if (!file) return { success: false };
-  const mockUrl = URL.createObjectURL(file);
-  localStorage.setItem(STORAGE_AVATAR_KEY, mockUrl);
-  return { success: true, avatarUrl: mockUrl };
-}
-
-/**
- * Remove candidate profile photo
- */
-export async function removeCandidateProfilePhoto() {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  localStorage.removeItem(STORAGE_AVATAR_KEY);
-  return { success: true, avatarUrl: null };
-}
-
-/**
- * Mark candidate notification as read
- */
 export async function markNotificationAsRead(id) {
-  await new Promise(resolve => setTimeout(resolve, 50));
-  const target = INITIAL_NOTIFICATIONS.find(n => n.id === id);
-  if (target) {
-    target.is_read = true;
-  }
-  return { success: true };
+  const url = `${API_BASE_URL}/accounts/notifications/${id}/mark-read/`;
+  const response = await authenticatedFetch(url, { method: 'POST' });
+  return { success: response.ok };
 }
 
-/**
- * Mark all candidate notifications as read
- */
 export async function markAllNotificationsAsRead() {
-  await new Promise(resolve => setTimeout(resolve, 50));
-  INITIAL_NOTIFICATIONS.forEach(n => { n.is_read = true; });
-  return { success: true };
+  const url = `${API_BASE_URL}/accounts/notifications/mark-all-read/`;
+  const response = await authenticatedFetch(url, { method: 'POST' });
+  return { success: response.ok };
+}
+
+export async function updateCandidateProfilePhoto(file) {
+  return uploadCandidateProfilePhoto(file);
+}
+
+export async function removeCandidateProfilePhoto() {
+  return removeCandidateProfilePhotoService();
+}
+
+export async function toggleSavedJob(jobId) {
+  const { toggleSavedCandidateJob } = await import('./candidateJobsService');
+  return toggleSavedCandidateJob(jobId);
+}
+
+export async function quickApplyJob(jobId, jobData = {}) {
+  const { submitCandidateApplication } = await import('./candidateApplicationsService');
+  return submitCandidateApplication({ jobId, ...jobData });
 }

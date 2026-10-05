@@ -5,17 +5,16 @@
  * summary metrics, resume selection, application details, and application withdrawal.
  * 
  * Django API Boundaries:
- * - GET /api/v1/candidates/applications/ -> List applications (supports DRF pagination & summary metadata)
- * - GET /api/v1/candidates/applications/summary/ -> Fetch application summary counts
- * - POST /api/v1/candidates/applications/ -> Submit new job application
- * - GET /api/v1/candidates/applications/{id}/ -> Fetch application details
- * - POST /api/v1/candidates/applications/{id}/withdraw/ -> Withdraw application
+ * - GET /accounts/candidate/applications/ -> List applications (supports DRF pagination)
+ * - GET /accounts/candidate/applications/summary/ -> Fetch application summary counts
+ * - POST /accounts/candidate/applications/ -> Submit new job application
+ * - GET /accounts/candidate/applications/{id}/ -> Fetch application details
+ * - POST /accounts/candidate/applications/{id}/withdraw/ -> Withdraw application
  */
 
-import { getAuthenticatedUser } from '../auth/adminAuthService';
+import { authenticatedFetch } from '../auth/adminAuthService';
 
-const STORAGE_APPLICATIONS_KEY = 'statejobz_candidate_applications';
-const STORAGE_RESUMES_KEY = 'statejobz_candidate_resumes';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 /**
  * Status visual mapping for application status codes
@@ -46,33 +45,18 @@ export const APPLICATION_STATUS_MAP = {
     badgeClass: 'bg-purple-100 text-[#3B00FF] border-purple-200',
     color: '#3B00FF'
   },
-  OFFER: {
-    label: 'Offer Received',
+  ACCEPTED: {
+    label: 'Selected',
     badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     color: '#065F46'
   },
-  OFFER_RECEIVED: {
-    label: 'Offer Received',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    color: '#065F46'
-  },
-  HIRED: {
-    label: 'Hired',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    color: '#065F46'
-  },
-  OFFER_ACCEPTED: {
-    label: 'Offer Accepted',
+  SELECTED: {
+    label: 'Selected',
     badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     color: '#065F46'
   },
   REJECTED: {
     label: 'Rejected',
-    badgeClass: 'bg-red-100 text-red-700 border-red-200',
-    color: '#B91C1C'
-  },
-  NOT_SELECTED: {
-    label: 'Not Selected',
     badgeClass: 'bg-red-100 text-red-700 border-red-200',
     color: '#B91C1C'
   },
@@ -100,7 +84,6 @@ export function getStatusConfig(status) {
     return APPLICATION_STATUS_MAP[normalized];
   }
 
-  // Safe readable label fallback for unmapped backend status
   const safeLabel = String(status)
     .split('_')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -114,7 +97,7 @@ export function getStatusConfig(status) {
 }
 
 /**
- * Centralized date formatter avoiding 'Invalid Date', 'undefined', or '[object Object]'
+ * Centralized date formatter
  */
 export function formatApplicationDate(dateStr) {
   if (!dateStr) return '';
@@ -139,46 +122,31 @@ export function normalizeApplicationRecord(raw) {
     return null;
   }
 
-  const id = String(raw.id || raw.application_id || raw.pk || `app_${Date.now()}`);
-  const rawStatus = raw.status || raw.application_status || 'APPLIED';
+  const id = String(raw.id || raw.pk || '');
+  const rawStatus = raw.status || 'APPLIED';
   const statusConfig = getStatusConfig(rawStatus);
 
   const rawJob = raw.job || {};
-  const jobId = String(raw.job_id || rawJob.id || raw.jobId || '');
-  const jobTitle = rawJob.title || raw.job_title || raw.jobTitle || 'Job Title Unavailable';
+  const jobId = String(rawJob.id || raw.job_id || '');
+  const jobTitle = rawJob.title || raw.job_title || 'Position';
 
-  const rawCompany = raw.company || rawJob.company || {};
-  const companyId = String(rawCompany.id || raw.company_id || '');
-  const companyName = rawCompany.name || raw.company_name || raw.company || 'Company Unavailable';
-  const companyLogo = rawCompany.logo_url || rawCompany.logoUrl || raw.company_logo || raw.companyLogo || null;
-  const companyInitials = (companyName && companyName !== 'Company Unavailable') 
-    ? companyName.charAt(0).toUpperCase() 
-    : (raw.companyInitials || 'C');
+  const companyName = rawJob.company_name || raw.company_name || 'Employer';
+  const companyLogo = rawJob.company_logo || null;
+  const companyInitials = companyName ? companyName.charAt(0).toUpperCase() : 'E';
 
-  const rawAppliedAt = raw.applied_at || raw.appliedAt || raw.created_at || raw.createdAt;
+  const rawAppliedAt = raw.applied_at || raw.created_at;
   const appliedAtFormatted = formatApplicationDate(rawAppliedAt);
 
-  const rawInterview = raw.interview || raw.interview_details || null;
+  const rawInterview = raw.interview || null;
   let interviewObj = null;
   if (rawInterview && typeof rawInterview === 'object') {
-    const rawSched = rawInterview.scheduled_at || rawInterview.scheduledAt;
     interviewObj = {
       id: String(rawInterview.id || ''),
-      scheduledAt: rawSched,
-      scheduledAtFormatted: formatApplicationDate(rawSched),
-      mode: rawInterview.mode || rawInterview.interview_mode || 'Google Meet',
-      meetingUrl: rawInterview.meeting_url || rawInterview.meetingUrl || '#',
+      scheduledAt: rawInterview.scheduled_date || rawInterview.scheduled_at_formatted,
+      scheduledAtFormatted: rawInterview.scheduled_at_formatted || formatApplicationDate(rawInterview.scheduled_date),
+      mode: rawInterview.interview_type || 'Online',
+      meetingUrl: rawInterview.meeting_link || '#',
       status: rawInterview.status || 'SCHEDULED'
-    };
-  }
-
-  const rawOffer = raw.offer || raw.offer_details || null;
-  let offerObj = null;
-  if (rawOffer && typeof rawOffer === 'object') {
-    offerObj = {
-      id: String(rawOffer.id || ''),
-      status: rawOffer.status || 'OFFERED',
-      acceptedAt: rawOffer.accepted_at || rawOffer.acceptedAt || null
     };
   }
 
@@ -187,26 +155,37 @@ export function normalizeApplicationRecord(raw) {
   if (rawResume && typeof rawResume === 'object') {
     resumeObj = {
       id: String(rawResume.id || ''),
-      fileName: rawResume.file_name || rawResume.fileName || 'Resume.pdf',
-      fileUrl: rawResume.file_url || rawResume.fileUrl || '#'
+      fileName: rawResume.file_name || 'Resume.pdf',
+      fileUrl: rawResume.file_path || '#'
     };
   }
+
+  const statusHistory = Array.isArray(raw.status_history) ? raw.status_history.map(sh => ({
+    status: sh.status,
+    date: sh.created_at,
+    label: getStatusConfig(sh.status).label,
+    notes: sh.notes
+  })) : [];
 
   return {
     id,
     status: String(rawStatus).toUpperCase(),
     statusConfig,
+    applicationType: raw.application_type || rawJob.application_type || 'PROFILE_RESUME',
     appliedAt: rawAppliedAt || null,
     appliedAtFormatted: appliedAtFormatted ? `Applied ${appliedAtFormatted}` : 'Applied recently',
-    updatedAt: raw.updated_at || raw.updatedAt || null,
+    updatedAt: raw.updated_at || null,
     job: {
       id: jobId,
-      title: jobTitle
+      title: jobTitle,
+      location: rawJob.location_name || '',
+      workMode: rawJob.work_mode_name || '',
+      description: rawJob.description || ''
     },
     jobId,
     jobTitle,
     company: {
-      id: companyId,
+      id: String(rawJob.employer_id || ''),
       name: companyName,
       logoUrl: companyLogo,
       initials: companyInitials
@@ -214,205 +193,149 @@ export function normalizeApplicationRecord(raw) {
     companyName,
     companyInitials,
     interview: interviewObj,
-    offer: offerObj,
     resume: resumeObj,
-    timeline: raw.timeline || []
+    remarks: raw.remarks || '',
+    timeline: statusHistory
   };
 }
 
-function getStoredApplications() {
-  try {
-    const raw = localStorage.getItem(STORAGE_APPLICATIONS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.error('Error reading Candidate applications storage:', err);
-    return [];
-  }
-}
-
-function saveStoredApplications(apps) {
-  try {
-    localStorage.setItem(STORAGE_APPLICATIONS_KEY, JSON.stringify(apps));
-  } catch (err) {
-    console.error('Error saving Candidate applications storage:', err);
-  }
-}
-function getStoredResumes() {
-  try {
-    const raw = localStorage.getItem(STORAGE_RESUMES_KEY);
-    if (raw) return JSON.parse(raw);
-    
-    const user = getAuthenticatedUser();
-    const candidateName = (user?.first_name || user?.fullName?.split(' ')[0] || 'Candidate').replace(/[^a-zA-Z0-9]/g, '_');
-
-    const defaultResume = [
-      {
-        id: 'res_default_1',
-        fileName: `${candidateName}_Resume.pdf`,
-        fileUrl: '#',
-        updatedAt: new Date().toISOString().split('T')[0],
-        isPrimary: true
-      }
-    ];
-    localStorage.setItem(STORAGE_RESUMES_KEY, JSON.stringify(defaultResume));
-    return defaultResume;
-  } catch {
-    return [];
-  }
-}
-
 /**
- * Fetch Candidate Applications list with tab/status filtering, search, and DRF response parsing
+ * Fetch Candidate Applications list from Django API
  */
 export async function getCandidateApplications(params = {}) {
-  await new Promise(resolve => setTimeout(resolve, 120));
   const { tab = 'all', search = '', status = '', page = 1, pageSize = 10 } = params;
 
-  const rawData = getStoredApplications();
+  const query = new URLSearchParams();
+  if (tab && tab !== 'all') query.append('tab', tab);
+  if (search) query.append('search', search);
+  if (status) query.append('status', status);
+  if (page) query.append('page', page);
 
-  // Handle direct array vs DRF paginated `{ results: [] }` responses
-  let list = Array.isArray(rawData) 
-    ? rawData 
-    : (rawData && Array.isArray(rawData.results) ? rawData.results : []);
+  const url = `${API_BASE_URL}/accounts/candidate/applications/?${query.toString()}`;
+  const response = await authenticatedFetch(url);
 
-  // Normalize raw application objects
-  let normalizedList = list.map(normalizeApplicationRecord).filter(Boolean);
-
-  // Tab filtering: 'all', 'active', 'interview', 'offered'
-  if (tab === 'active') {
-    normalizedList = normalizedList.filter(a => !['REJECTED', 'WITHDRAWN', 'NOT_SELECTED'].includes(a.status));
-  } else if (tab === 'interview') {
-    normalizedList = normalizedList.filter(a => ['INTERVIEW', 'INTERVIEW_SCHEDULED'].includes(a.status) || Boolean(a.interview));
-  } else if (tab === 'offered') {
-    normalizedList = normalizedList.filter(a => ['OFFER', 'OFFER_RECEIVED', 'HIRED', 'OFFER_ACCEPTED'].includes(a.status));
+  if (!response.ok) {
+    throw new Error('Failed to fetch candidate applications.');
   }
 
-  // Status filtering
-  if (status) {
-    const sNorm = String(status).toUpperCase().replace(/\s+/g, '_');
-    normalizedList = normalizedList.filter(a => a.status === sNorm);
-  }
-
-  // Search filtering
-  if (search.trim()) {
-    const term = search.trim().toLowerCase();
-    normalizedList = normalizedList.filter(a => 
-      a.jobTitle.toLowerCase().includes(term) ||
-      a.company.name.toLowerCase().includes(term)
-    );
-  }
-
-  const totalCount = normalizedList.length;
-  const startIndex = (page - 1) * pageSize;
-  const paginatedList = normalizedList.slice(startIndex, startIndex + pageSize);
+  const data = await response.json();
+  const rawList = Array.isArray(data) ? data : (data.results || []);
+  const normalizedList = rawList.map(normalizeApplicationRecord).filter(Boolean);
+  const totalCount = data.count !== undefined ? data.count : normalizedList.length;
 
   return {
-    applications: paginatedList,
+    applications: normalizedList,
     totalCount,
     page,
     totalPages: Math.ceil(totalCount / pageSize) || 1,
-    hasNext: startIndex + pageSize < totalCount,
-    hasPrevious: page > 1
+    hasNext: Boolean(data.next),
+    hasPrevious: Boolean(data.previous)
   };
 }
 
 /**
- * Fetch Candidate Application Summary Metrics (Total, Interviews, Offers, Rejected)
+ * Fetch Candidate Application Summary Metrics
  */
 export async function getCandidateApplicationSummary() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  try {
-    const rawData = getStoredApplications();
-    let list = Array.isArray(rawData) 
-      ? rawData 
-      : (rawData && Array.isArray(rawData.results) ? rawData.results : []);
+  const url = `${API_BASE_URL}/accounts/candidate/applications/summary/`;
+  const response = await authenticatedFetch(url);
 
-    const normalizedList = list.map(normalizeApplicationRecord).filter(Boolean);
-
-    const totalApplications = normalizedList.length;
-    const interviewsCount = normalizedList.filter(a => ['INTERVIEW', 'INTERVIEW_SCHEDULED'].includes(a.status) || Boolean(a.interview)).length;
-    const offersCount = normalizedList.filter(a => ['OFFER', 'OFFER_RECEIVED', 'HIRED', 'OFFER_ACCEPTED'].includes(a.status)).length;
-    const rejectedCount = normalizedList.filter(a => ['REJECTED', 'NOT_SELECTED'].includes(a.status)).length;
-
-    return {
-      totalApplications,
-      interviewsCount,
-      offersCount,
-      rejectedCount
-    };
-  } catch (err) {
-    console.error('Failed to compute application summary metrics:', err);
-    return null; // Return null so UI can render error/unavailable state instead of false 0
+  if (!response.ok) {
+    throw new Error('Failed to fetch application summary metrics.');
   }
+
+  const data = await response.json();
+  return {
+    totalApplications: data.totalApplications || 0,
+    interviewsCount: data.interviewsCount || 0,
+    selectedCount: data.selectedCount || data.offersCount || 0,
+    offersCount: data.selectedCount || data.offersCount || 0,
+    rejectedCount: data.rejectedCount || 0
+  };
 }
 
 /**
- * Fetch candidate's uploaded resumes for application selection
+ * Fetch candidate's uploaded resumes
  */
 export async function getCandidateResumes() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  return getStoredResumes();
+  const url = `${API_BASE_URL}/accounts/candidate/resumes/`;
+  const response = await authenticatedFetch(url);
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  const rawList = Array.isArray(data) ? data : (data.results || []);
+  return rawList.map(r => ({
+    id: String(r.id),
+    fileName: r.file_name,
+    fileUrl: r.file_path,
+    isPrimary: Boolean(r.is_default),
+    uploadedAt: formatApplicationDate(r.created_at || r.uploaded_at)
+  }));
 }
 
 /**
  * Fetch detailed application by ID
  */
 export async function getCandidateApplicationDetails(applicationId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const list = getStoredApplications();
-  const rawApp = list.find(a => String(a.id || a.application_id) === String(applicationId));
-  return rawApp ? normalizeApplicationRecord(rawApp) : null;
-}
+  const url = `${API_BASE_URL}/accounts/candidate/applications/${applicationId}/`;
+  const response = await authenticatedFetch(url);
 
-/**
- * Submit candidate job application
- */
-export async function submitCandidateApplication(payload) {
-  await new Promise(resolve => setTimeout(resolve, 250));
-  const { jobId, jobTitle, company, companyInitials, resumeId, currentCtc, noticePeriod, candidateNote } = payload;
-
-  const apps = getStoredApplications();
-  const existing = apps.find(a => String(a.jobId || a.job_id) === String(jobId));
-
-  if (existing) {
-    return { success: false, message: 'You have already applied for this position.' };
+  if (!response.ok) {
+    return null;
   }
 
-  const rawNewApp = {
-    id: `app_${Date.now()}`,
-    job_id: jobId,
-    job_title: jobTitle || 'Specialist Position',
-    company_name: company || 'Employer',
-    company_initials: companyInitials || (company ? company.charAt(0) : 'E'),
-    status: 'APPLIED',
-    applied_at: new Date().toISOString(),
-    resume_id: resumeId || 'res_default_1',
-    current_ctc: currentCtc || '',
-    notice_period: noticePeriod || '',
-    candidate_note: candidateNote || '',
-    timeline: [
-      { status: 'APPLIED', date: new Date().toISOString(), label: 'Application Submitted' }
-    ]
+  const data = await response.json();
+  return normalizeApplicationRecord(data);
+}
+
+/**
+ * Submit candidate job application to Django API
+ */
+export async function submitCandidateApplication(payload) {
+  const url = `${API_BASE_URL}/accounts/candidate/applications/`;
+
+  const bodyData = {
+    job_id: Number(payload.jobId),
+    resume_id: payload.resumeId ? Number(payload.resumeId) : null,
+    application_type: payload.applicationType || 'PROFILE_RESUME',
+    phone_number: payload.phone || null,
+    candidate_note: payload.candidateNote || ''
   };
 
-  const updated = [rawNewApp, ...apps];
-  saveStoredApplications(updated);
+  const response = await authenticatedFetch(url, {
+    method: 'POST',
+    body: JSON.stringify(bodyData)
+  });
 
-  return { 
-    success: true, 
-    application: normalizeApplicationRecord(rawNewApp) 
+  const resData = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = resData.detail || resData.non_field_errors?.[0] || resData.job_id?.[0] || resData.resume_id?.[0] || 'Failed to submit application.';
+    return { success: false, message: errorMsg };
+  }
+
+  return {
+    success: true,
+    application: normalizeApplicationRecord(resData)
   };
 }
 
 /**
- * Withdraw candidate application
+ * Withdraw candidate application in Django API
  */
 export async function withdrawCandidateApplication(applicationId) {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  const apps = getStoredApplications();
-  const updated = apps.map(a => String(a.id || a.application_id) === String(applicationId) ? { ...a, status: 'WITHDRAWN' } : a);
-  saveStoredApplications(updated);
+  const url = `${API_BASE_URL}/accounts/candidate/applications/${applicationId}/withdraw/`;
+  const response = await authenticatedFetch(url, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const resData = await response.json();
+    return { success: false, message: resData.detail || 'Failed to withdraw application.' };
+  }
+
   return { success: true };
 }

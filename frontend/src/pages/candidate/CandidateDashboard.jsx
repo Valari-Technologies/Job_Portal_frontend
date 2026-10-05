@@ -20,37 +20,21 @@ export default function CandidateDashboard() {
 
     async function checkGuard() {
       try {
-        const status = await getCandidateOnboardingStatus();
-        if (!isMounted) return;
-
-        // If mandatory onboarding is incomplete, redirect to last incomplete step
-        if (!status.isCompleted) {
-          if (!status.industry) {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          } else if (!status.specialization) {
-            navigate('/candidate/onboarding/specialization', { replace: true });
-          } else {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          }
-          return;
-        }
-
-        setIsCheckingOnboarding(false);
+        await getCandidateOnboardingStatus();
+        if (isMounted) setIsCheckingOnboarding(false);
       } catch (err) {
         console.error('Failed to check onboarding guard:', err);
         if (isMounted) {
-          setOnboardingError('Unable to verify account onboarding status.');
           setIsCheckingOnboarding(false);
         }
       }
     }
 
     checkGuard();
-
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
+  }, []);
 
   if (isCheckingOnboarding) {
     return (

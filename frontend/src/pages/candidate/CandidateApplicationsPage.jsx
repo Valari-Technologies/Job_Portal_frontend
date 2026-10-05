@@ -33,22 +33,13 @@ export default function CandidateApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 1. Check Onboarding Guard
+  // 1. Check Onboarding Guard (Allow direct access)
   useEffect(() => {
     let isMounted = true;
     async function checkGuard() {
       try {
-        const status = await getCandidateOnboardingStatus();
-        if (!isMounted) return;
-        if (!status.isCompleted) {
-          if (!status.industry) {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          } else {
-            navigate('/candidate/onboarding/specialization', { replace: true });
-          }
-          return;
-        }
-        setIsCheckingOnboarding(false);
+        await getCandidateOnboardingStatus();
+        if (isMounted) setIsCheckingOnboarding(false);
       } catch (err) {
         console.error('Failed to verify candidate onboarding status:', err);
         if (isMounted) setIsCheckingOnboarding(false);
@@ -56,7 +47,7 @@ export default function CandidateApplicationsPage() {
     }
     checkGuard();
     return () => { isMounted = false; };
-  }, [navigate]);
+  }, []);
 
   // 2. Fetch Applications & Summary Metrics from Service Layer
   const loadApplicationsData = useCallback(async () => {
@@ -224,10 +215,10 @@ export default function CandidateApplicationsPage() {
             )}
           </div>
 
-          {/* Card 3: OFFERS */}
+          {/* Card 3: SELECTED */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-2">
             <span className="text-[10px] sm:text-xs font-black text-indigo-900/60 uppercase tracking-wider">
-              Offers
+              Selected
             </span>
             {isLoading ? (
               <div className="h-8 w-16 bg-slate-200 animate-pulse rounded-lg" />
@@ -235,7 +226,7 @@ export default function CandidateApplicationsPage() {
               <p className="text-2xl sm:text-4xl font-black text-slate-400">—</p>
             ) : (
               <p className="text-2xl sm:text-4xl font-black text-[#3B00FF]">
-                {summary ? summary.offersCount : 0}
+                {summary ? (summary.selectedCount !== undefined ? summary.selectedCount : summary.offersCount) : 0}
               </p>
             )}
           </div>

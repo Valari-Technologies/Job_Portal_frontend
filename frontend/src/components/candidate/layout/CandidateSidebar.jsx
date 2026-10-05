@@ -40,10 +40,10 @@ export default function CandidateSidebar() {
       {/* 1. Brand & Account Header Card */}
       <div className="p-6 border-b border-slate-100 flex items-center gap-3.5">
         <div className="h-11 w-11 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
-          {profile?.avatarUrl ? (
+          {(profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')) ? (
             <img 
-              src={profile.avatarUrl} 
-              alt={profile.fullName || 'Candidate Avatar'} 
+              src={profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')} 
+              alt={profile?.fullName || 'Candidate Avatar'} 
               className="h-full w-full object-cover"
             />
           ) : (
@@ -57,7 +57,7 @@ export default function CandidateSidebar() {
             {profile?.firstName || (profile?.fullName ? profile.fullName.split(' ')[0] : 'Job Portal')}
           </span>
           <span className="text-[11px] font-semibold text-slate-400">
-            Premium Tier
+            {profile?.headline || 'Candidate'}
           </span>
         </div>
       </div>

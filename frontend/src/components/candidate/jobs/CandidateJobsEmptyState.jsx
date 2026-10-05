@@ -77,17 +77,11 @@ export default function CandidateJobsEmptyState({ tab, hasFilters, onClearFilter
         <Sparkles className="h-6 w-6" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-base sm:text-lg font-black text-slate-900">No recommendations yet</h3>
+        <h3 className="text-base sm:text-lg font-black text-slate-900">No jobs available yet</h3>
         <p className="text-xs font-semibold text-slate-500">
-          Complete your profile and job preferences to receive better job recommendations.
+          Check back later as employers post new career opportunities across Tamil Nadu.
         </p>
       </div>
-      <Link
-        to="/candidate/profile"
-        className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold shadow-md shadow-[#3B00FF]/20"
-      >
-        Complete Profile
-      </Link>
     </div>
   );
 }

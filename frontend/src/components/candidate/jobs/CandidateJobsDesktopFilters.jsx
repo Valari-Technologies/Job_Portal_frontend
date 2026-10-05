@@ -83,14 +83,14 @@ export default function CandidateJobsDesktopFilters({
               onFilterChange('industryId', e.target.value);
               onFilterChange('departmentId', ''); // Reset department on industry change
             }}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               filters.industryId
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
             }`}
           >
-            <option value="">Industry</option>
-            {options.industries.map((ind) => (
+            <option value="">Industry / Category</option>
+            {(options?.industries || options?.categories || []).map((ind) => (
               <option key={ind.id} value={ind.id}>
                 {ind.name}
               </option>
@@ -100,12 +100,12 @@ export default function CandidateJobsDesktopFilters({
         </div>
 
         {/* 2. Department / Specialization */}
-        <div className="relative inline-block">
+        <div className="relative inline-block max-w-full">
           <select
             value={filters.departmentId || ''}
             disabled={!filters.industryId}
             onChange={(e) => onFilterChange('departmentId', e.target.value)}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               !filters.industryId ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200 text-slate-400' :
               filters.departmentId
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
@@ -113,7 +113,7 @@ export default function CandidateJobsDesktopFilters({
             }`}
           >
             <option value="">Department</option>
-            {departments.map((dept) => (
+            {(departments || []).map((dept) => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
               </option>
@@ -123,18 +123,18 @@ export default function CandidateJobsDesktopFilters({
         </div>
 
         {/* 3. Location */}
-        <div className="relative inline-block">
+        <div className="relative inline-block max-w-full">
           <select
             value={filters.location || ''}
             onChange={(e) => onFilterChange('location', e.target.value)}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               filters.location
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
             }`}
           >
             <option value="">Location</option>
-            {options.locations.map((loc) => (
+            {(options?.locations || []).map((loc) => (
               <option key={loc.id} value={loc.name}>
                 {loc.name}
               </option>
@@ -144,18 +144,18 @@ export default function CandidateJobsDesktopFilters({
         </div>
 
         {/* 4. Experience */}
-        <div className="relative inline-block">
+        <div className="relative inline-block max-w-full">
           <select
             value={filters.experience || ''}
             onChange={(e) => onFilterChange('experience', e.target.value)}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               filters.experience
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
             }`}
           >
             <option value="">Experience</option>
-            {options.experienceRanges.map((exp) => (
+            {(options?.experienceRanges || []).map((exp) => (
               <option key={exp.id} value={exp.id}>
                 {exp.label}
               </option>
@@ -165,18 +165,18 @@ export default function CandidateJobsDesktopFilters({
         </div>
 
         {/* 5. Job Type */}
-        <div className="relative inline-block">
+        <div className="relative inline-block max-w-full">
           <select
             value={filters.jobType || ''}
             onChange={(e) => onFilterChange('jobType', e.target.value)}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               filters.jobType
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
             }`}
           >
             <option value="">Job Type</option>
-            {options.jobTypes.map((jt) => (
+            {(options?.jobTypes || []).map((jt) => (
               <option key={jt.id} value={jt.id}>
                 {jt.label}
               </option>
@@ -186,18 +186,18 @@ export default function CandidateJobsDesktopFilters({
         </div>
 
         {/* 6. Work Mode */}
-        <div className="relative inline-block">
+        <div className="relative inline-block max-w-full">
           <select
             value={filters.workMode || ''}
             onChange={(e) => onFilterChange('workMode', e.target.value)}
-            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 ${
+            className={`appearance-none pl-4 pr-9 py-2 rounded-full text-xs font-black border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3B00FF]/20 max-w-full truncate ${
               filters.workMode
                 ? 'bg-indigo-50 border-[#3B00FF] text-[#3B00FF]'
                 : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
             }`}
           >
             <option value="">Work Mode</option>
-            {options.workModes.map((wm) => (
+            {(options?.workModes || []).map((wm) => (
               <option key={wm.id} value={wm.id}>
                 {wm.label}
               </option>

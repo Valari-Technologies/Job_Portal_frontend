@@ -35,7 +35,7 @@ import {
 
 export default function CandidateProfilePage() {
   const navigate = useNavigate();
-  const { profile: contextProfile, refreshProfile } = useCandidateUser();
+  const { profile: contextProfile, refreshProfile, updatePhoto, removePhoto } = useCandidateUser();
   const fileInputRef = useRef(null);
 
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
@@ -87,22 +87,13 @@ export default function CandidateProfilePage() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // 1. Check Onboarding Guard
+  // 1. Check Onboarding Guard (Direct access to profile without route lockout)
   useEffect(() => {
     let isMounted = true;
     async function checkGuard() {
       try {
-        const status = await getCandidateOnboardingStatus();
-        if (!isMounted) return;
-        if (!status.isCompleted) {
-          if (!status.industry) {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          } else {
-            navigate('/candidate/onboarding/specialization', { replace: true });
-          }
-          return;
-        }
-        setIsCheckingOnboarding(false);
+        await getCandidateOnboardingStatus();
+        if (isMounted) setIsCheckingOnboarding(false);
       } catch (err) {
         console.error('Failed to verify candidate onboarding status:', err);
         if (isMounted) setIsCheckingOnboarding(false);
@@ -110,7 +101,7 @@ export default function CandidateProfilePage() {
     }
     checkGuard();
     return () => { isMounted = false; };
-  }, [navigate]);
+  }, []);
 
   // Initialize Edit Forms from Profile data
   const initEditForms = useCallback((data) => {
@@ -213,10 +204,9 @@ export default function CandidateProfilePage() {
     setIsUploadingPhoto(true);
 
     try {
-      const res = await uploadCandidateProfilePhoto(selectedPhotoFile);
+      const res = await updatePhoto(selectedPhotoFile);
       if (res.success) {
         setProfile(res.profile);
-        refreshProfile(); // Sync photo globally across header/sidebar/dashboard
         setPhotoCropModalOpen(false);
         triggerToast('Profile picture uploaded successfully!');
       } else {
@@ -234,10 +224,9 @@ export default function CandidateProfilePage() {
   const handleRemovePhoto = async () => {
     if (!window.confirm('Are you sure you want to remove your profile picture?')) return;
     try {
-      const res = await removeCandidateProfilePhoto();
+      const res = await removePhoto();
       if (res.success) {
         setProfile(res.profile);
-        refreshProfile(); // Sync avatar removal globally
         triggerToast('Profile picture removed.');
       }
     } catch (err) {
@@ -525,18 +514,48 @@ export default function CandidateProfilePage() {
                   className="hidden"
                 />
 
-                {/* Candidate Name & Info */}
-                <div className="space-y-0.5 pt-1">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    {fullName}
-                  </h2>
-                  <p className="text-xs font-bold text-slate-500">
-                    {headline}
-                  </p>
-                  <p className="text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5 pt-1">
+                {/* Candidate Name & Info (Editable like LinkedIn) */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                      {fullName}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('personal')}
+                      className="p-1 text-slate-400 hover:text-[#3B00FF] transition-colors cursor-pointer"
+                      title="Edit Personal Details"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-1.5">
+                    <p className="text-xs font-bold text-slate-600">
+                      {headline}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('personal')}
+                      className="p-1 text-slate-400 hover:text-[#3B00FF] transition-colors cursor-pointer"
+                      title="Edit Headline (Role Designation)"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-1.5 pt-0.5">
                     <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{location}</span>
-                  </p>
+                    <span className="text-xs font-bold text-slate-500">{location}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('personal')}
+                      className="p-1 text-slate-400 hover:text-[#3B00FF] transition-colors cursor-pointer"
+                      title="Edit Location"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
 
                 {activeAvatar && (

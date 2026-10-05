@@ -3,29 +3,18 @@
  * 
  * Manages authenticated candidate profile details, personal & professional info,
  * taxonomy skills, work experience timeline, education, certifications,
- * profile photo upload/crop, and dynamic completion calculation.
+ * profile photo upload, and dynamic completion calculation.
  * 
  * Django DRF API Boundaries:
- * - GET /api/v1/candidates/profile/ -> Fetch full candidate profile
- * - PUT/PATCH /api/v1/candidates/profile/ -> Update personal & professional details
- * - POST /api/v1/candidates/profile/photo/ -> Upload & crop profile picture
- * - DELETE /api/v1/candidates/profile/photo/ -> Remove profile picture
- * - POST /api/v1/candidates/profile/experience/ -> Create/update experience records
- * - POST /api/v1/candidates/profile/education/ -> Create/update education records
- * - POST /api/v1/candidates/profile/certifications/ -> Create/update certification records
+ * - GET /accounts/candidate/profile/ -> Fetch full candidate profile
+ * - PUT/PATCH /accounts/candidate/profile/ -> Update personal & professional details
+ * - POST /accounts/candidate/profile/photo/ -> Upload profile picture
+ * - DELETE /accounts/candidate/profile/photo/ -> Remove profile picture
  */
 
-import { getAuthenticatedUser } from '../auth/adminAuthService';
+import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthService';
 
-function getProfileStorageKey() {
-  const user = getAuthenticatedUser();
-  return user?.email ? `statejobz_candidate_full_profile_${user.email.toLowerCase()}` : 'statejobz_candidate_full_profile_guest';
-}
-
-function getAvatarStorageKey() {
-  const user = getAuthenticatedUser();
-  return user?.email ? `statejobz_candidate_avatar_${user.email.toLowerCase()}` : 'statejobz_candidate_avatar_guest';
-}
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 export function getInitialProfileForCurrentUser() {
   const user = getAuthenticatedUser();
@@ -36,168 +25,77 @@ export function getInitialProfileForCurrentUser() {
   const email = user?.email || 'candidate@example.com';
   const phone = user?.phone_number || user?.mobileNumber || '';
 
+  let cachedAvatar = null;
+  try {
+    cachedAvatar = localStorage.getItem('tnjobz_candidate_avatar');
+  } catch {}
+
+  const avatarUrl = cachedAvatar || user?.profile_picture || user?.avatarUrl || null;
+
   return {
     fullName,
     firstName,
     lastName,
     email,
     phone,
-    headline: 'Candidate',
-    location: 'Tamil Nadu, India',
-    summary: 'Welcome! Complete your profile to get personalized job recommendations.',
-    avatarUrl: null,
-    completionPercentage: 80,
-    industry: { id: 'ind_it', title: 'Information Technology' },
-    specialization: { id: 'spec_dev', title: 'Software Development' },
-    
-    programmingLanguages: ['JavaScript / TS', 'Python', 'Go'],
-    technologies: ['React', 'AWS', 'Docker', 'Kubernetes'],
-    
+    headline: 'Senior Full-Stack Developer',
+    location: 'Chennai, Tamil Nadu',
+    summary: 'Welcome to TN Jobz!',
+    avatarUrl,
+    completionPercentage: 85,
     experiences: [],
-
     education: [],
-
-    certifications: [],
-
-    links: {
-      github: '',
-      linkedin: '',
-      portfolio: '',
-      expectedSalary: ''
-    },
-
-    missingSections: [
-      { id: 'github', label: 'Add GitHub Portfolio', sectionKey: 'github' },
-      { id: 'salary', label: 'Set Salary Expectations', sectionKey: 'expectedSalary' }
-    ]
+    skills: [],
+    links: { github: '', linkedin: '', portfolio: '', expectedSalary: '' },
+    missingSections: []
   };
 }
 
-function calculateCompletion(prof) {
-  let score = 30; // base score for account
-  if (prof.fullName && prof.headline && prof.location) score += 20;
-  if (prof.avatarUrl) score += 10;
-  if (prof.experiences && prof.experiences.length > 0) score += 15;
-  if (prof.education && prof.education.length > 0) score += 10;
-  if (prof.certifications && prof.certifications.length > 0) score += 5;
-  if (prof.links?.github) score += 5;
-  if (prof.links?.expectedSalary) score += 5;
-
-  return Math.min(100, Math.max(40, score));
-}
-
-function getMissingSections(prof) {
-  const missing = [];
-  if (!prof.links?.github) {
-    missing.push({ id: 'github', label: 'Add GitHub Portfolio', sectionKey: 'github' });
-  }
-  if (!prof.links?.expectedSalary) {
-    missing.push({ id: 'salary', label: 'Set Salary Expectations', sectionKey: 'expectedSalary' });
-  }
-  if (!prof.avatarUrl) {
-    missing.push({ id: 'photo', label: 'Upload Profile Photo', sectionKey: 'photo' });
-  }
-  return missing;
-}
-
-function getStoredProfile() {
-  try {
-    const key = getProfileStorageKey();
-    const avatarKey = getAvatarStorageKey();
-    const raw = localStorage.getItem(key);
-    const storedAvatar = localStorage.getItem(avatarKey);
-    const initial = getInitialProfileForCurrentUser();
-
-    if (!raw) {
-      const profileObj = {
-        ...initial,
-        avatarUrl: storedAvatar || null
-      };
-      localStorage.setItem(key, JSON.stringify(profileObj));
-      return profileObj;
-    }
-
-    const parsed = JSON.parse(raw);
-
-    // Sync authenticated user details to profile
-    const user = getAuthenticatedUser();
-    if (user) {
-      if (user.fullName) parsed.fullName = user.fullName;
-      else if (user.first_name || user.last_name) parsed.fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      if (user.first_name) parsed.firstName = user.first_name;
-      if (user.last_name) parsed.lastName = user.last_name;
-      if (user.email) parsed.email = user.email;
-      if (user.phone_number || user.mobileNumber) parsed.phone = user.phone_number || user.mobileNumber;
-    }
-
-    if (storedAvatar) parsed.avatarUrl = storedAvatar;
-    return parsed;
-  } catch (err) {
-    console.error('Error reading candidate full profile:', err);
-    return getInitialProfileForCurrentUser();
-  }
-}
-
-function saveStoredProfile(profileObj) {
-  try {
-    const key = getProfileStorageKey();
-    const avatarKey = getAvatarStorageKey();
-    const completionPercentage = calculateCompletion(profileObj);
-    const missingSections = getMissingSections(profileObj);
-    const updated = {
-      ...profileObj,
-      completionPercentage,
-      missingSections
-    };
-    localStorage.setItem(key, JSON.stringify(updated));
-    if (updated.avatarUrl) {
-      localStorage.setItem(avatarKey, updated.avatarUrl);
-    }
-    return updated;
-  } catch (err) {
-    console.error('Error saving candidate profile:', err);
-    return profileObj;
-  }
-}
-
 /**
- * Fetch Candidate Profile
+ * Fetch Candidate Profile from Django API
  */
 export async function getCandidateProfile() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  return getStoredProfile();
+  const url = `${API_BASE_URL}/accounts/candidate/profile/`;
+  const response = await authenticatedFetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch candidate profile.');
+  }
+
+  const data = await response.json();
+  if (data?.avatarUrl) {
+    try {
+      localStorage.setItem('tnjobz_candidate_avatar', data.avatarUrl);
+    } catch {}
+  }
+  return data;
 }
 
 /**
- * Update Personal & Professional Info
+ * Update Personal & Professional Info in Django API
  */
 export async function updateCandidateProfile(payload) {
-  await new Promise(resolve => setTimeout(resolve, 150));
-  const current = getStoredProfile();
-
-  const nameParts = (payload.fullName || current.fullName).trim().split(' ');
-  const firstName = nameParts[0] || current.firstName;
-  const lastName = nameParts.slice(1).join(' ') || current.lastName;
-
-  const updated = saveStoredProfile({
-    ...current,
-    ...payload,
-    firstName,
-    lastName,
-    fullName: (payload.fullName || current.fullName).trim()
+  const url = `${API_BASE_URL}/accounts/candidate/profile/`;
+  const response = await authenticatedFetch(url, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
   });
 
-  return { success: true, profile: updated };
+  if (!response.ok) {
+    const resData = await response.json().catch(() => ({}));
+    return { success: false, message: resData.detail || 'Failed to update candidate profile.' };
+  }
+
+  const updatedProfile = await response.json();
+  return { success: true, profile: updatedProfile };
 }
 
 /**
- * Upload and crop profile photo
+ * Upload profile photo to Django API
  */
 export async function uploadCandidateProfilePhoto(file) {
-  await new Promise(resolve => setTimeout(resolve, 250));
   if (!file) return { success: false, message: 'No file selected.' };
 
-  // Validate image file type & max size (5MB)
   if (!file.type.startsWith('image/')) {
     return { success: false, message: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.' };
   }
@@ -205,67 +103,68 @@ export async function uploadCandidateProfilePhoto(file) {
     return { success: false, message: 'Image file size must be less than 5MB.' };
   }
 
-  const mockUrl = URL.createObjectURL(file);
-  const current = getStoredProfile();
-  current.avatarUrl = mockUrl;
-  const updated = saveStoredProfile(current);
+  const formData = new FormData();
+  formData.append('profile_picture', file);
 
-  return { success: true, avatarUrl: mockUrl, profile: updated };
+  const url = `${API_BASE_URL}/accounts/candidate/profile/photo/`;
+  const response = await authenticatedFetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  const resData = await response.json();
+
+  if (!response.ok) {
+    return { success: false, message: resData.detail || 'Failed to upload photo.' };
+  }
+
+  const updatedProfile = await getCandidateProfile();
+
+  return {
+    success: true,
+    avatarUrl: resData.avatarUrl,
+    profile: updatedProfile
+  };
 }
 
 /**
- * Remove profile photo
+ * Remove profile photo in Django API
  */
 export async function removeCandidateProfilePhoto() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  localStorage.removeItem(getAvatarStorageKey());
-  const current = getStoredProfile();
-  current.avatarUrl = null;
-  const updated = saveStoredProfile(current);
+  const url = `${API_BASE_URL}/accounts/candidate/profile/photo/`;
+  const response = await authenticatedFetch(url, {
+    method: 'DELETE'
+  });
 
-  return { success: true, avatarUrl: null, profile: updated };
+  if (!response.ok) {
+    return { success: false, message: 'Failed to remove photo.' };
+  }
+
+  const updatedProfile = await getCandidateProfile();
+
+  return {
+    success: true,
+    avatarUrl: null,
+    profile: updatedProfile
+  };
 }
 
-/**
- * Update Repeatable Sections (Experience, Education, Certifications, Skills)
- */
 export async function updateCandidateExperience(experiencesList) {
-  await new Promise(resolve => setTimeout(resolve, 120));
-  const current = getStoredProfile();
-  current.experiences = experiencesList;
-  const updated = saveStoredProfile(current);
-  return { success: true, profile: updated };
+  return updateCandidateProfile({ experiences: experiencesList });
 }
 
 export async function updateCandidateEducation(educationList) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredProfile();
-  current.education = educationList;
-  const updated = saveStoredProfile(current);
-  return { success: true, profile: updated };
+  return updateCandidateProfile({ education: educationList });
 }
 
 export async function updateCandidateCertifications(certificationsList) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredProfile();
-  current.certifications = certificationsList;
-  const updated = saveStoredProfile(current);
-  return { success: true, profile: updated };
+  return updateCandidateProfile({ certifications: certificationsList });
 }
 
 export async function updateCandidateSkills(programmingLanguages, technologies) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredProfile();
-  current.programmingLanguages = programmingLanguages;
-  current.technologies = technologies;
-  const updated = saveStoredProfile(current);
-  return { success: true, profile: updated };
+  return updateCandidateProfile({ programmingLanguages, technologies });
 }
 
 export async function updateCandidateLinks(linksPayload) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const current = getStoredProfile();
-  current.links = { ...current.links, ...linksPayload };
-  const updated = saveStoredProfile(current);
-  return { success: true, profile: updated };
+  return updateCandidateProfile({ links: linksPayload });
 }

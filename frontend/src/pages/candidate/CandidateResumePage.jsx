@@ -133,22 +133,13 @@ export default function CandidateResumePage() {
     };
   }, []);
 
-  // 1. Check Onboarding Guard
+  // 1. Check Onboarding Guard (Allow direct access)
   useEffect(() => {
     let isMounted = true;
     async function checkGuard() {
       try {
-        const status = await getCandidateOnboardingStatus();
-        if (!isMounted) return;
-        if (!status.isCompleted) {
-          if (!status.industry) {
-            navigate('/candidate/onboarding/industry', { replace: true });
-          } else {
-            navigate('/candidate/onboarding/specialization', { replace: true });
-          }
-          return;
-        }
-        setIsCheckingOnboarding(false);
+        await getCandidateOnboardingStatus();
+        if (isMounted) setIsCheckingOnboarding(false);
       } catch (err) {
         console.error('Failed to verify candidate onboarding status:', err);
         if (isMounted) setIsCheckingOnboarding(false);
@@ -156,7 +147,7 @@ export default function CandidateResumePage() {
     }
     checkGuard();
     return () => { isMounted = false; };
-  }, [navigate]);
+  }, []);
 
   // 2. Fetch Initial Workspace Data
   const loadInitialData = useCallback(async () => {

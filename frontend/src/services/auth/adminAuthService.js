@@ -271,8 +271,11 @@ export async function fetchWithAuth(url, options = {}) {
 
   const headers = {
     ...options.headers,
-    'Content-Type': 'application/json',
   };
+
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -301,3 +304,5 @@ export async function fetchWithAuth(url, options = {}) {
 
   return response;
 }
+
+export const authenticatedFetch = fetchWithAuth;
