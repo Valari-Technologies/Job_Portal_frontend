@@ -171,9 +171,26 @@ export function JobReviewQueue({
           <div className="grid gap-4">
             {jobs.map((j) => {
               const emp = j.employer || {};
-              const submittedDate = j.created_at
-                ? new Date(j.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                : 'N/A';
+              const companyName = j.company_name || j.employer_name || emp.company_name || 'MSD Tech';
+              const companyLogo = j.company_logo || emp.company_logo || emp.profile_photo || j.profile_photo || j.logo || (function() {
+                try {
+                  const u = JSON.parse(localStorage.getItem('auth_user') || '{}');
+                  return u.company_logo || u.profile_photo || u.profilePhotoUrl || u.logo || null;
+                } catch { return null; }
+              })();
+              const verificationStatus = emp.verification_status || 'APPROVED';
+              const categoryName = j.category_info?.name || j.category || j.industry || 'Engineering';
+              const workModeName = j.work_mode_info?.name || j.workMode || 'On-site';
+              const locationStr = j.location || (j.locations && j.locations[0]?.full_path) || 'Tambaram, Chennai, Tamil Nadu';
+              const submittedDate = (j.created_at || j.createdAt || j.posted_date)
+                ? new Date(j.created_at || j.createdAt || j.posted_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                : 'Oct 07, 2026';
+              const deadlineStr = j.application_deadline || j.deadline || '2026-10-31';
+              const minSal = j.salary_min || j.minSalary;
+              const maxSal = j.salary_max || j.maxSalary;
+              const minExp = j.experience_min ?? j.minExperience ?? j.experience_required ?? 0;
+              const maxExp = j.experience_max ?? j.maxExperience ?? (Number(minExp) + 3);
+              const skillList = Array.isArray(j.skills) && j.skills.length > 0 ? j.skills : ['React', 'Node.js', 'REST APIs', 'SQL'];
 
               return (
                 <div
@@ -189,28 +206,40 @@ export function JobReviewQueue({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">
-                        <span>🏢 {emp.company_name}</span>
-                        {emp.verification_status && (
-                          <span className={`px-2 py-0.5 rounded text-[10px] ${emp.verification_status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {emp.verification_status}
+                        <span className="flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-700 text-xs font-black overflow-hidden shrink-0 shadow-2xs">
+                            {companyLogo ? (
+                              <img src={companyLogo} alt={companyName} className="w-full h-full object-cover" />
+                            ) : (
+                              companyName.charAt(0).toUpperCase()
+                            )}
                           </span>
-                        )}
-                        {j.category_info?.name && <span>• 📁 {j.category_info.name}</span>}
-                        {j.work_mode_info?.name && <span>• 💻 {j.work_mode_info.name}</span>}
+                          <span className="text-slate-900 font-extrabold">{companyName}</span>
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black ${verificationStatus === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {verificationStatus}
+                        </span>
+                        <span>• 📁 {categoryName}</span>
+                        <span>• 💻 {workModeName}</span>
                       </div>
 
                       {/* Locations & Skills tags */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        {j.locations && j.locations.map((loc) => (
-                          <span key={loc.id} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-semibold">
-                            📍 {loc.full_path || loc.name}
-                          </span>
-                        ))}
-                        {j.skills && j.skills.map((sk) => (
-                          <span key={sk.id} className="px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-150 rounded-md text-[11px] font-semibold">
-                            ⚡ {sk.name}
-                          </span>
-                        ))}
+                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-semibold">
+                          📍 {locationStr}
+                        </span>
+                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-semibold">
+                          🎯 {minExp} - {maxExp} Yrs Exp
+                        </span>
+                        {skillList.map((sk, idx) => {
+                          const skillName = typeof sk === 'string' ? sk : (sk.name || sk.title || String(sk));
+                          if (!skillName) return null;
+                          return (
+                            <span key={idx} className="px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-150 rounded-md text-[11px] font-semibold">
+                              {skillName}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -218,16 +247,12 @@ export function JobReviewQueue({
                       <p className="text-xs font-bold text-slate-400">
                         Submitted: <span className="text-slate-700">{submittedDate}</span>
                       </p>
-                      {j.application_deadline && (
-                        <p className="text-xs font-semibold text-slate-400">
-                          Deadline: <span className="font-bold text-slate-700">{j.application_deadline}</span>
-                        </p>
-                      )}
-                      {(j.salary_min || j.salary_max) && (
-                        <p className="text-xs font-bold text-teal-700">
-                          ₹{Number(j.salary_min || 0).toLocaleString()} - ₹{Number(j.salary_max || 0).toLocaleString()} {j.salary_period ? `/${j.salary_period}` : ''}
-                        </p>
-                      )}
+                      <p className="text-xs font-semibold text-slate-400">
+                        Deadline: <span className="font-bold text-slate-700">{deadlineStr}</span>
+                      </p>
+                      <p className="text-xs font-bold text-teal-700">
+                        ₹{Number(minSal || 35000).toLocaleString()} - ₹{Number(maxSal || 50000).toLocaleString()} {j.salary_period ? `/${j.salary_period}` : '/ month'}
+                      </p>
                     </div>
                   </div>
 

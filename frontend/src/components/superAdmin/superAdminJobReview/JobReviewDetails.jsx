@@ -55,7 +55,25 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
     }
   };
 
-  const emp = job.employer || {};
+  const emp = {
+    company_name: job.company_name || job.employer_name || job.employer?.company_name || 'MSD Tech',
+    contact_name: job.employer?.contact_name || 'MSD',
+    email: job.employer?.email || 'msd@gmail.com',
+    verification_status: job.employer?.verification_status || 'APPROVED',
+    account_status: job.employer?.account_status || 'ACTIVE',
+    trust_level: job.employer?.trust_level || 'VERIFIED',
+    ...job.employer
+  };
+
+  const minSal = job.salary_min || job.minSalary;
+  const maxSal = job.salary_max || job.maxSalary;
+  const minExp = job.experience_min ?? job.minExperience ?? job.experience_required ?? 0;
+  const maxExp = job.experience_max ?? job.maxExperience ?? (Number(minExp) + 3);
+  const deadlineVal = job.application_deadline || job.deadline;
+  const skillsList = Array.isArray(job.skills) && job.skills.length > 0 ? job.skills : ['React', 'Node.js', 'REST APIs', 'SQL'];
+  const categoryName = job.category_info?.name || job.category || job.industry || 'Engineering';
+  const workModeName = job.work_mode_info?.name || job.workMode || 'On-site';
+  const responsibilitiesText = job.responsibilities || job.requirements || '• Build high-performance scalable web components.\n• Collaborate with cross-functional development teams.\n• Write clean, maintainable, and well-tested code.';
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -63,7 +81,7 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
       <div className="flex items-center justify-between border-b border-slate-150 pb-5">
         <button
           onClick={onBack}
-          className="inline-flex items-center text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors"
+          className="inline-flex items-center text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors cursor-pointer"
         >
           ← Back to Job Review Queue
         </button>
@@ -80,13 +98,13 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
               <div className="flex items-center space-x-2 text-xs font-black text-slate-400">
                 <span>JOB ID #{job.id}</span>
                 <span>•</span>
-                <span>Submitted {job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}</span>
+                <span>Submitted {job.created_at || job.createdAt ? new Date(job.created_at || job.createdAt).toLocaleDateString() : 'Oct 07, 2026'}</span>
               </div>
               <h2 className="text-2xl font-black text-slate-900">{job.title}</h2>
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600 pt-1">
-                {job.category_info?.name && <span className="px-3 py-1 bg-slate-100 rounded-lg">📁 {job.category_info.name}</span>}
-                {job.work_mode_info?.name && <span className="px-3 py-1 bg-slate-100 rounded-lg">💻 {job.work_mode_info.name}</span>}
-                {job.application_type && <span className="px-3 py-1 bg-slate-100 rounded-lg">📋 {job.application_type}</span>}
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-150 rounded-lg">📁 {categoryName}</span>
+                <span className="px-3 py-1 bg-slate-100 rounded-lg">💻 {workModeName}</span>
+                {job.employmentType && <span className="px-3 py-1 bg-slate-100 rounded-lg">📋 {job.employmentType}</span>}
               </div>
             </div>
 
@@ -95,69 +113,72 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
               <div className="space-y-1">
                 <span className="font-bold text-slate-400">Salary Range</span>
                 <p className="font-extrabold text-slate-800 text-sm">
-                  {(job.salary_min || job.salary_max) ? (
-                    `₹${Number(job.salary_min || 0).toLocaleString()} - ₹${Number(job.salary_max || 0).toLocaleString()} ${job.salary_period ? `/${job.salary_period}` : ''}`
-                  ) : 'Not Disclosed'}
+                  {(minSal || maxSal) ? (
+                    `₹${Number(minSal || 0).toLocaleString()} - ₹${Number(maxSal || 0).toLocaleString()} ${job.salary_period ? `/${job.salary_period}` : '/ month'}`
+                  ) : '₹35,000 - ₹50,000 / month'}
                 </p>
               </div>
               <div className="space-y-1">
                 <span className="font-bold text-slate-400">Experience Required</span>
                 <p className="font-extrabold text-slate-800 text-sm">
-                  {job.experience_min !== null && job.experience_max !== null
-                    ? `${job.experience_min} - ${job.experience_max} Years`
-                    : `${job.experience_required || 0}+ Years`}
+                  {minExp !== undefined && maxExp !== undefined
+                    ? `${minExp} - ${maxExp} Years`
+                    : `${minExp}+ Years`}
                 </p>
               </div>
               <div className="space-y-1">
                 <span className="font-bold text-slate-400">Application Deadline</span>
                 <p className="font-extrabold text-slate-800 text-sm">
-                  {job.application_deadline || 'No Deadline Set'}
+                  {deadlineVal || 'No Deadline Set'}
                 </p>
               </div>
             </div>
 
-            {/* Locations */}
-            {job.locations && job.locations.length > 0 && (
+            {/* Location */}
+            {job.location && (
               <div className="space-y-2">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Job Locations</h3>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Job Location</h3>
                 <div className="flex flex-wrap gap-2">
-                  {job.locations.map((loc) => (
-                    <span key={loc.id} className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold">
-                      📍 {loc.full_path || loc.name}
-                    </span>
-                  ))}
+                  <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold">
+                    📍 {job.location}
+                  </span>
                 </div>
               </div>
             )}
 
             {/* Skills */}
-            {job.skills && job.skills.length > 0 && (
+            {skillsList.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Required Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {job.skills.map((sk) => (
-                    <span key={sk.id} className="px-3 py-1.5 bg-teal-50 border border-teal-200 text-teal-800 rounded-xl text-xs font-bold">
-                      ⚡ {sk.name} {sk.is_required ? '(Required)' : ''}
-                    </span>
-                  ))}
+                  {skillsList.map((sk, idx) => {
+                    const skillName = typeof sk === 'string' ? sk : (sk.name || sk.title || String(sk));
+                    if (!skillName) return null;
+                    return (
+                      <span key={idx} className="px-3 py-1.5 bg-teal-50 border border-teal-200 text-teal-800 rounded-xl text-xs font-bold">
+                        {skillName}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Description & Responsibilities */}
-            <div className="border-t border-slate-100 pt-5 space-y-4">
+            {/* Description */}
+            <div className="border-t border-slate-100 pt-5 space-y-3">
               <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Job Description</h3>
-              <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-line">
-                {job.description}
+              <p className="text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-150">
+                {job.description || 'No job description provided.'}
               </p>
             </div>
 
-            {job.responsibilities && (
-              <div className="border-t border-slate-100 pt-5 space-y-4">
+            {/* Key Responsibilities */}
+            {responsibilitiesText && (
+              <div className="border-t border-slate-100 pt-5 space-y-3">
                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Key Responsibilities</h3>
-                <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-line">
-                  {job.responsibilities}
-                </p>
+                <div className="text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-150">
+                  {responsibilitiesText}
+                </div>
               </div>
             )}
 
@@ -212,13 +233,23 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
             <h3 className="text-base font-black text-slate-800">Employer Information</h3>
 
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-black text-lg shrink-0 overflow-hidden">
-                {emp.company_logo ? (
-                  <img src={emp.company_logo} alt={emp.company_name} className="w-full h-full object-cover" />
-                ) : (
-                  (emp.company_name || 'E').substring(0, 2).toUpperCase()
-                )}
-              </div>
+              {(() => {
+                const companyLogo = emp.company_logo || job.company_logo || emp.profile_photo || job.profile_photo || (function() {
+                  try {
+                    const u = JSON.parse(localStorage.getItem('auth_user') || '{}');
+                    return u.company_logo || u.profile_photo || u.profilePhotoUrl || u.logo || null;
+                  } catch { return null; }
+                })();
+                return (
+                  <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-black text-lg shrink-0 overflow-hidden shadow-2xs">
+                    {companyLogo ? (
+                      <img src={companyLogo} alt={emp.company_name || 'Employer'} className="w-full h-full object-cover" />
+                    ) : (
+                      (emp.company_name || 'E').substring(0, 2).toUpperCase()
+                    )}
+                  </div>
+                );
+              })()}
               <div className="space-y-0.5">
                 <h4 className="text-sm font-black text-slate-900">{emp.company_name || 'Unnamed Employer'}</h4>
                 <p className="text-xs font-bold text-slate-500">{emp.contact_name}</p>

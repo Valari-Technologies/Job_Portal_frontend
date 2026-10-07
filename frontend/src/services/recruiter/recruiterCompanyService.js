@@ -99,8 +99,25 @@ export async function updateCompanyProfileService(payload) {
     try {
       const userStr = localStorage.getItem('auth_user');
       const user = userStr ? JSON.parse(userStr) : {};
-      const updatedUser = { ...user, ...data };
+      const updatedUser = { ...user, ...data, ...(payload.company_logo ? { company_logo: payload.company_logo } : {}) };
       localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      
+      if (payload.company_logo) {
+        const storedJobs = localStorage.getItem('tnjobz_recruiter_jobs');
+        if (storedJobs) {
+          const jobs = JSON.parse(storedJobs);
+          const updatedJobs = jobs.map(j => ({
+            ...j,
+            company_logo: payload.company_logo,
+            employer: {
+              ...(j.employer || {}),
+              company_logo: payload.company_logo,
+              profile_photo: payload.company_logo
+            }
+          }));
+          localStorage.setItem('tnjobz_recruiter_jobs', JSON.stringify(updatedJobs));
+        }
+      }
     } catch {
       // ignore
     }

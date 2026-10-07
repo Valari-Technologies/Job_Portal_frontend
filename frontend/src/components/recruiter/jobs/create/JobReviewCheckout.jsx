@@ -1,11 +1,28 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, CreditCard, QrCode, Building2, Wallet, ArrowLeft, ShieldCheck, Check } from 'lucide-react';
+import { Briefcase, CreditCard, QrCode, Building2, Wallet, ArrowLeft, ShieldCheck, Check, CheckCircle2 } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
+import { createJobDraftService } from '../../../../services/recruiter/recruiterJobsService';
 
 export default function JobReviewCheckout() {
   const navigate = useNavigate();
-  const { jobDetails, selectedPlan, paymentMethod, setPaymentMethod } = useContext(JobWizardContext);
+  const { jobDetails, selectedPlan, paymentMethod, setPaymentMethod, clearWizard } = useContext(JobWizardContext);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const handlePublishJob = async () => {
+    setIsPublishing(true);
+    try {
+      await createJobDraftService(jobDetails);
+      if (clearWizard) clearWizard();
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error('Failed to publish job:', err);
+      alert('Failed to publish job posting. Please try again.');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   // If no plan selected, fallback to default basic plan or prompt redirect
   const plan = selectedPlan || { name: 'Basic', price: 0, formatted_price: 'Free', duration_days: 7, is_free: true };
@@ -165,15 +182,47 @@ export default function JobReviewCheckout() {
 
         <button
           type="button"
-          onClick={() => {
-            alert("Payment order creation and publication will connect to Django API once backend endpoints are live.");
-          }}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px] cursor-pointer"
+          disabled={isPublishing}
+          onClick={handlePublishJob}
+          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px] cursor-pointer disabled:opacity-50"
         >
-          <Check className="h-4 w-4" />
-          <span>{plan.is_free ? 'Publish Job' : 'Pay & Publish Job'}</span>
+          {isPublishing ? (
+            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          <span>{isPublishing ? 'Publishing...' : plan.is_free ? 'Publish Job' : 'Pay & Publish Job'}</span>
         </button>
       </div>
+
+      {/* Centered Success Modal Dialog */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-5 border border-slate-150 relative">
+            <div className="h-16 w-16 bg-emerald-100 rounded-full text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="h-10 w-10" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Job Submitted Successfully!</h3>
+              <p className="text-xs font-semibold text-slate-500 leading-relaxed max-w-xs mx-auto">
+                Your job posting has been saved and submitted to Super Admin for approval.
+                Once approved, it will go live for all candidate applications.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/recruiter/jobs')}
+                className="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+              >
+                Go to My Jobs Dashboard →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

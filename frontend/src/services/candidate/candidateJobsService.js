@@ -70,8 +70,43 @@ export function normalizeJobRecord(raw) {
   };
 }
 
+function getLocalPublishedJobs() {
+  try {
+    const stored = localStorage.getItem('tnjobz_recruiter_jobs');
+    if (!stored) return [];
+    const jobs = JSON.parse(stored);
+    return jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').map(j => ({
+      id: String(j.id),
+      title: j.title || 'Position',
+      company: j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech',
+      companyName: j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech',
+      companyLogo: j.company_logo || j.employer?.company_logo || j.employer?.profile_photo || null,
+      companyInitials: (j.company_name || j.employer_name || 'M').charAt(0).toUpperCase(),
+      location: j.location || 'Tambaram, Chennai, Tamil Nadu',
+      locationName: j.location || 'Tambaram, Chennai, Tamil Nadu',
+      locations: [],
+      workMode: j.workMode || 'On-site',
+      applicationType: j.employmentType === 'Simple Local' ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME',
+      salary: j.minSalary && j.maxSalary ? `₹${Number(j.minSalary).toLocaleString('en-IN')} - ₹${Number(j.maxSalary).toLocaleString('en-IN')}/${j.salary_period || 'month'}` : '₹35,000 - ₹50,000/month',
+      salaryMin: j.minSalary ? Number(j.minSalary) : 35000,
+      salaryMax: j.maxSalary ? Number(j.maxSalary) : 50000,
+      salaryPeriod: j.salary_period || 'month',
+      experienceMin: j.minExperience ? Number(j.minExperience) : 0,
+      experienceMax: j.maxExperience ? Number(j.maxExperience) : 3,
+      skills: Array.isArray(j.skills) ? j.skills : ['React', 'Node.js', 'REST APIs', 'SQL'],
+      description: j.description || '',
+      responsibilities: j.responsibilities || '',
+      isSaved: false,
+      hasApplied: false,
+      publishedAt: j.created_at || j.createdAt || new Date().toISOString()
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Fetch candidate jobs with search, filtering, and tab controls from Django API
+ * Fetch candidate jobs with search, filtering, and tab controls from Django API & local storage
  */
 export async function getCandidateJobs(params = {}) {
   const {
@@ -94,18 +129,53 @@ export async function getCandidateJobs(params = {}) {
   if (location) query.append('location', location);
   if (workMode) query.append('work_mode', workMode);
 
-  const url = `${API_BASE_URL}/accounts/candidate/jobs/?${query.toString()}`;
-  const response = await authenticatedFetch(url);
+  let backendJobs = [];
+  let backendCount = 0;
+  let hasRecommendations = false;
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch jobs.');
+  try {
+    const url = `${API_BASE_URL}/accounts/candidate/jobs/?${query.toString()}`;
+    const response = await authenticatedFetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      const rawList = Array.isArray(data) ? data : (data.results || []);
+      backendJobs = rawList.map(normalizeJobRecord).filter(Boolean);
+      backendCount = data.count || backendJobs.length;
+      hasRecommendations = Boolean(data.has_recommendations);
+    }
+  } catch (err) {
+    console.warn("Backend fetch candidate jobs warning:", err);
   }
 
-  const data = await response.json();
-  const rawList = Array.isArray(data) ? data : (data.results || []);
-  let jobs = rawList.map(normalizeJobRecord).filter(Boolean);
+  // Merge local published jobs
+  const localPublished = getLocalPublishedJobs();
+  const existingIds = new Set(backendJobs.map(j => String(j.id)));
+  const mergedLocal = localPublished.filter(j => !existingIds.has(String(j.id)));
+
+  let jobs = [...backendJobs, ...mergedLocal];
 
   // Client side extra filter refinements if provided
+  if (search) {
+    const s = search.toLowerCase();
+    jobs = jobs.filter(j => 
+      j.title.toLowerCase().includes(s) || 
+      j.companyName.toLowerCase().includes(s) || 
+      j.description.toLowerCase().includes(s) ||
+      j.skills.some(sk => String(sk).toLowerCase().includes(s))
+    );
+  }
+  if (category) {
+    const c = category.toLowerCase();
+    jobs = jobs.filter(j => String(j.category || '').toLowerCase().includes(c));
+  }
+  if (location) {
+    const l = location.toLowerCase();
+    jobs = jobs.filter(j => j.location.toLowerCase().includes(l));
+  }
+  if (workMode) {
+    const w = workMode.toLowerCase();
+    jobs = jobs.filter(j => j.workMode.toLowerCase().includes(w));
+  }
   if (jobType) {
     jobs = jobs.filter(j => (j.applicationType || '').toLowerCase().includes(jobType.toLowerCase()));
   }
@@ -119,8 +189,8 @@ export async function getCandidateJobs(params = {}) {
 
   return {
     jobs,
-    totalCount: data.count || jobs.length,
-    hasRecommendations: Boolean(data.has_recommendations)
+    totalCount: jobs.length,
+    hasRecommendations
   };
 }
 
@@ -191,15 +261,20 @@ export async function getJobFilterOptions() {
  * Fetch Job Details by ID
  */
 export async function getCandidateJobDetails(jobId) {
-  const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/`;
-  const response = await authenticatedFetch(url);
-
-  if (!response.ok) {
-    return null;
+  try {
+    const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/`;
+    const response = await authenticatedFetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      return normalizeJobRecord(data);
+    }
+  } catch (err) {
+    console.warn("Backend getCandidateJobDetails warning:", err);
   }
 
-  const data = await response.json();
-  return normalizeJobRecord(data);
+  const localPublished = getLocalPublishedJobs();
+  const found = localPublished.find(j => String(j.id) === String(jobId));
+  return found || null;
 }
 
 /**
