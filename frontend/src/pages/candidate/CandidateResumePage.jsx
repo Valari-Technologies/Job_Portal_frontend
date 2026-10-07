@@ -349,10 +349,16 @@ export default function CandidateResumePage() {
           (r.versionId === updatedResume.versionId || r.id === updatedResume.id) ? updatedResume : r
         ));
 
-        await updateResumeVersion(currentResume.versionId || currentResume.id, { sections: updatedResume.sections });
+        try {
+          await updateResumeVersion(currentResume.versionId || currentResume.id, { sections: updatedResume.sections });
+        } catch (updateErr) {
+          console.warn('Non-critical storage update notice:', updateErr);
+        }
 
         setIsEditingSuggestion(false);
         triggerToast('Suggestion applied to Current Draft!');
+      } else {
+        triggerToast(res.message || 'Failed to apply suggestion.');
       }
     } catch (err) {
       console.error('Error applying suggestion:', err);
@@ -573,24 +579,24 @@ export default function CandidateResumePage() {
     if (!currentResume) return;
 
     try {
-      const targetJobId = targetJob?.id || jobIdParam || 'job_techflow_01';
-      const targetJobTitle = targetJob?.title || analysis?.jobTitle || 'Target Role';
+      if (currentResume.id) {
+        try {
+          await setCandidateDefaultResume(currentResume.id);
+        } catch {
+          // non-critical default resume setting
+        }
+      }
 
-      const tailoredRes = await createTailoredResumeVersion({
-        baseVersionId: currentResume.versionId || currentResume.id,
-        jobId: targetJobId,
-        jobTitle: targetJobTitle,
-        updatedSections: currentResume.sections
-      });
-
-      if (tailoredRes.success) {
-        const newVersionId = tailoredRes.tailoredVersion.versionId;
-        triggerToast('Tailored resume version saved!');
-        navigate(`/candidate/jobs/${targetJobId}/apply?resumeVersionId=${newVersionId}`);
+      if (jobIdParam) {
+        triggerToast('Active resume selected for application!');
+        navigate(`/candidate/jobs/${jobIdParam}/apply?resumeId=${currentResume.id || currentResume.versionId}`);
+      } else {
+        triggerToast('Resume selected! Choose a job position to apply.');
+        navigate('/candidate/jobs');
       }
     } catch (err) {
-      console.error('Error applying with tailored resume:', err);
-      triggerToast('Failed to prepare tailored resume for application.');
+      console.error('Error applying with resume:', err);
+      triggerToast('Failed to select resume for application.');
     }
   };
 
@@ -881,81 +887,100 @@ export default function CandidateResumePage() {
                     <span>Upload Resume</span>
                   </button>
                 </div>
+              ) : currentResume.fileUrl || currentResume.fileDataUrl ? (
+                <div className="bg-white shadow-md border border-slate-200/80 rounded-2xl overflow-hidden max-w-2xl mx-auto space-y-0">
+                  {/* Document Header Bar */}
+                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-3 flex items-center justify-between text-xs font-bold text-slate-800">
+                    <div className="flex items-center gap-2 truncate pr-2">
+                      <FileText className="h-4 w-4 text-[#3B00FF] shrink-0" />
+                      <span className="truncate">{currentResume.title || currentResume.fileName}</span>
+                      {currentResume.isDefault && (
+                        <span className="bg-indigo-100 text-[#3B00FF] text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <a
+                      href={currentResume.fileUrl || currentResume.fileDataUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#3B00FF] hover:underline font-black text-xs shrink-0 flex items-center gap-1"
+                    >
+                      <span>Open Original PDF</span>
+                      <span>↗</span>
+                    </a>
+                  </div>
+
+                  {/* Embedded PDF Document Viewer (Renders EXACT uploaded PDF layout, fonts, text) */}
+                  <div className="w-full h-[700px] bg-slate-50 relative">
+                    <object
+                      data={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0`}
+                      type="application/pdf"
+                      className="w-full h-full border-0"
+                    >
+                      <iframe
+                        src={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0`}
+                        title={currentResume.title || currentResume.fileName}
+                        className="w-full h-full border-0"
+                      >
+                        <div className="p-8 text-center space-y-3">
+                          <p className="text-xs text-slate-600 font-semibold">Your browser cannot render the PDF preview directly.</p>
+                          <a
+                            href={currentResume.fileUrl || currentResume.fileDataUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-black"
+                          >
+                            Open PDF Document
+                          </a>
+                        </div>
+                      </iframe>
+                    </object>
+                  </div>
+                </div>
               ) : (
                 <div className="bg-white shadow-md border border-slate-200/80 p-6 sm:p-10 rounded-2xl space-y-6 text-slate-800 font-sans text-xs leading-relaxed max-w-2xl mx-auto overflow-x-hidden">
                   
-                  {/* Dynamic Resume Header (strictly matching selected currentResume) */}
+                  {/* Dynamic Resume Header */}
                   <div className="text-center space-y-1 border-b border-slate-200 pb-5">
                     <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-widest text-slate-900 uppercase">
                       {currentResume.candidateName || currentResume.title || 'RESUME'}
                     </h1>
                     <p className="text-[11px] font-semibold text-slate-500">
-                      {currentResume.contactInfo || 'San Francisco, CA • contact@email.com • (555) 123-4567'}
+                      {currentResume.contactInfo || ''}
                     </p>
                   </div>
 
                   {/* Section: PROFESSIONAL EXPERIENCE */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
-                      PROFESSIONAL EXPERIENCE
-                    </h3>
+                  {currentResume.sections?.experience && (
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
+                        PROFESSIONAL EXPERIENCE
+                      </h3>
 
-                    {currentResume.sections?.experience?.map((exp) => (
-                      <div key={exp.id || exp.roleTitle} className="space-y-1.5">
-                        <div className="flex items-center justify-between font-bold text-slate-900">
-                          <span className="text-sm font-black">{exp.roleTitle}</span>
-                          <span className="text-[11px] text-slate-500 font-semibold">{exp.period}</span>
+                      {currentResume.sections.experience.map((exp) => (
+                        <div key={exp.id || exp.roleTitle} className="space-y-1.5">
+                          <div className="flex items-center justify-between font-bold text-slate-900">
+                            <span className="text-sm font-black">{exp.roleTitle}</span>
+                            <span className="text-[11px] text-slate-500 font-semibold">{exp.period}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs font-bold text-indigo-700 italic">
+                            <span>{exp.companyName}</span>
+                            <span className="text-slate-400 not-italic font-normal">{exp.location}</span>
+                          </div>
+
+                          <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-xs font-normal pl-1 pt-1">
+                            {exp.bullets?.map((bullet, idx) => (
+                              <li key={idx} className="leading-relaxed">
+                                <span>{bullet}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-
-                        <div className="flex items-center justify-between text-xs font-bold text-indigo-700 italic">
-                          <span>{exp.companyName}</span>
-                          <span className="text-slate-400 not-italic font-normal">{exp.location}</span>
-                        </div>
-
-                        <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-xs font-normal pl-1 pt-1">
-                          {exp.bullets?.map((bullet, idx) => (
-                            <li key={idx} className="leading-relaxed">
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Section: CORE COMPETENCIES */}
-                  <div className="space-y-2 pt-2">
-                    <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
-                      CORE COMPETENCIES
-                    </h3>
-
-                    <div className="space-y-1.5 text-xs">
-                      {currentResume.sections?.competencies?.design && (
-                        <p>
-                          <strong className="font-extrabold text-slate-900">Design: </strong>
-                          <span className="text-slate-700 font-medium">
-                            {currentResume.sections.competencies.design}
-                          </span>
-                        </p>
-                      )}
-                      {currentResume.sections?.competencies?.tools && (
-                        <p>
-                          <strong className="font-extrabold text-slate-900">Tools: </strong>
-                          <span className="text-slate-700 font-medium">
-                            {currentResume.sections.competencies.tools}
-                          </span>
-                        </p>
-                      )}
-                      {currentResume.sections?.competencies?.research && (
-                        <p>
-                          <strong className="font-extrabold text-slate-900">Research: </strong>
-                          <span className="text-slate-700 font-medium">
-                            {currentResume.sections.competencies.research}
-                          </span>
-                        </p>
-                      )}
+                      ))}
                     </div>
-                  </div>
+                  )}
 
                 </div>
               )}
@@ -1000,7 +1025,7 @@ export default function CandidateResumePage() {
                   </div>
 
                   <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-3 py-1 rounded-full border border-indigo-100 truncate max-w-[180px]">
-                    Context: {targetJob?.companyName || analysis?.companyName || 'Tech Employer'} Role
+                    Context: {currentResume ? (targetJob?.companyName || analysis?.companyName || 'Target Role') + ' Role' : 'No Resume'}
                   </span>
                 </div>
 
@@ -1009,6 +1034,46 @@ export default function CandidateResumePage() {
                   <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-2xl flex items-center justify-center gap-3 text-xs font-extrabold text-[#3B00FF]">
                     <div className="h-5 w-5 border-2 border-[#3B00FF] border-t-transparent rounded-full animate-spin" />
                     <span>Analyzing target resume against job description...</span>
+                  </div>
+                ) : !currentResume ? (
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center gap-4">
+                    <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
+                      <svg className="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-slate-200"
+                          strokeWidth="3"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="text-slate-400"
+                          strokeDasharray="0, 100"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <span className="absolute text-sm font-black text-slate-400">
+                        --
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                          MATCH SCORE
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black">
+                          No Resume
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-500 leading-snug">
+                        Upload a resume to begin AI match score analysis against target job roles.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
@@ -1024,7 +1089,7 @@ export default function CandidateResumePage() {
                         />
                         <path
                           className="text-[#3B00FF]"
-                          strokeDasharray={`${analysis?.score || 80}, 100`}
+                          strokeDasharray={`${analysis?.score || 0}, 100`}
                           strokeWidth="3.5"
                           strokeLinecap="round"
                           stroke="currentColor"
@@ -1033,7 +1098,7 @@ export default function CandidateResumePage() {
                         />
                       </svg>
                       <span className="absolute text-base font-black text-slate-900">
-                        {analysis?.score || 80}
+                        {analysis?.score || 0}
                       </span>
                     </div>
 
@@ -1044,11 +1109,11 @@ export default function CandidateResumePage() {
                           MATCH SCORE
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                          {analysis?.scoreLabel || 'Strong'}
+                          {analysis?.scoreLabel || 'Pending'}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-slate-500 leading-snug">
-                        {analysis?.scoreFeedback || 'Matches standard target role requirements. Review active suggestions to increase impact.'}
+                        {analysis?.scoreFeedback || 'Resume ready. Paste a job description to analyze target role compatibility.'}
                       </p>
                     </div>
                   </div>
@@ -1060,7 +1125,11 @@ export default function CandidateResumePage() {
                     ACTIVE SUGGESTION
                   </span>
 
-                  {currentSuggestion ? (
+                  {!currentResume ? (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-bold text-slate-500">
+                      Upload your resume to view AI optimization suggestions.
+                    </div>
+                  ) : currentSuggestion ? (
                     <div className="border border-indigo-200 bg-indigo-50/30 p-4 rounded-2xl space-y-3 font-sans">
                       
                       {/* Original Text */}
@@ -1177,17 +1246,18 @@ export default function CandidateResumePage() {
                   <div className="relative">
                     <textarea
                       rows={2}
-                      placeholder="Paste Job Description here..."
+                      disabled={!currentResume}
+                      placeholder={currentResume ? "Paste Job Description here..." : "Upload a resume first to paste job description..."}
                       value={pastedJd}
                       onChange={(e) => setPastedJd(e.target.value)}
-                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#3B00FF] resize-none bg-slate-50/50"
+                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#3B00FF] resize-none bg-slate-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
 
                     <button
                       type="button"
                       onClick={handleRunAnalysis}
-                      disabled={isAnalyzing}
-                      className="absolute right-2.5 bottom-3.5 p-1.5 rounded-lg bg-[#3B00FF] text-white hover:bg-[#3000D6] transition-colors cursor-pointer disabled:opacity-50"
+                      disabled={isAnalyzing || !currentResume}
+                      className="absolute right-2.5 bottom-3.5 p-1.5 rounded-lg bg-[#3B00FF] text-white hover:bg-[#3000D6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Analyze Job Description"
                     >
                       <Send className="h-3.5 w-3.5" />
@@ -1216,11 +1286,10 @@ export default function CandidateResumePage() {
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleApplyWithTailoredResume}
-                    disabled={!currentResume}
-                    className="w-full py-3 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs sm:text-sm font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                    onClick={() => currentResume ? handleApplyWithTailoredResume() : setIsUploadModalOpen(true)}
+                    className="w-full py-3 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs sm:text-sm font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                   >
-                    <span>Use This Resume to Apply</span>
+                    <span>{currentResume ? 'Use This Resume to Apply' : 'Upload Resume to Apply'}</span>
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -1331,7 +1400,7 @@ export default function CandidateResumePage() {
                         e.stopPropagation();
                         setSelectedUploadFile(null);
                       }}
-                      className="text-xs text-rose-600 font-bold hover:underline"
+                      className="text-xs text-[#3B00FF] font-extrabold hover:underline"
                     >
                       Choose a different file
                     </button>

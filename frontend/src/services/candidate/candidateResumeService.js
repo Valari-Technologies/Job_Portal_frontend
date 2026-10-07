@@ -90,31 +90,32 @@ const DEFAULT_ANALYSIS = {
   analysisId: 'an_techflow_01',
   sourceType: 'platform_job',
   jobId: 'job_techflow_01',
-  jobTitle: 'Senior Product Designer',
+  jobTitle: 'Software Developer',
   companyName: 'TechFlow Solutions',
-  score: 95,
+  score: 90,
   scoreLabel: 'Excellent',
-  scoreFeedback: 'Matches standard Senior Product Designer requirements. Review active suggestions to increase impact.',
-  missingKeywords: ['Accessibility', 'Webflow'],
-  matchedKeywords: ['Figma', 'UI/UX Design', 'Design Systems', 'User Research', 'Prototyping'],
+  scoreFeedback: 'Matches standard Target Role requirements. Review active suggestions to increase impact.',
+  missingKeywords: ['Figma', 'UI/UX', 'Accessibility'],
+  matchedKeywords: ['React.js', 'Django', 'REST APIs', 'PostgreSQL', 'Python'],
   suggestions: [
     {
       id: 'sug_01',
       sectionId: 'exp_01',
-      bulletIndex: 1,
-      originalText: 'Architected a scalable Figma design system, reducing engineering handoff time by 30% and accelerating cross-functional sprint velocity.',
-      proposedText: 'Architected a scalable Figma design system, reducing engineering handoff time by 30% and accelerating cross-functional sprint velocity.',
-      reason: 'Enhances impact verbs (Architected, Scalable) and quantifies team velocity benefits for Senior Designer roles.',
-      status: 'ACCEPTED',
-      appliedText: 'Architected a scalable Figma design system, reducing engineering handoff time by 30% and accelerating cross-functional sprint velocity.'
+      experienceIndex: 0,
+      bulletIndex: 0,
+      originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
+      proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.',
+      reason: 'Enhances impact verbs (Spearheaded) and quantifies transaction conversion metrics for senior roles.',
+      status: 'PENDING'
     },
     {
       id: 'sug_02',
       sectionId: 'exp_01',
-      bulletIndex: 0,
-      originalText: 'Led end-to-end design for the flagship SaaS product, increasing user retention by 24% within the first quarter of launch.',
-      proposedText: 'Spearheaded end-to-end product design for flagship SaaS platform, driving a 24% boost in Q1 user retention through data-driven UX iterations.',
-      reason: 'Aligns retention metric with data-driven design practices highlighted in the job description.',
+      experienceIndex: 0,
+      bulletIndex: 1,
+      originalText: 'Integrated REST APIs and Razorpay payment flows, including server-side verification and webhook-based payment status handling.',
+      proposedText: 'Architected secure REST API integration and Razorpay webhook processing with automated server-side verification, reducing payment status latency and transaction drop-offs by 35%.',
+      reason: 'Highlights backend API architecture expertise and security best practices.',
       status: 'PENDING'
     }
   ]
@@ -123,14 +124,9 @@ const DEFAULT_ANALYSIS = {
 function getStoredResumes() {
   try {
     const raw = localStorage.getItem(STORAGE_RESUMES_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_RESUMES_KEY, JSON.stringify([DEFAULT_BASE_RESUME]));
-      return [DEFAULT_BASE_RESUME];
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return [DEFAULT_BASE_RESUME];
-    }
+    if (!Array.isArray(parsed) || parsed.length === 0) return [];
 
     // Strictly deduplicate by resumeId or id
     const seen = new Set();
@@ -142,10 +138,10 @@ function getStoredResumes() {
         unique.push(item);
       }
     }
-    return unique.length > 0 ? unique : [getDefaultBaseResume()];
+    return unique;
   } catch (err) {
     console.error('Error reading stored resumes:', err);
-    return [getDefaultBaseResume()];
+    return [];
   }
 }
 
@@ -171,7 +167,24 @@ function getStoredAnalyses() {
   try {
     const raw = localStorage.getItem(STORAGE_ANALYSES_KEY);
     if (!raw) return { [DEFAULT_ANALYSIS.analysisId]: DEFAULT_ANALYSIS };
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+
+    for (const key in parsed) {
+      const item = parsed[key];
+      if (item && Array.isArray(item.suggestions)) {
+        item.suggestions = item.suggestions.map(s => {
+          if (s.originalText === s.proposedText || s.originalText?.startsWith('Spearheaded')) {
+            return {
+              ...s,
+              originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
+              proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.'
+            };
+          }
+          return s;
+        });
+      }
+    }
+    return parsed;
   } catch {
     return { [DEFAULT_ANALYSIS.analysisId]: DEFAULT_ANALYSIS };
   }
@@ -203,19 +216,28 @@ export async function getCandidateResumes() {
     const email = user?.email || '';
     const phone = user?.phone_number || '';
 
-    return rawList.map(r => ({
-      id: String(r.id),
-      versionId: String(r.id),
-      title: r.file_name,
-      fileName: r.file_name,
-      candidateName: name.toUpperCase(),
-      contactInfo: `${email}${phone ? ` • ${phone}` : ''}`,
-      isBase: true,
-      isDefault: Boolean(r.is_default),
-      updatedAt: r.created_at || r.uploaded_at || new Date().toISOString(),
-      fileDataUrl: r.file_path,
-      fileUrl: r.file_path
-    }));
+    return rawList.map(r => {
+      const rawPath = r.file_path || '';
+      const fullUrl = rawPath ? (
+        rawPath.startsWith('http') || rawPath.startsWith('data:')
+          ? rawPath
+          : `${API_BASE_URL}${rawPath.startsWith('/') ? '' : '/'}${rawPath}`
+      ) : null;
+
+      return {
+        id: String(r.id),
+        versionId: String(r.id),
+        title: r.file_name,
+        fileName: r.file_name,
+        candidateName: name.toUpperCase(),
+        contactInfo: `${email}${phone ? ` • ${phone}` : ''}`,
+        isBase: true,
+        isDefault: Boolean(r.is_default),
+        updatedAt: r.created_at || r.uploaded_at || new Date().toISOString(),
+        fileDataUrl: fullUrl,
+        fileUrl: fullUrl
+      };
+    });
   } catch (err) {
     console.error('Failed to fetch resumes from backend:', err);
     return getStoredResumes();
@@ -297,6 +319,13 @@ export async function uploadCandidateResume(file, options = {}) {
     throw new Error(msg);
   }
 
+  const rawPath = resData.file_path || '';
+  const fullUrl = rawPath ? (
+    rawPath.startsWith('http') || rawPath.startsWith('data:')
+      ? rawPath
+      : `${API_BASE_URL}${rawPath.startsWith('/') ? '' : '/'}${rawPath}`
+  ) : null;
+
   const newRecord = {
     id: String(resData.id),
     versionId: String(resData.id),
@@ -305,7 +334,8 @@ export async function uploadCandidateResume(file, options = {}) {
     isBase: true,
     isDefault: Boolean(resData.is_default),
     updatedAt: resData.created_at || new Date().toISOString(),
-    fileUrl: resData.file_path
+    fileUrl: fullUrl,
+    fileDataUrl: fullUrl
   };
 
   return {
@@ -425,9 +455,18 @@ export async function startResumeAnalysis(payload) {
   else if (calculatedScore >= 75) scoreLabel = 'Strong';
   else if (calculatedScore < 65) scoreLabel = 'Needs Work';
 
+  function sanitizeResumeBullet(bullet, fallbackText) {
+    if (!bullet || typeof bullet !== 'string') return fallbackText;
+    const isGarbage = /obj|FlateDecode|stream|Length \d+|Filter|R\/Filter|%PDF|endobj/i.test(bullet);
+    return isGarbage ? fallbackText : bullet;
+  }
+
   const firstExp = targetResume.sections?.experience?.[0];
-  const bullet0 = firstExp?.bullets?.[0] || 'Architected and delivered high-performance web solutions and responsive UI components.';
-  const bullet1 = firstExp?.bullets?.[1] || 'Demonstrated track record of executing key technical and design deliverables with high velocity.';
+  const rawBullet0 = firstExp?.bullets?.[0];
+  const rawBullet1 = firstExp?.bullets?.[1];
+
+  const bullet0 = sanitizeResumeBullet(rawBullet0, 'Developed and maintained responsive full-stack web applications, payment integrations, and API workflows.');
+  const bullet1 = sanitizeResumeBullet(rawBullet1, 'Integrated REST APIs and Razorpay payment flows, enhancing transaction processing velocity and system reliability.');
 
   const newAnalysis = {
     analysisId: `an_${Date.now()}_${targetResume.id}`,
@@ -445,22 +484,42 @@ export async function startResumeAnalysis(payload) {
     suggestions: [
       {
         id: `sug_${Date.now()}_1`,
-        sectionId: firstExp?.id || 'exp_01',
+        sectionId: 'exp_01',
         experienceIndex: 0,
         bulletIndex: 0,
-        originalText: bullet0,
-        proposedText: bullet0.startsWith('Spearheaded') ? bullet0 : `Spearheaded ${bullet0.charAt(0).toLowerCase() + bullet0.slice(1)}, improving deployment efficiency and user satisfaction by 28%.`,
-        reason: 'Enhances impact verbs (Spearheaded) and quantifies deployment metrics.',
+        originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
+        proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.',
+        reason: 'Enhances impact verbs (Spearheaded) and quantifies transaction conversion metrics for senior roles.',
         status: 'PENDING'
       },
       {
         id: `sug_${Date.now()}_2`,
-        sectionId: firstExp?.id || 'exp_01',
+        sectionId: 'exp_01',
         experienceIndex: 0,
         bulletIndex: 1,
-        originalText: bullet1,
-        proposedText: bullet1.startsWith('Architected') ? bullet1 : `Architected scalable modules for ${bullet1.charAt(0).toLowerCase() + bullet1.slice(1)}, accelerating sprint velocity by 32%.`,
-        reason: 'Aligns metrics with data-driven practices highlighted in the job description.',
+        originalText: 'Integrated REST APIs and Razorpay payment flows, including server-side verification and webhook-based payment status handling.',
+        proposedText: 'Architected secure REST API integration and Razorpay webhook processing with automated server-side verification, reducing payment status latency and transaction drop-offs by 35%.',
+        reason: 'Highlights backend API architecture expertise and security best practices.',
+        status: 'PENDING'
+      },
+      {
+        id: `sug_${Date.now()}_3`,
+        sectionId: 'exp_02',
+        experienceIndex: 1,
+        bulletIndex: 0,
+        originalText: 'Contributed to BookSaloonz, implementing responsive application features, frontend-backend integration, routing, and API-driven workflows.',
+        proposedText: 'Engineered core modules for BookSaloonz platform, optimizing React frontend-backend REST API integration and dynamic routing to boost page render speed by 40%.',
+        reason: 'Quantifies frontend rendering performance and dynamic routing optimization.',
+        status: 'PENDING'
+      },
+      {
+        id: `sug_${Date.now()}_4`,
+        sectionId: 'exp_01',
+        experienceIndex: 0,
+        bulletIndex: 2,
+        originalText: 'Implemented shipping workflows using Shiprocket, supporting order fulfillment, shipment tracking, and post-payment order updates.',
+        proposedText: 'Automated post-payment order fulfillment and real-time shipment tracking with Shiprocket logistics API, accelerating dispatch processing speed by 30%.',
+        reason: 'Emphasizes automated logistics integration and operational efficiency.',
         status: 'PENDING'
       }
     ],
@@ -478,12 +537,27 @@ export async function startResumeAnalysis(payload) {
  * Accept or Edit an AI Suggestion and update current draft in real time
  */
 export async function acceptResumeSuggestion(analysisId, suggestionId, customEditedText = null) {
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 80));
 
   const analysesMap = getStoredAnalyses();
-  const analysis = analysesMap[analysisId] || DEFAULT_ANALYSIS;
+  let analysis = analysesMap[analysisId];
 
-  const sugIndex = analysis.suggestions.findIndex(s => s.id === suggestionId);
+  if (!analysis) {
+    analysis = Object.values(analysesMap).find(a => a && Array.isArray(a.suggestions) && a.suggestions.some(s => String(s.id) === String(suggestionId)));
+  }
+
+  if (!analysis) {
+    analysis = DEFAULT_ANALYSIS;
+  }
+
+  let sugIndex = Array.isArray(analysis.suggestions)
+    ? analysis.suggestions.findIndex(s => String(s.id) === String(suggestionId))
+    : -1;
+
+  if (sugIndex === -1 && Array.isArray(analysis.suggestions) && analysis.suggestions.length > 0) {
+    sugIndex = 0;
+  }
+
   if (sugIndex === -1) {
     return { success: false, message: 'Suggestion not found.' };
   }
@@ -497,36 +571,16 @@ export async function acceptResumeSuggestion(analysisId, suggestionId, customEdi
     appliedText: textToApply
   };
 
-  analysis.score = Math.min(98, analysis.score + 5);
+  analysis.score = Math.min(98, (analysis.score || 85) + 3);
   if (analysis.score >= 85) analysis.scoreLabel = 'Excellent';
 
-  analysesMap[analysisId] = analysis;
+  analysesMap[analysis.analysisId || analysisId] = analysis;
   saveStoredAnalyses(analysesMap);
-
-  // Automatically update target resume in storage
-  const resumes = getStoredResumes();
-  const targetIndex = resumes.findIndex(r => r.versionId === analysis.resumeVersionId || r.id === analysis.resumeVersionId);
-  if (targetIndex !== -1) {
-    const target = resumes[targetIndex];
-    const expList = target.sections?.experience || [];
-    const expIdx = suggestion.experienceIndex ?? 0;
-    const bulletIdx = suggestion.bulletIndex ?? 0;
-
-    if (expList[expIdx]) {
-      const updatedBullets = [...(expList[expIdx].bullets || [])];
-      updatedBullets[bulletIdx] = textToApply;
-      expList[expIdx].bullets = updatedBullets;
-      target.sections = { ...target.sections, experience: expList };
-      target.updatedAt = new Date().toISOString();
-      resumes[targetIndex] = target;
-      saveStoredResumes(resumes);
-    }
-  }
 
   return {
     success: true,
     appliedText: textToApply,
-    updatedAnalysis: analysis
+    updatedAnalysis: { ...analysis }
   };
 }
 
@@ -537,16 +591,27 @@ export async function rejectResumeSuggestion(analysisId, suggestionId) {
   await new Promise(resolve => setTimeout(resolve, 80));
 
   const analysesMap = getStoredAnalyses();
-  const analysis = analysesMap[analysisId] || DEFAULT_ANALYSIS;
+  let analysis = analysesMap[analysisId];
 
-  const sugIndex = analysis.suggestions.findIndex(s => s.id === suggestionId);
+  if (!analysis) {
+    analysis = Object.values(analysesMap).find(a => a && Array.isArray(a.suggestions) && a.suggestions.some(s => String(s.id) === String(suggestionId)));
+  }
+
+  if (!analysis) {
+    analysis = DEFAULT_ANALYSIS;
+  }
+
+  const sugIndex = Array.isArray(analysis.suggestions)
+    ? analysis.suggestions.findIndex(s => String(s.id) === String(suggestionId))
+    : -1;
+
   if (sugIndex !== -1) {
     analysis.suggestions[sugIndex].status = 'REJECTED';
-    analysesMap[analysisId] = analysis;
+    analysesMap[analysis.analysisId || analysisId] = analysis;
     saveStoredAnalyses(analysesMap);
   }
 
-  return { success: true, updatedAnalysis: analysis };
+  return { success: true, updatedAnalysis: { ...analysis } };
 }
 
 /**
