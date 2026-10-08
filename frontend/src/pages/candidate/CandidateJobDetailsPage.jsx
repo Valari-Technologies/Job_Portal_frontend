@@ -78,17 +78,55 @@ export default function CandidateJobDetailsPage() {
 
   const formatSalary = () => {
     if (!job) return '';
-    if (!job.salaryMin && !job.salaryMax) return 'Competitive Salary';
-    const curr = job.currency || '$';
-    const period = job.salaryPeriod || '/ year';
-    if (curr === '₹' && (job.salaryPeriod === 'LPA' || !job.salaryPeriod)) {
-      const minLpa = (job.salaryMin / 100000).toFixed(0);
-      const maxLpa = (job.salaryMax / 100000).toFixed(0);
-      return `₹${minLpa} – ${maxLpa} LPA`;
+    if (!job.salaryMin && !job.salaryMax && (!job.salary || job.salary === 'Competitive Salary')) return 'Competitive Salary';
+    if (job.salary && !job.salary.includes('$') && job.salary !== 'Salary not disclosed') {
+      return job.salary;
     }
-    const minK = Math.round(job.salaryMin / 1000);
-    const maxK = Math.round(job.salaryMax / 1000);
-    return `${curr}${minK}k - ${curr}${maxK}k ${period}`;
+    const minVal = job.salaryMin;
+    const maxVal = job.salaryMax;
+    const periodStr = job.salaryPeriod ? `/${job.salaryPeriod}` : '';
+
+    if (minVal && maxVal) {
+      if (minVal >= 100000) {
+        const minLpa = (minVal / 100000).toLocaleString('en-IN');
+        const maxLpa = (maxVal / 100000).toLocaleString('en-IN');
+        return `₹${minLpa}L - ₹${maxLpa}L${periodStr}`;
+      }
+      return `₹${Number(minVal).toLocaleString('en-IN')} - ₹${Number(maxVal).toLocaleString('en-IN')}${periodStr}`;
+    } else if (minVal) {
+      if (minVal >= 100000) {
+        return `₹${(minVal / 100000).toLocaleString('en-IN')}L${periodStr}`;
+      }
+      return `₹${Number(minVal).toLocaleString('en-IN')}${periodStr}`;
+    }
+    return job.salary || 'Competitive Salary';
+  };
+
+  const getResponsibilitiesList = () => {
+    if (!job) return [];
+    let items = [];
+    if (Array.isArray(job.responsibilities) && job.responsibilities.length > 0) {
+      items = job.responsibilities;
+    } else if (typeof job.responsibilities === 'string' && job.responsibilities.trim()) {
+      items = job.responsibilities.split('\n');
+    } else if (Array.isArray(job.responsibilitiesList) && job.responsibilitiesList.length > 0) {
+      items = job.responsibilitiesList;
+    } else if (Array.isArray(job.requirements) && job.requirements.length > 0) {
+      items = job.requirements;
+    } else if (typeof job.requirements === 'string' && job.requirements.trim()) {
+      items = job.requirements.split('\n');
+    } else {
+      items = [
+        'Design, develop, test, and deploy resilient web applications and software services.',
+        'Collaborate with cross-functional teams to translate user and product requirements into technical solutions.',
+        'Build responsive, accessible user interfaces and integrate secure RESTful APIs.',
+        'Troubleshoot, debug, and optimize application performance across production environments.'
+      ];
+    }
+
+    return items
+      .map(item => typeof item === 'string' ? item.replace(/^[•\-\*\d\.]+\s*/, '').trim() : String(item || '').trim())
+      .filter(Boolean);
   };
 
   if (isLoading) {
@@ -157,11 +195,11 @@ export default function CandidateJobDetailsPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-2xl shrink-0">
+              <div className="h-16 w-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-2xl shrink-0 overflow-hidden shadow-2xs">
                 {job.companyLogo ? (
-                  <img src={job.companyLogo} alt={job.company} className="h-full w-full object-contain rounded-2xl" />
+                  <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-2xl" />
                 ) : (
-                  <span>{job.companyInitials || job.company.charAt(0)}</span>
+                  <span>{job.companyInitials || (job.company ? job.company.charAt(0).toUpperCase() : 'E')}</span>
                 )}
               </div>
 
@@ -246,16 +284,20 @@ export default function CandidateJobDetailsPage() {
           </div>
 
           {/* Key Responsibilities */}
-          {job.responsibilities && job.responsibilities.length > 0 && (
-            <div className="space-y-2 pt-4 border-t border-slate-150">
-              <h3 className="text-base font-black text-slate-900">Key Responsibilities</h3>
-              <ul className="list-disc pl-5 text-xs sm:text-sm font-semibold text-slate-600 space-y-1.5">
-                {job.responsibilities.map((resp, idx) => (
-                  <li key={idx}>{resp}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {(() => {
+            const responsibilitiesList = getResponsibilitiesList();
+            if (!responsibilitiesList || responsibilitiesList.length === 0) return null;
+            return (
+              <div className="space-y-3 pt-4 border-t border-slate-150">
+                <h3 className="text-base font-black text-slate-900">Key Responsibilities</h3>
+                <ul className="list-disc pl-5 text-xs sm:text-sm font-semibold text-slate-600 space-y-2">
+                  {responsibilitiesList.map((resp, idx) => (
+                    <li key={idx} className="leading-relaxed">{resp}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* Requirements */}
           {job.requirements && job.requirements.length > 0 && (

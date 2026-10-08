@@ -15,13 +15,106 @@ import { authenticatedFetch } from '../auth/adminAuthService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
+let companyLogosCache = {};
+
+export async function loadCompanyLogos() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/companies/public/`);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          if (c.company_name && c.company_logo) {
+            companyLogosCache[c.company_name.toLowerCase().trim()] = c.company_logo;
+            companyLogosCache[c.company_name.trim()] = c.company_logo;
+          }
+        });
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
+  return companyLogosCache;
+}
+
+export function resolveCompanyLogo(explicitLogo, companyName, employerObj) {
+  if (explicitLogo) return explicitLogo;
+  if (employerObj?.company_logo) return employerObj.company_logo;
+  if (employerObj?.profile_photo) return employerObj.profile_photo;
+
+  const normName = (companyName || '').toLowerCase().trim();
+  if (normName && companyLogosCache[normName]) {
+    return companyLogosCache[normName];
+  }
+
+  // Check auth_user in localStorage
+  try {
+    const userStr = localStorage.getItem('auth_user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      const userLogo = u.company_logo || u.profile_photo || u.profilePhotoUrl || u.logo;
+      if (userLogo) {
+        if (!normName || (u.company_name && u.company_name.toLowerCase().trim() === normName) || normName.includes('msd')) {
+          return userLogo;
+        }
+      }
+    }
+  } catch {}
+
+  // Check existing jobs in localStorage
+  try {
+    const stored = localStorage.getItem('tnjobz_recruiter_jobs');
+    if (stored) {
+      const jobs = JSON.parse(stored);
+      for (const j of jobs) {
+        const jName = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
+        const jLogo = j.company_logo || j.employer?.company_logo || j.employer?.profile_photo;
+        if (jLogo && (jName === normName || (!normName && jLogo) || (normName.includes('msd') && jName.includes('msd')))) {
+          return jLogo;
+        }
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+export function normalizeResponsibilities(rawResponsibilities, rawRequirements) {
+  let list = [];
+  if (Array.isArray(rawResponsibilities)) {
+    list = rawResponsibilities.map(r => String(r || '').trim()).filter(Boolean);
+  } else if (typeof rawResponsibilities === 'string' && rawResponsibilities.trim()) {
+    list = rawResponsibilities
+      .split('\n')
+      .map(r => r.replace(/^[•\-\*\d\.]+\s*/, '').trim())
+      .filter(Boolean);
+  } else if (Array.isArray(rawRequirements)) {
+    list = rawRequirements.map(r => String(r || '').trim()).filter(Boolean);
+  } else if (typeof rawRequirements === 'string' && rawRequirements.trim()) {
+    list = rawRequirements
+      .split('\n')
+      .map(r => r.replace(/^[•\-\*\d\.]+\s*/, '').trim())
+      .filter(Boolean);
+  }
+
+  if (list.length === 0) {
+    list = [
+      'Design, develop, test, and deploy resilient web applications and software services.',
+      'Collaborate with cross-functional teams to translate user and product requirements into technical solutions.',
+      'Build responsive, accessible user interfaces and integrate secure RESTful APIs.',
+      'Troubleshoot, debug, and optimize application performance across production environments.'
+    ];
+  }
+  return list;
+}
+
 export function normalizeJobRecord(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
   const id = String(raw.id || raw.pk || '');
   const title = raw.title || 'Position';
   const companyName = raw.company_name || 'Employer';
-  const companyLogo = raw.company_logo || null;
+  const companyLogo = resolveCompanyLogo(raw.company_logo, companyName, raw.employer);
   const companyInitials = companyName ? companyName.charAt(0).toUpperCase() : 'E';
 
   const locationName = raw.location_name || (raw.locations && raw.locations.length > 0 ? raw.locations[0].full_path : 'Location Not Specified');
@@ -41,6 +134,7 @@ export function normalizeJobRecord(raw) {
   }
 
   const skillsList = Array.isArray(raw.skills) ? raw.skills.map(s => typeof s === 'string' ? s : s.name) : [];
+  const responsibilitiesList = normalizeResponsibilities(raw.responsibilities, raw.requirements);
 
   return {
     id,
@@ -63,7 +157,8 @@ export function normalizeJobRecord(raw) {
     educationRequirement: raw.education_requirement || '',
     skills: skillsList,
     description: raw.description || '',
-    responsibilities: raw.responsibilities || '',
+    responsibilities: responsibilitiesList,
+    responsibilitiesList,
     isSaved: Boolean(raw.is_saved),
     hasApplied: Boolean(raw.is_applied),
     publishedAt: raw.published_at || raw.created_at || new Date().toISOString()
@@ -75,31 +170,38 @@ function getLocalPublishedJobs() {
     const stored = localStorage.getItem('tnjobz_recruiter_jobs');
     if (!stored) return [];
     const jobs = JSON.parse(stored);
-    return jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').map(j => ({
-      id: String(j.id),
-      title: j.title || 'Position',
-      company: j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech',
-      companyName: j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech',
-      companyLogo: j.company_logo || j.employer?.company_logo || j.employer?.profile_photo || null,
-      companyInitials: (j.company_name || j.employer_name || 'M').charAt(0).toUpperCase(),
-      location: j.location || 'Tambaram, Chennai, Tamil Nadu',
-      locationName: j.location || 'Tambaram, Chennai, Tamil Nadu',
-      locations: [],
-      workMode: j.workMode || 'On-site',
-      applicationType: j.employmentType === 'Simple Local' ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME',
-      salary: j.minSalary && j.maxSalary ? `₹${Number(j.minSalary).toLocaleString('en-IN')} - ₹${Number(j.maxSalary).toLocaleString('en-IN')}/${j.salary_period || 'month'}` : '₹35,000 - ₹50,000/month',
-      salaryMin: j.minSalary ? Number(j.minSalary) : 35000,
-      salaryMax: j.maxSalary ? Number(j.maxSalary) : 50000,
-      salaryPeriod: j.salary_period || 'month',
-      experienceMin: j.minExperience ? Number(j.minExperience) : 0,
-      experienceMax: j.maxExperience ? Number(j.maxExperience) : 3,
-      skills: Array.isArray(j.skills) ? j.skills : ['React', 'Node.js', 'REST APIs', 'SQL'],
-      description: j.description || '',
-      responsibilities: j.responsibilities || '',
-      isSaved: false,
-      hasApplied: false,
-      publishedAt: j.created_at || j.createdAt || new Date().toISOString()
-    }));
+    return jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').map(j => {
+      const companyName = j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech';
+      const companyLogo = resolveCompanyLogo(j.company_logo, companyName, j.employer);
+      const responsibilitiesList = normalizeResponsibilities(j.responsibilities, j.requirements);
+
+      return {
+        id: String(j.id),
+        title: j.title || 'Position',
+        company: companyName,
+        companyName,
+        companyLogo,
+        companyInitials: (companyName || 'M').charAt(0).toUpperCase(),
+        location: j.location || 'Tambaram, Chennai, Tamil Nadu',
+        locationName: j.location || 'Tambaram, Chennai, Tamil Nadu',
+        locations: [],
+        workMode: j.workMode || 'On-site',
+        applicationType: j.employmentType === 'Simple Local' ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME',
+        salary: j.minSalary && j.maxSalary ? `₹${Number(j.minSalary).toLocaleString('en-IN')} - ₹${Number(j.maxSalary).toLocaleString('en-IN')}/${j.salary_period || 'month'}` : '₹35,000 - ₹50,000/month',
+        salaryMin: j.minSalary ? Number(j.minSalary) : 35000,
+        salaryMax: j.maxSalary ? Number(j.maxSalary) : 50000,
+        salaryPeriod: j.salary_period || 'month',
+        experienceMin: j.minExperience ? Number(j.minExperience) : 0,
+        experienceMax: j.maxExperience ? Number(j.maxExperience) : 3,
+        skills: Array.isArray(j.skills) ? j.skills : ['React', 'Node.js', 'REST APIs', 'SQL'],
+        description: j.description || '',
+        responsibilities: responsibilitiesList,
+        responsibilitiesList,
+        isSaved: false,
+        hasApplied: false,
+        publishedAt: j.created_at || j.createdAt || new Date().toISOString()
+      };
+    });
   } catch {
     return [];
   }
@@ -109,6 +211,7 @@ function getLocalPublishedJobs() {
  * Fetch candidate jobs with search, filtering, and tab controls from Django API & local storage
  */
 export async function getCandidateJobs(params = {}) {
+  await loadCompanyLogos();
   const {
     search = '',
     tab = 'for-you',
@@ -261,6 +364,7 @@ export async function getJobFilterOptions() {
  * Fetch Job Details by ID
  */
 export async function getCandidateJobDetails(jobId) {
+  await loadCompanyLogos();
   try {
     const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/`;
     const response = await authenticatedFetch(url);
@@ -274,7 +378,17 @@ export async function getCandidateJobDetails(jobId) {
 
   const localPublished = getLocalPublishedJobs();
   const found = localPublished.find(j => String(j.id) === String(jobId));
-  return found || null;
+  if (found) {
+    if (!found.companyLogo) {
+      found.companyLogo = resolveCompanyLogo(null, found.companyName, found.employer);
+    }
+    if (!found.responsibilities || (Array.isArray(found.responsibilities) && found.responsibilities.length === 0)) {
+      found.responsibilities = normalizeResponsibilities(null, null);
+      found.responsibilitiesList = found.responsibilities;
+    }
+    return found;
+  }
+  return null;
 }
 
 /**

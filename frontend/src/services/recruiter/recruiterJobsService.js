@@ -96,25 +96,43 @@ export async function createJobDraftService(jobPayload) {
     const existingData = getRecruiterJobsData();
     const existingJobs = existingData.jobs || [];
     const locationStr = [jobPayload?.locality, jobPayload?.city, jobPayload?.district, jobPayload?.state].filter(Boolean).join(', ') || jobPayload?.location || 'Tambaram, Chennai, Tamil Nadu';
+    const logoUrl = getRecruiterCompanyLogo();
     
     const minExp = jobPayload?.minExperience || '0';
     const maxExp = jobPayload?.maxExperience || '3';
     const minSal = jobPayload?.minSalary || '35000';
     const maxSal = jobPayload?.maxSalary || '50000';
     const deadLineStr = jobPayload?.deadline || new Date(Date.now() + 30*86400000).toISOString().split('T')[0];
-    const responsibilitiesText = Array.isArray(jobPayload?.responsibilities) 
-      ? jobPayload.responsibilities.filter(Boolean).join('\n• ') 
-      : (jobPayload?.responsibilities || jobPayload?.requirements || '• Develop high-quality software applications.\n• Collaborate with product managers and engineers.');
+    
+    let responsibilitiesArr = [];
+    if (Array.isArray(jobPayload?.responsibilities)) {
+      responsibilitiesArr = jobPayload.responsibilities.map(r => String(r || '').trim()).filter(Boolean);
+    } else if (typeof jobPayload?.responsibilities === 'string' && jobPayload.responsibilities.trim()) {
+      responsibilitiesArr = jobPayload.responsibilities.split('\n').map(r => r.replace(/^[•\-\*\s]+/, '').trim()).filter(Boolean);
+    }
+
+    if (responsibilitiesArr.length === 0) {
+      responsibilitiesArr = [
+        'Design, develop, test, and maintain high-quality software applications and web-based solutions.',
+        'Collaborate with cross-functional teams to translate business requirements into technical solutions.',
+        'Develop reliable backend services, RESTful APIs, and responsive user interfaces.',
+        'Troubleshoot, debug, and optimize application workflows and performance.'
+      ];
+    }
+    const responsibilitiesText = responsibilitiesArr.map(r => `• ${r}`).join('\n');
 
     const newJob = {
       id: `job_${Date.now()}`,
       title: jobPayload?.title?.trim() || 'Software Development Engineer',
       company_name: jobPayload?.companyName || 'MSD Tech',
       employer_name: 'MSD Tech',
+      company_logo: logoUrl || jobPayload?.company_logo || null,
       employer: {
-        company_name: 'MSD Tech',
+        company_name: jobPayload?.companyName || 'MSD Tech',
         contact_name: 'MSD',
         email: 'msd@gmail.com',
+        company_logo: logoUrl || jobPayload?.company_logo || null,
+        profile_photo: logoUrl || jobPayload?.company_logo || null,
         verification_status: 'APPROVED',
         account_status: 'ACTIVE',
         trust_level: 'VERIFIED'
@@ -135,7 +153,8 @@ export async function createJobDraftService(jobPayload) {
       salary_max: maxSal,
       salary_period: jobPayload?.salaryType === 'PER_YEAR' ? 'year' : 'month',
       description: jobPayload?.description || 'Software Development Engineer responsible for designing, developing, testing, and maintaining scalable applications.',
-      responsibilities: responsibilitiesText ? `• ${responsibilitiesText.replace(/^• /, '')}` : '',
+      responsibilities: responsibilitiesText,
+      responsibilitiesList: responsibilitiesArr,
       skills: Array.isArray(jobPayload?.skills) && jobPayload.skills.length > 0 ? jobPayload.skills : ['React', 'Node.js', 'REST APIs', 'SQL'],
       status: 'PENDING_REVIEW',
       status_label: 'Pending Review',
@@ -148,7 +167,21 @@ export async function createJobDraftService(jobPayload) {
     };
 
     // Remove any incomplete "Untitled Job Position" drafts to keep recruiter dashboard clean
-    const cleanedJobs = existingJobs.filter(j => j.title !== 'Untitled Job Position');
+    const cleanedJobs = existingJobs.filter(j => j.title !== 'Untitled Job Position').map(j => {
+      // Backfill missing company_logo or responsibilities on existing jobs
+      const updated = { ...j };
+      if (!updated.company_logo && logoUrl) {
+        updated.company_logo = logoUrl;
+      }
+      if (!updated.employer?.company_logo && logoUrl) {
+        updated.employer = { ...(updated.employer || {}), company_logo: logoUrl, profile_photo: logoUrl };
+      }
+      if (!updated.responsibilities || updated.responsibilities.trim() === '') {
+        updated.responsibilities = responsibilitiesText;
+      }
+      return updated;
+    });
+
     const updatedJobs = [newJob, ...cleanedJobs];
     localStorage.setItem(STORAGE_RECRUITER_JOBS_KEY, JSON.stringify(updatedJobs));
     return { success: true, job: newJob };
