@@ -195,9 +195,9 @@ export default function CandidateJobDetailsPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-2xl shrink-0 overflow-hidden shadow-2xs">
+              <div className="h-16 w-16 rounded-full bg-white border-2 border-black flex items-center justify-center text-slate-900 font-black text-2xl shrink-0 overflow-hidden shadow-xs">
                 {job.companyLogo ? (
-                  <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-2xl" />
+                  <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-full" />
                 ) : (
                   <span>{job.companyInitials || (job.company ? job.company.charAt(0).toUpperCase() : 'E')}</span>
                 )}

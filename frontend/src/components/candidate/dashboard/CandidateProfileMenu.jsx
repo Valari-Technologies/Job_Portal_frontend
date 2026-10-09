@@ -48,11 +48,11 @@ export default function CandidateProfileMenu({ isOpen, onClose }) {
     >
       {/* Profile Header */}
       <div className="p-3 border-b border-slate-150 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="h-10 w-10 rounded-full bg-white border border-black flex items-center justify-center shrink-0 overflow-hidden">
           {profile?.avatarUrl ? (
             <img src={profile.avatarUrl} alt={profile.fullName} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs font-black text-[#3B00FF]">{getInitials(profile?.fullName)}</span>
+            <span className="text-xs font-black text-slate-900">{getInitials(profile?.fullName)}</span>
           )}
         </div>
         <div className="flex flex-col min-w-0">

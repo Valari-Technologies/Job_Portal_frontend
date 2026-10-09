@@ -241,9 +241,9 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
                   } catch { return null; }
                 })();
                 return (
-                  <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-black text-lg shrink-0 overflow-hidden shadow-2xs">
+                  <div className="w-12 h-12 rounded-full bg-white border-2 border-black flex items-center justify-center text-slate-900 font-black text-lg shrink-0 overflow-hidden shadow-xs">
                     {companyLogo ? (
-                      <img src={companyLogo} alt={emp.company_name || 'Employer'} className="w-full h-full object-cover" />
+                      <img src={companyLogo} alt={emp.company_name || 'Employer'} className="w-full h-full object-cover rounded-full" />
                     ) : (
                       (emp.company_name || 'E').substring(0, 2).toUpperCase()
                     )}

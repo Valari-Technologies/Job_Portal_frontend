@@ -76,9 +76,9 @@ export default function EmployerVerificationReview({ request, onBack, onDecision
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-2xs space-y-6">
             <div className="flex items-start space-x-4">
-              <div className="w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-black text-2xl overflow-hidden shrink-0">
+              <div className="w-16 h-16 rounded-full bg-white border-2 border-black flex items-center justify-center text-slate-900 font-black text-2xl overflow-hidden shrink-0">
                 {request.company_logo ? (
-                  <img src={request.company_logo} alt={request.company_name} className="w-full h-full object-cover" />
+                  <img src={request.company_logo} alt={request.company_name} className="w-full h-full object-cover rounded-full" />
                 ) : (
                   (request.company_name || 'E').substring(0, 2).toUpperCase()
                 )}

@@ -488,13 +488,13 @@ export default function CandidateProfilePage() {
                 {/* Photo Avatar with Camera trigger */}
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative h-28 w-28 rounded-full border-4 border-slate-100 shadow-sm mx-auto overflow-hidden bg-indigo-50 flex items-center justify-center group cursor-pointer"
+                  className="relative h-28 w-28 rounded-full border-2 border-black shadow-sm mx-auto overflow-hidden bg-white flex items-center justify-center group cursor-pointer"
                   title="Click to change profile picture"
                 >
                   {activeAvatar ? (
                     <img src={activeAvatar} alt={fullName} className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-3xl font-black text-[#3B00FF]">
+                    <span className="text-3xl font-black text-slate-900">
                       {fullName.charAt(0)}
                     </span>
                   )}

@@ -270,9 +270,9 @@ export default function SuperAdminEmployers() {
             <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
               <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
                 {selectedEmployer.company_logo ? (
-                  <img src={selectedEmployer.company_logo} alt="" className="h-12 w-12 rounded-xl object-cover border border-slate-200 shrink-0" />
+                  <img src={selectedEmployer.company_logo} alt="" className="h-12 w-12 rounded-full object-cover border-2 border-black bg-white shrink-0" />
                 ) : (
-                  <div className="h-12 w-12 rounded-xl bg-teal-50 border border-teal-100 text-teal-700 font-extrabold text-lg flex items-center justify-center shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-white border-2 border-black text-slate-900 font-extrabold text-lg flex items-center justify-center shrink-0">
                     {(selectedEmployer.company_name || selectedEmployer.full_name || 'E').charAt(0).toUpperCase()}
                   </div>
                 )}

@@ -186,9 +186,9 @@ export function EmployerVerificationQueue({
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-start space-x-4">
                       {/* Logo or placeholder */}
-                      <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-black text-lg overflow-hidden shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-white border-2 border-black flex items-center justify-center text-slate-900 font-black text-lg overflow-hidden shrink-0">
                         {r.company_logo ? (
-                          <img src={r.company_logo} alt={r.company_name} className="w-full h-full object-cover" />
+                          <img src={r.company_logo} alt={r.company_name} className="w-full h-full object-cover rounded-full" />
                         ) : (
                           (r.company_name || 'E').substring(0, 2).toUpperCase()
                         )}

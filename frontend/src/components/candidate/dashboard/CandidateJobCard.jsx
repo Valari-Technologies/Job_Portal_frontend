@@ -61,9 +61,9 @@ export default function CandidateJobCard({ job, onStatusChange }) {
       
       {/* Top Header: Company Avatar & Badges */}
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="h-12 w-12 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-lg shrink-0 overflow-hidden shadow-2xs">
+        <div className="h-12 w-12 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-black text-lg shrink-0 overflow-hidden shadow-2xs">
           {job.companyLogo ? (
-            <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-xl" />
+            <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-full" />
           ) : (
             <span>{job.companyInitials || (job.company ? job.company.charAt(0) : 'J')}</span>
           )}

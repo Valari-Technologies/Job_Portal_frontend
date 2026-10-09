@@ -358,9 +358,22 @@ export async function deleteCandidateResume(resumeId) {
 
   const resData = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
+  if (!response.ok && response.status !== 404) {
     throw new Error(resData.detail || 'Failed to delete resume.');
   }
+
+  // Remove from localStorage cache
+  try {
+    const stored = getStoredResumes();
+    const updated = stored.filter(r => String(r.id) !== String(resumeId) && String(r.versionId) !== String(resumeId));
+    saveStoredResumes(updated);
+
+    const analyses = getStoredAnalyses();
+    if (analyses[resumeId]) {
+      delete analyses[resumeId];
+      saveStoredAnalyses(analyses);
+    }
+  } catch {}
 
   const remaining = await getCandidateResumes();
   return {

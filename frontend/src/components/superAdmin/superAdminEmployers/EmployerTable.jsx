@@ -74,10 +74,10 @@ export default function EmployerTable({ employers = [], onSelectEmployer }) {
                         <img 
                           src={emp.company_logo || emp.profile_photo} 
                           alt={emp.company_name || 'Logo'} 
-                          className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" 
+                          className="h-10 w-10 rounded-full object-cover border border-black bg-white shrink-0" 
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700 font-extrabold text-base shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-extrabold text-base shrink-0">
                           {companyInitial}
                         </div>
                       )}

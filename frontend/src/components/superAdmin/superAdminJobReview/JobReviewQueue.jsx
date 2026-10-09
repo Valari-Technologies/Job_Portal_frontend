@@ -207,9 +207,9 @@ export function JobReviewQueue({
 
                       <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">
                         <span className="flex items-center gap-2">
-                          <span className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-700 text-xs font-black overflow-hidden shrink-0 shadow-2xs">
+                          <span className="w-7 h-7 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 text-xs font-black overflow-hidden shrink-0 shadow-2xs">
                             {companyLogo ? (
-                              <img src={companyLogo} alt={companyName} className="w-full h-full object-cover" />
+                              <img src={companyLogo} alt={companyName} className="w-full h-full object-cover rounded-full" />
                             ) : (
                               companyName.charAt(0).toUpperCase()
                             )}

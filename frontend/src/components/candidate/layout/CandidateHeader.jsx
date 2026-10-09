@@ -47,11 +47,11 @@ export default function CandidateHeader() {
             aria-label="Open profile menu"
             className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-indigo-300 transition-all cursor-pointer shadow-2xs"
           >
-            <div className="h-8 w-8 rounded-full bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+            <div className="h-8 w-8 rounded-full bg-white border border-black flex items-center justify-center overflow-hidden shrink-0">
               {(profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')) ? (
                 <img src={profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')} alt={profile?.fullName || 'Candidate'} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-xs font-black text-[#3B00FF]">
+                <span className="text-xs font-black text-slate-900">
                   {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : (profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'C')}
                 </span>
               )}

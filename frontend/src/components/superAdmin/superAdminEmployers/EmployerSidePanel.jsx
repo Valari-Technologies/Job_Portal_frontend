@@ -38,10 +38,10 @@ export default function EmployerSidePanel({
               <img 
                 src={emp.company_logo} 
                 alt={emp.company_name || 'Logo'} 
-                className="h-14 w-14 rounded-2xl object-cover border border-slate-200 shadow-xs shrink-0" 
+                className="h-14 w-14 rounded-full object-cover border-2 border-black bg-white shadow-xs shrink-0" 
               />
             ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border border-teal-100 text-teal-700 font-black text-xl shadow-xs">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white border-2 border-black text-slate-900 font-black text-xl shadow-xs">
                 {emp ? (emp.company_name ? emp.company_name.charAt(0).toUpperCase() : (emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E')) : <Building2 className="h-7 w-7" />}
               </div>
             )}

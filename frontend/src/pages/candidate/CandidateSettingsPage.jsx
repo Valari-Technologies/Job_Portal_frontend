@@ -465,11 +465,11 @@ export default function CandidateSettingsPage() {
 
                 {/* Avatar & Summary Header */}
                 <div className="flex items-center gap-4">
-                  <div className="relative h-16 w-16 rounded-full border-2 border-slate-200 bg-indigo-50 overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="relative h-16 w-16 rounded-full border-2 border-black bg-white overflow-hidden flex items-center justify-center shrink-0">
                     {activeAvatar ? (
                       <img src={activeAvatar} alt={fullName} className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-xl font-black text-[#3B00FF]">{fullName.charAt(0)}</span>
+                      <span className="text-xl font-black text-slate-900">{fullName.charAt(0)}</span>
                     )}
 
                     <Link

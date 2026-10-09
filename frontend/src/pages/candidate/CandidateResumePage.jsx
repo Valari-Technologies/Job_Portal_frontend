@@ -287,7 +287,7 @@ export default function CandidateResumePage() {
       }
     } catch (err) {
       console.error('Failed to delete resume:', err);
-      triggerToast('Failed to delete resume. Please retry.');
+      triggerToast(err.message || 'Failed to delete resume. Please retry.');
     } finally {
       setIsDeletingResume(false);
     }
@@ -648,12 +648,12 @@ export default function CandidateResumePage() {
           <button
             type="button"
             onClick={() => navigate('/candidate/profile')}
-            className="h-9 w-9 rounded-full bg-indigo-50 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer"
+            className="h-9 w-9 rounded-full bg-white border border-black overflow-hidden flex items-center justify-center shrink-0 cursor-pointer"
           >
             {userAvatar ? (
               <img src={userAvatar} alt={firstName} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-xs font-black text-[#3B00FF]">{firstName.charAt(0)}</span>
+              <span className="text-xs font-black text-slate-900">{firstName.charAt(0)}</span>
             )}
           </button>
         </div>

@@ -71,9 +71,9 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
         {/* Top Header: Logo + Title + Bookmark */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="h-12 w-12 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-lg shrink-0 overflow-hidden shadow-2xs">
+            <div className="h-12 w-12 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-black text-lg shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-300">
               {job.companyLogo ? (
-                <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-xl" />
+                <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-full" />
               ) : (
                 <span>{job.companyInitials || (job.company ? job.company.charAt(0).toUpperCase() : 'J')}</span>
               )}
@@ -174,9 +174,9 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
         {/* Top Header: Logo + Title/Company + Save Icon */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="h-11 w-11 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-center text-[#3B00FF] font-black text-base shrink-0 overflow-hidden shadow-2xs">
+            <div className="h-11 w-11 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-black text-base shrink-0 overflow-hidden shadow-2xs">
               {job.companyLogo ? (
-                <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-xl" />
+                <img src={job.companyLogo} alt={job.company} className="h-full w-full object-cover rounded-full" />
               ) : (
                 <span>{job.companyInitials || (job.company ? job.company.charAt(0) : 'J')}</span>
               )}
