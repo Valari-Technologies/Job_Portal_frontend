@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import logoJobz from '../../../assets/logo-jobz.png';
-import { loginAdmin, clearAllAuthTokens } from '../../../services/auth/adminAuthService';
+import { loginAdmin, loginWithGoogle, clearAllAuthTokens } from '../../../services/auth/adminAuthService';
 
 export default function AdminPortalLoginForm() {
   const navigate = useNavigate();
@@ -114,7 +115,8 @@ export default function AdminPortalLoginForm() {
     try {
       const response = await loginAdmin({
         email: email.trim(),
-        password: password
+        password: password,
+        expectedRole: 'ADMIN_PORTAL',
       });
 
       if (response.success) {
@@ -144,11 +146,45 @@ export default function AdminPortalLoginForm() {
     alert("Password reset is managed by System Administration. Please contact your Super Admin.");
   };
 
-  const handleGoogleLogin = (e) => {
-    e.preventDefault();
-    // Future Admin Google OAuth:
-    // Permit Google login only if authorized for SUPER_ADMIN or ADMIN role by backend response.
-    alert("Admin Google Single Sign-On is subject to backend OAuth configuration.");
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      triggerAuthError('Google sign-in did not return a valid credential.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    clearAuthError();
+
+    try {
+      const response = await loginWithGoogle({
+        token: credentialResponse.credential,
+        expectedRole: 'ADMIN_PORTAL',
+      });
+
+      if (response.success) {
+        const role = response.role;
+        if (role === 'SUPER_ADMIN') {
+          window.location.href = '/super-admin/overview';
+        } else if (role === 'ADMIN') {
+          window.location.href = '/admin/dashboard';
+        } else {
+          clearAllAuthTokens();
+          triggerAuthError('Access denied. Admin portal is restricted to authorized Super Admins and Admins. Candidate and HR users please login at /login.');
+        }
+      } else {
+        clearAllAuthTokens();
+        triggerAuthError(response.message || 'Google login failed.');
+      }
+    } catch {
+      clearAllAuthTokens();
+      triggerAuthError('An unexpected Google authentication error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    triggerAuthError('Google sign-in was cancelled or encountered an error.');
   };
 
   return (
@@ -308,32 +344,18 @@ export default function AdminPortalLoginForm() {
         </div>
 
         {/* Google OAuth Button */}
-        <div>
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 flex items-center justify-center gap-2.5 min-h-[44px] transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-200"
-          >
-            <svg className="h-4.5 w-4.5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.15C3.26 21.3 7.31 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.39l3.99-3.15z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.61l3.99 3.15c.95-2.85 3.6-4.96 6.72-4.96z"
-              />
-            </svg>
-            <span className="text-sm font-bold text-slate-700">Google</span>
-          </button>
+        <div className="flex justify-center w-full">
+          <div className="w-full flex justify-center [&>div]:w-full [&>div>iframe]:w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="continue_with"
+              shape="rectangular"
+              width="380"
+            />
+          </div>
         </div>
 
       </form>

@@ -60,9 +60,9 @@ export default function RecruiterAccountMenu({ onClose, isMobile = false }) {
         onClick={handleLinkClick}
         className="p-4 bg-slate-50/80 border-b border-slate-150 flex items-center gap-3 hover:bg-indigo-50/50 transition-colors block cursor-pointer group"
       >
-        <div className="h-10 w-10 rounded-full bg-indigo-600 text-white font-black text-sm flex items-center justify-center border border-indigo-200 shadow-xs shrink-0 overflow-hidden">
+        <div className="h-10 w-10 rounded-full bg-white text-slate-900 font-black text-sm flex items-center justify-center border border-black shadow-xs shrink-0 overflow-hidden">
           {profilePhotoUrl ? (
-            <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+            <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-contain p-0.5 rounded-full" />
           ) : (
             <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : 'RD'}</span>
           )}

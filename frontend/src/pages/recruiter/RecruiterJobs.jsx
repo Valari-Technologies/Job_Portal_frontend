@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterJobsHeader from '../../components/recruiter/jobs/RecruiterJobsHeader';
 import RecruiterJobsFilters from '../../components/recruiter/jobs/RecruiterJobsFilters';
 import RecruiterJobsMetrics from '../../components/recruiter/jobs/RecruiterJobsMetrics';
 import RecruiterJobsList from '../../components/recruiter/jobs/RecruiterJobsList';
-import { getRecruiterJobsData } from '../../services/recruiter/recruiterJobsService';
+import { getRecruiterJobsData, fetchRecruiterJobsFromApi } from '../../services/recruiter/recruiterJobsService';
 
 export default function RecruiterJobs() {
   const [data, setData] = useState(() => getRecruiterJobsData());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
+
+  useEffect(() => {
+    fetchRecruiterJobsFromApi().then(freshData => {
+      if (freshData) setData(freshData);
+    });
+  }, []);
 
   const metrics = data?.metrics || { active_jobs: 0, total_applications: 0, interviews_scheduled: 0 };
   const jobs = data?.jobs || [];

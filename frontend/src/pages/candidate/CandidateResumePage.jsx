@@ -133,6 +133,13 @@ export default function CandidateResumePage() {
     };
   }, []);
 
+  // Open upload modal if redirected with action=upload
+  useEffect(() => {
+    if (searchParams.get('action') === 'upload') {
+      setIsUploadModalOpen(true);
+    }
+  }, [searchParams]);
+
   // 1. Check Onboarding Guard (Allow direct access)
   useEffect(() => {
     let isMounted = true;
@@ -550,11 +557,17 @@ export default function CandidateResumePage() {
         setResumes(updatedList);
         setCurrentResume(res.resume);
 
-        triggerToast('Resume uploaded and parsed successfully!');
+        triggerToast(jobIdParam ? 'Resume uploaded! Redirecting to job application...' : 'Resume uploaded and parsed successfully!');
         setIsUploadModalOpen(false);
         setSelectedUploadFile(null);
         setUploadDisplayName('');
         setUploadProgress(0);
+
+        if (jobIdParam) {
+          setTimeout(() => {
+            navigate(`/candidate/jobs/${jobIdParam}`);
+          }, 1200);
+        }
 
         // Re-analyze newly uploaded resume specifically
         setIsAnalyzing(true);

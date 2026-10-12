@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import CandidateDetailsHeader from '../../components/recruiter/candidates/details/CandidateDetailsHeader';
@@ -9,6 +9,7 @@ import CandidateEducationCard from '../../components/recruiter/candidates/detail
 import CandidateTimelineCard from '../../components/recruiter/candidates/details/CandidateTimelineCard';
 import CandidateInterviewFeedbackCard from '../../components/recruiter/candidates/details/CandidateInterviewFeedbackCard';
 import { updateApplicationStatusService } from '../../services/recruiter/recruiterApplicationsService';
+import { getCandidateDetailsData } from '../../services/recruiter/recruiterCandidatesService';
 
 export default function RecruiterCandidateDetails() {
   const { candidateId, applicationId } = useParams();
@@ -16,21 +17,31 @@ export default function RecruiterCandidateDetails() {
   const [candidateData, setCandidateData] = useState({
     candidate: {
       id: candidateId,
-      full_name: 'Candidate Profile',
-      current_title: 'Applicant',
-      location: 'Location Not Specified',
-      willing_to_relocate: false,
-      email: null,
-      phone: null
+      full_name: 'DSS',
+      current_title: 'Senior Full-Stack Developer',
+      location: 'Chennai, Tamil Nadu',
+      willing_to_relocate: true,
+      email: 'ds@gmail.com',
+      phone: '6365865876'
     },
     application_status: 'APPLIED',
-    resume_url: null,
-    skills: [],
+    resume_url: 'http://127.0.0.1:8000/media/resumes/DHANAIS_RESUME_1.pdf',
+    skills: ['React', 'JavaScript', 'Python', 'Django', 'Tailwind CSS'],
     experiences: [],
     educations: [],
     history: [],
     feedback: []
   });
+
+  useEffect(() => {
+    async function loadCandidate() {
+      const details = await getCandidateDetailsData(candidateId, applicationId);
+      if (details) {
+        setCandidateData(details);
+      }
+    }
+    loadCandidate();
+  }, [candidateId, applicationId]);
 
   const handleUpdateStatus = async (newStatus) => {
     try {

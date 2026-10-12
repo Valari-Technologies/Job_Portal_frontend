@@ -148,10 +148,13 @@ export default function AddEmployerForm() {
       }
     }
 
+    const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
     if (!formState.password) {
       newErrors.password = 'Password is required.';
     } else if (formState.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters long.';
+    } else if (!passwordComplexityRegex.test(formState.password)) {
+      newErrors.password = 'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol (e.g. Abc@1234).';
     }
 
     if (!formState.confirmPassword) {
@@ -205,8 +208,13 @@ export default function AddEmployerForm() {
 
     if (!validate()) {
       setTimeout(() => {
-        const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] textarea');
-        if (firstErrorEl) firstErrorEl.focus();
+        const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] textarea, [data-error="true"] select');
+        if (firstErrorEl) {
+          firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstErrorEl.focus();
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }, 50);
       return;
     }
@@ -251,18 +259,50 @@ export default function AddEmployerForm() {
       if (res.success) {
         navigate('/super-admin/employers');
       } else {
-        setApiError(res.message || 'Failed to create employer account.');
+        const errorMsg = res.message || 'Failed to create employer account.';
+        setApiError(errorMsg);
         if (res.errors) {
           const fieldErrors = {};
-          if (res.errors.email) fieldErrors.accountEmail = Array.isArray(res.errors.email) ? res.errors.email[0] : res.errors.email;
-          if (res.errors.password) fieldErrors.password = Array.isArray(res.errors.password) ? res.errors.password[0] : res.errors.password;
-          if (res.errors.confirmPassword) fieldErrors.confirmPassword = Array.isArray(res.errors.confirmPassword) ? res.errors.confirmPassword[0] : res.errors.confirmPassword;
+          if (res.errors.email) fieldErrors.accountEmail = Array.isArray(res.errors.email) ? res.errors.email.join(' ') : res.errors.email;
+          if (res.errors.account_email) fieldErrors.accountEmail = Array.isArray(res.errors.account_email) ? res.errors.account_email.join(' ') : res.errors.account_email;
+          if (res.errors.password) fieldErrors.password = Array.isArray(res.errors.password) ? res.errors.password.join(' ') : res.errors.password;
+          if (res.errors.confirmPassword || res.errors.confirm_password) {
+            const confErr = res.errors.confirmPassword || res.errors.confirm_password;
+            fieldErrors.confirmPassword = Array.isArray(confErr) ? confErr.join(' ') : confErr;
+          }
+          if (res.errors.company_name) fieldErrors.companyName = Array.isArray(res.errors.company_name) ? res.errors.company_name.join(' ') : res.errors.company_name;
+          if (res.errors.company_email) fieldErrors.companyEmail = Array.isArray(res.errors.company_email) ? res.errors.company_email.join(' ') : res.errors.company_email;
+          if (res.errors.company_phone) fieldErrors.companyPhone = Array.isArray(res.errors.company_phone) ? res.errors.company_phone.join(' ') : res.errors.company_phone;
+          if (res.errors.mobile_number || res.errors.phone_number) {
+            const phoneErr = res.errors.mobile_number || res.errors.phone_number;
+            fieldErrors.mobileNumber = Array.isArray(phoneErr) ? phoneErr.join(' ') : phoneErr;
+          }
+          if (res.errors.website || res.errors.company_website) {
+            const webErr = res.errors.website || res.errors.company_website;
+            fieldErrors.website = Array.isArray(webErr) ? webErr.join(' ') : webErr;
+          }
           setErrors(prev => ({ ...prev, ...fieldErrors }));
         }
+
+        setTimeout(() => {
+          const firstErrorEl = document.querySelector('[data-error="true"] input, [data-error="true"] textarea, [data-error="true"] select');
+          if (firstErrorEl) {
+            firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstErrorEl.focus();
+          } else {
+            const bottomBanner = document.getElementById('api-error-banner-bottom') || document.getElementById('api-error-banner-top');
+            if (bottomBanner) {
+              bottomBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }
+        }, 100);
       }
     } catch (err) {
       console.error("Failed to create employer", err);
       setApiError('An unexpected error occurred. Please check network connection.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -278,9 +318,12 @@ export default function AddEmployerForm() {
       </div>
 
       {apiError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 flex items-center gap-2.5">
-          <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0" />
-          <span>{apiError}</span>
+        <div id="api-error-banner-top" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 flex items-start gap-2.5 shadow-xs">
+          <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-extrabold text-red-800 text-sm">Failed to create employer</p>
+            <p className="mt-1 text-red-700 font-semibold text-xs leading-relaxed">{apiError}</p>
+          </div>
         </div>
       )}
 
@@ -325,6 +368,7 @@ export default function AddEmployerForm() {
                 }`}
               />
               {errors.accountEmail && <p className="text-xs text-red-500 font-semibold">{errors.accountEmail}</p>}
+              <p className="text-[11px] text-slate-400 font-medium">Unique email used by this employer to log into the portal.</p>
             </div>
 
             {/* Password */}
@@ -339,7 +383,7 @@ export default function AddEmployerForm() {
                     setFormState(prev => ({ ...prev, password: e.target.value }));
                     if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
-                  placeholder="Minimum 8 characters"
+                  placeholder="e.g. Pass@1234"
                   className={`w-full rounded-xl border px-3.5 py-2.5 pr-10 text-sm font-medium text-slate-800 focus:outline-none min-h-[44px] ${
                     errors.password 
                       ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
@@ -356,6 +400,7 @@ export default function AddEmployerForm() {
                 </button>
               </div>
               {errors.password && <p className="text-xs text-red-500 font-semibold">{errors.password}</p>}
+              <p className="text-[11px] text-slate-400 font-medium">Must contain min 8 characters with uppercase, lowercase, number, and special character (e.g. Abc@1234).</p>
             </div>
 
             {/* Confirm Password */}
@@ -530,6 +575,7 @@ export default function AddEmployerForm() {
                 }`}
               />
               {errors.companyEmail && <p className="text-xs text-red-500 font-semibold">{errors.companyEmail}</p>}
+              <p className="text-[11px] text-slate-400 font-medium">Official company contact email shown on public company details.</p>
             </div>
 
             {/* Website */}
@@ -652,6 +698,17 @@ export default function AddEmployerForm() {
             </span>
           </div>
         </div>
+
+        {/* Bottom Error Notification if API returned error */}
+        {apiError && (
+          <div id="api-error-banner-bottom" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 flex items-start gap-2.5 shadow-xs">
+            <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-extrabold text-red-800 text-sm">Failed to create employer</p>
+              <p className="mt-1 text-red-700 font-semibold text-xs leading-relaxed">{apiError}</p>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

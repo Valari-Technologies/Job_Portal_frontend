@@ -12,7 +12,7 @@
  * - POST /accounts/candidate/applications/{id}/withdraw/ -> Withdraw application
  */
 
-import { authenticatedFetch } from '../auth/adminAuthService';
+import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -208,6 +208,7 @@ export async function getCandidateApplications(params = {}) {
   let backendApps = [];
   let hasNext = false;
   let hasPrevious = false;
+  let backendSuccess = false;
 
   try {
     const query = new URLSearchParams();
@@ -220,6 +221,7 @@ export async function getCandidateApplications(params = {}) {
     const response = await authenticatedFetch(url);
 
     if (response.ok) {
+      backendSuccess = true;
       const data = await response.json();
       const rawList = Array.isArray(data) ? data : (data.results || []);
       backendApps = rawList.map(normalizeApplicationRecord).filter(Boolean);
@@ -230,40 +232,58 @@ export async function getCandidateApplications(params = {}) {
     console.warn("Backend getCandidateApplications warning:", err);
   }
 
-  // Merge local fallback applications if present
+  // If backend responded, it is the authoritative source for this authenticated candidate
+  if (backendSuccess) {
+    return {
+      applications: backendApps,
+      totalCount: backendApps.length,
+      page,
+      totalPages: Math.ceil(backendApps.length / pageSize) || 1,
+      hasNext,
+      hasPrevious
+    };
+  }
+
+  // Fallback ONLY when backend is unreachable, scoped strictly to the current candidate
+  const user = getAuthenticatedUser();
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const userId = String(user?.id || '');
+
   const localApps = (function() {
     try {
       const stored = localStorage.getItem('tnjobz_candidate_applications');
       if (!stored) return [];
       const parsed = JSON.parse(stored);
-      return parsed.map(a => ({
-        id: a.id,
-        status: a.status || 'APPLIED',
-        statusConfig: getStatusConfig(a.status || 'APPLIED'),
-        appliedAt: a.applied_at || new Date().toISOString(),
-        candidateNote: a.candidate_note || '',
-        jobId: a.job_id,
-        jobTitle: a.job_title || 'Software Developer',
-        companyName: a.company_name || 'MSD Tech',
-        companyInitials: (a.company_name || 'M').charAt(0).toUpperCase(),
-        location: 'Chennai',
-        workMode: 'On-site',
-        description: 'Applied position'
-      }));
+      return parsed
+        .filter(a => {
+          const candEmail = (a.candidate?.email || a.email || '').toLowerCase().trim();
+          const candId = String(a.candidate?.id || a.candidate_id || '');
+          return (userEmail && candEmail === userEmail) || (userId && candId === userId);
+        })
+        .map(a => ({
+          id: a.id,
+          status: a.status || 'APPLIED',
+          statusConfig: getStatusConfig(a.status || 'APPLIED'),
+          appliedAt: a.applied_at || new Date().toISOString(),
+          candidateNote: a.candidate_note || '',
+          jobId: a.job_id,
+          jobTitle: a.job_title || 'Software Developer',
+          companyName: a.company_name || 'MSD Tech',
+          companyInitials: (a.company_name || 'M').charAt(0).toUpperCase(),
+          location: a.location || 'Chennai',
+          workMode: a.work_mode || 'On-site',
+          description: a.description || 'Applied position'
+        }));
     } catch { return []; }
   })();
 
-  const existingIds = new Set(backendApps.map(a => String(a.id)));
-  const mergedLocal = localApps.filter(a => !existingIds.has(String(a.id)));
-  const normalizedList = [...backendApps, ...mergedLocal];
-
   return {
-    applications: normalizedList,
-    totalCount: normalizedList.length,
+    applications: localApps,
+    totalCount: localApps.length,
     page,
-    totalPages: Math.ceil(normalizedList.length / pageSize) || 1,
-    hasNext,
-    hasPrevious
+    totalPages: Math.ceil(localApps.length / pageSize) || 1,
+    hasNext: false,
+    hasPrevious: false
   };
 }
 
@@ -272,35 +292,51 @@ export async function getCandidateApplications(params = {}) {
  */
 export async function getCandidateApplicationSummary() {
   const url = `${API_BASE_URL}/accounts/candidate/applications/summary/`;
-  let backendData = null;
 
   try {
     const response = await authenticatedFetch(url);
     if (response.ok) {
-      backendData = await response.json();
+      const backendData = await response.json();
+      return {
+        totalApplications: backendData?.totalApplications || 0,
+        interviewsCount: backendData?.interviewsCount || 0,
+        selectedCount: backendData?.selectedCount || backendData?.offersCount || 0,
+        offersCount: backendData?.selectedCount || backendData?.offersCount || 0,
+        rejectedCount: backendData?.rejectedCount || 0
+      };
     }
   } catch (err) {
     console.warn("Backend summary fetch warning:", err);
   }
 
+  // Fallback ONLY when backend is unreachable, scoped strictly to the current candidate
+  const user = getAuthenticatedUser();
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const userId = String(user?.id || '');
+
   const localApps = (function() {
     try {
       const stored = localStorage.getItem('tnjobz_candidate_applications');
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return parsed.filter(a => {
+        const candEmail = (a.candidate?.email || a.email || '').toLowerCase().trim();
+        const candId = String(a.candidate?.id || a.candidate_id || '');
+        return (userEmail && candEmail === userEmail) || (userId && candId === userId);
+      });
     } catch { return []; }
   })();
 
-  const bTotal = backendData?.totalApplications || 0;
-  const bInterviews = backendData?.interviewsCount || 0;
-  const bSelected = backendData?.selectedCount || backendData?.offersCount || 0;
-  const bRejected = backendData?.rejectedCount || 0;
+  const interviewsCount = localApps.filter(a => a.status === 'INTERVIEW' || a.status === 'INTERVIEW_SCHEDULED').length;
+  const selectedCount = localApps.filter(a => a.status === 'ACCEPTED' || a.status === 'SELECTED').length;
+  const rejectedCount = localApps.filter(a => a.status === 'REJECTED').length;
 
   return {
-    totalApplications: bTotal + localApps.length,
-    interviewsCount: bInterviews,
-    selectedCount: bSelected,
-    offersCount: bSelected,
-    rejectedCount: bRejected
+    totalApplications: localApps.length,
+    interviewsCount,
+    selectedCount,
+    offersCount: selectedCount,
+    rejectedCount
   };
 }
 
@@ -346,16 +382,6 @@ export async function getCandidateResumes() {
   const existingIds = new Set(backendResumes.map(r => String(r.id)));
   const mergedLocal = localResumes.filter(r => !existingIds.has(String(r.id)));
   const list = [...mergedLocal, ...backendResumes];
-
-  if (list.length === 0) {
-    list.push({
-      id: 'res_default',
-      fileName: 'Primary_Resume.pdf',
-      fileUrl: null,
-      isPrimary: true,
-      uploadedAt: 'Recently'
-    });
-  }
   return list;
 }
 
@@ -374,10 +400,20 @@ export async function getCandidateApplicationDetails(applicationId) {
     console.warn("Backend getCandidateApplicationDetails warning:", err);
   }
 
+  const user = getAuthenticatedUser();
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const userId = String(user?.id || '');
+
   const localApps = (function() {
     try {
       const stored = localStorage.getItem('tnjobz_candidate_applications');
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return parsed.filter(a => {
+        const candEmail = (a.candidate?.email || a.email || '').toLowerCase().trim();
+        const candId = String(a.candidate?.id || a.candidate_id || '');
+        return (userEmail && candEmail === userEmail) || (userId && candId === userId);
+      });
     } catch { return []; }
   })();
 
@@ -405,12 +441,57 @@ export async function getCandidateApplicationDetails(applicationId) {
  * Submit candidate job application to Django API & sync local storage for recruiter flow
  */
 export async function submitCandidateApplication(payload) {
-  const parsedJobId = isNaN(Number(payload.jobId)) ? payload.jobId : Number(payload.jobId);
+  let parsedJobId = isNaN(Number(payload.jobId)) ? payload.jobId : Number(payload.jobId);
+  if (isNaN(Number(parsedJobId))) {
+    if (String(payload.jobTitle || '').toLowerCase().includes('sde') || String(parsedJobId).includes('rec_01')) {
+      parsedJobId = 8;
+    }
+  }
   const url = `${API_BASE_URL}/accounts/candidate/applications/`;
+
+  // Retrieve active resume if not provided
+  let activeResumeId = payload.resumeId && !isNaN(Number(payload.resumeId)) ? Number(payload.resumeId) : null;
+  let activeResumeFilename = payload.resumeFileName || null;
+  let activeResumeUrl = payload.resumeUrl || null;
+
+  try {
+    const resumes = await getCandidateResumes();
+    if (resumes && resumes.length > 0) {
+      const defaultRes = resumes.find(r => r.isPrimary || r.is_default) || resumes[0];
+      if (defaultRes) {
+        if (!activeResumeId && defaultRes.id && !isNaN(Number(defaultRes.id))) {
+          activeResumeId = Number(defaultRes.id);
+        }
+        if (!activeResumeFilename) {
+          activeResumeFilename = defaultRes.fileName || defaultRes.file_name || null;
+        }
+        if (!activeResumeUrl) {
+          activeResumeUrl = defaultRes.fileUrl || defaultRes.file_path || null;
+        }
+      }
+    } else {
+      // Candidate has zero resumes
+      return {
+        success: false,
+        requireResume: true,
+        message: 'A resume is required to apply for this job. Please upload your resume first.'
+      };
+    }
+  } catch (err) {
+    console.warn("Resume resolution warning:", err);
+  }
+
+  if (!activeResumeId && !activeResumeFilename) {
+    return {
+      success: false,
+      requireResume: true,
+      message: 'A resume is required to apply for this job. Please upload your resume first.'
+    };
+  }
 
   const bodyData = {
     job_id: parsedJobId,
-    resume_id: payload.resumeId && !isNaN(Number(payload.resumeId)) ? Number(payload.resumeId) : null,
+    resume_id: activeResumeId,
     application_type: payload.applicationType || 'PROFILE_RESUME',
     phone_number: payload.phone || null,
     candidate_note: payload.candidateNote || ''
@@ -418,18 +499,31 @@ export async function submitCandidateApplication(payload) {
 
   let candidateUser = null;
   try {
-    const userStr = localStorage.getItem('auth_user');
-    candidateUser = userStr ? JSON.parse(userStr) : null;
+    candidateUser = getAuthenticatedUser();
   } catch { candidateUser = null; }
 
+  // Fetch full candidate profile to include headline, skills, experience, and education
+  let fullProfile = null;
+  try {
+    const { getCandidateProfile } = await import('./candidateProfileService');
+    fullProfile = await getCandidateProfile();
+  } catch (err) {
+    console.warn("Candidate profile resolution warning:", err);
+  }
+
   const candidateProfile = {
-    full_name: candidateUser?.fullName || (candidateUser?.first_name || candidateUser?.last_name ? `${candidateUser.first_name || ''} ${candidateUser.last_name || ''}`.trim() : '') || 'Candidate User',
-    email: candidateUser?.email || 'candidate@tnjobz.com',
-    phone: candidateUser?.mobileNumber || candidateUser?.phone_number || '',
-    location: candidateUser?.location || 'Chennai, Tamil Nadu',
-    profile_photo: candidateUser?.profilePhotoUrl || candidateUser?.profile_photo || null,
-    profile_completion: 95,
-    initials: (candidateUser?.fullName || candidateUser?.first_name || 'C').charAt(0).toUpperCase()
+    id: fullProfile?.id || candidateUser?.id || 'cand_1',
+    full_name: fullProfile?.fullName || candidateUser?.fullName || (candidateUser?.first_name || candidateUser?.last_name ? `${candidateUser.first_name || ''} ${candidateUser.last_name || ''}`.trim() : '') || 'Candidate',
+    headline: fullProfile?.headline || 'Candidate',
+    email: fullProfile?.email || candidateUser?.email || '',
+    phone: fullProfile?.phone || candidateUser?.mobileNumber || candidateUser?.phone_number || '',
+    location: fullProfile?.location || candidateUser?.location || 'Tamil Nadu',
+    profile_photo: fullProfile?.avatarUrl || candidateUser?.profilePhotoUrl || candidateUser?.profile_photo || null,
+    profile_completion: fullProfile?.completionPercentage || 0,
+    initials: (fullProfile?.fullName || candidateUser?.fullName || 'C').charAt(0).toUpperCase(),
+    skills: (fullProfile?.skills && fullProfile.skills.length > 0) ? fullProfile.skills : [],
+    experiences: (fullProfile?.experiences && fullProfile.experiences.length > 0) ? fullProfile.experiences : [],
+    education: (fullProfile?.education && fullProfile.education.length > 0) ? fullProfile.education : []
   };
 
   let createdAppRecord = null;
@@ -443,6 +537,15 @@ export async function submitCandidateApplication(payload) {
     if (response.ok) {
       const resData = await response.json();
       createdAppRecord = normalizeApplicationRecord(resData);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      if (errData?.resume_id) {
+        return {
+          success: false,
+          requireResume: true,
+          message: Array.isArray(errData.resume_id) ? errData.resume_id[0] : errData.resume_id
+        };
+      }
     }
   } catch (err) {
     console.warn("Backend application submit warning, fallback to local application:", err);
@@ -456,15 +559,24 @@ export async function submitCandidateApplication(payload) {
     const appId = createdAppRecord?.id || `app_${Date.now()}`;
     const newApp = {
       id: appId,
-      job_id: payload.jobId,
-      job_title: payload.jobTitle || 'Software Developer',
-      company_name: payload.company || payload.companyName || 'MSD Tech',
+      job_id: String(parsedJobId || payload.jobId || ''),
+      job_title: payload.jobTitle || 'Job',
+      company_name: payload.company || payload.companyName || 'Company',
       status: createdAppRecord?.status || 'APPLIED',
       applied_at: new Date().toISOString(),
+      applied_time: 'Recently',
       candidate_note: payload.candidateNote || '',
-      resume_id: payload.resumeId || null,
-      resume_filename: payload.resumeFileName || 'Candidate_Resume.pdf',
-      resume_url: payload.resumeUrl || null,
+      resume_id: activeResumeId || null,
+      resume_filename: activeResumeFilename || null,
+      resume_url: activeResumeUrl || null,
+      job: {
+        id: String(parsedJobId || payload.jobId || ''),
+        title: payload.jobTitle || 'Job',
+        company_name: payload.company || payload.companyName || 'Company',
+        location: payload.location || 'Tamil Nadu',
+        work_mode: payload.workMode || 'On-site',
+        salary: payload.salary || 'Competitive Salary'
+      },
       candidate: candidateProfile
     };
 

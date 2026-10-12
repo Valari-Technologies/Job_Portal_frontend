@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertCircle, Camera } from 'lucide-react';
 import { getAdminProfile } from '../../services/admin/adminProfileService';
 import { getProfilePhotoFromStorage, saveProfilePhotoToStorage, subscribeProfilePhoto } from '../../services/admin/profilePhotoSync';
+import ImageCropModal from '../../components/shared/ImageCropModal';
 
 import { getAuthenticatedUser } from '../../services/auth/adminAuthService';
 
@@ -40,10 +41,6 @@ export default function AdminProfile() {
   const [saveWarning, setSaveWarning] = useState(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showPhotoDropdown, setShowPhotoDropdown] = useState(false);
 
   useEffect(() => {
@@ -99,11 +96,11 @@ export default function AdminProfile() {
 
   // Crop controls
   const handlePhotoSelect = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     setShowPhotoDropdown(false);
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Image size must be 2MB or less.");
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must be 5MB or less.");
       return;
     }
     if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
@@ -112,45 +109,26 @@ export default function AdminProfile() {
     }
     setError(null);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropImageSrc(reader.result);
-      setIsCropOpen(true);
-      setZoom(1);
-      setPosition({ x: 0, y: 0 });
-    };
-    reader.readAsDataURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
+    setIsCropOpen(true);
+    e.target.value = '';
   };
 
-  const handleCropSave = () => {
-    // Process crop image using browser canvas
-    const img = new Image();
-    img.src = cropImageSrc;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-
-      // Simple centered crop calculation applying zoom and offsets
-      const size = Math.min(img.width, img.height) / zoom;
-      const sx = (img.width - size) / 2 - position.x;
-      const sy = (img.height - size) / 2 - position.y;
-
-      ctx.drawImage(img, sx, sy, size, size, 0, 0, 512, 512);
-      
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      
-      // Save directly to localStorage to keep profile synced immediately
-      const saved = saveProfilePhotoToStorage(compressedDataUrl, 'current-admin');
-      if (saved) {
-        setProfile(prev => ({ ...prev, profilePhoto: compressedDataUrl }));
-        if (isEditing) {
-          setFormState(prev => ({ ...prev, profilePhoto: compressedDataUrl }));
-        }
+  const handleCropComplete = (croppedBlob, dataUrl) => {
+    const photoToSave = dataUrl || croppedBlob;
+    const saved = saveProfilePhotoToStorage(photoToSave, 'current-admin');
+    if (saved) {
+      setProfile(prev => ({ ...prev, profilePhoto: photoToSave }));
+      if (isEditing) {
+        setFormState(prev => ({ ...prev, profilePhoto: photoToSave }));
       }
-      setIsCropOpen(false);
-    };
+    }
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+      setCropImageSrc(null);
+    }
+    setIsCropOpen(false);
   };
 
   const handleRemovePhoto = () => {
@@ -184,24 +162,6 @@ export default function AdminProfile() {
     });
 
     setSaveWarning("Backend is not connected. Your changes are not permanently saved yet.");
-  };
-
-  // Drag logic for crop window
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
   };
 
   const initials = profile.fullName
@@ -508,72 +468,18 @@ export default function AdminProfile() {
       </div>
 
       {/* Center Crop Preview Modal Dialog */}
-      {isCropOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center font-sans">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" onClick={() => setIsCropOpen(false)} />
-          
-          <div 
-            role="dialog"
-            aria-modal="true"
-            className="relative bg-white rounded-lg border border-slate-200 shadow-2xl p-6 max-w-sm w-full mx-4 space-y-4 z-10"
-          >
-            <h3 className="text-[15px] font-bold text-slate-900">Crop Profile Photo</h3>
-            
-            <div 
-              className="relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200 cursor-move select-none"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            >
-              <img 
-                src={cropImageSrc} 
-                alt="Original source crop preview" 
-                draggable="false"
-                className="absolute origin-center"
-                style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-                  objectFit: 'cover'
-                }}
-              />
-              {/* Target circular mask overlay highlights */}
-              <div className="absolute inset-0 border-[32px] border-slate-900/40 pointer-events-none flex items-center justify-center">
-                <div className="w-full h-full rounded-full border border-white" />
-              </div>
-            </div>
-
-            {/* Zoom Controls */}
-            <div className="space-y-1">
-              <label className="text-[12px] font-bold text-slate-650">Zoom</label>
-              <input 
-                type="range"
-                min="1"
-                max="3"
-                step="0.1"
-                value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-full accent-[#4A1DDF]"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCropOpen(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer min-h-[44px]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCropSave}
-                className="rounded-lg bg-[#4A1DDF] hover:bg-[#3B15CA] text-white px-5 py-2 text-[13px] font-semibold cursor-pointer min-h-[44px]"
-              >
-                Save Photo
-              </button>
-            </div>
-          </div>
-        </div>
+      {isCropOpen && cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => {
+            if (cropImageSrc) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc(null);
+            }
+            setIsCropOpen(false);
+          }}
+        />
       )}
 
     </div>

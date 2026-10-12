@@ -16,7 +16,7 @@ export default function CandidateQuickApplyDialog({
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
-      const res = await onConfirmApply(job.id);
+      const res = await onConfirmApply(job);
       if (res && res.success) {
         onClose();
       } else {

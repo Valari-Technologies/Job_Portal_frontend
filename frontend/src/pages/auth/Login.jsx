@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import logoJobz from '../../assets/logo-jobz.png';
-import { loginAdmin, clearAllAuthTokens } from '../../services/auth/adminAuthService';
+import { loginAdmin, loginWithGoogle, clearAllAuthTokens } from '../../services/auth/adminAuthService';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -129,32 +130,117 @@ export default function Login() {
     if (isEmailValid && isPasswordValid) {
       setIsSubmitting(true);
       try {
+        const expectedRole = activeRole === 'candidate' ? 'CANDIDATE' : 'HR';
         const response = await loginAdmin({
           email: email.trim(),
-          password: password
+          password: password,
+          expectedRole: expectedRole,
         });
 
         if (response.success) {
           const role = response.role;
-          if (role === 'HR') {
-            window.location.href = '/recruiter/dashboard';
-          } else if (role === 'CANDIDATE') {
-            window.location.href = '/candidate/dashboard';
-          } else if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-            clearAllAuthTokens();
-            triggerAuthError('Access denied. Super Admin and Admin users must log in at /admin.');
+          if (activeRole === 'candidate') {
+            if (role === 'CANDIDATE') {
+              window.location.href = '/candidate/dashboard';
+              return;
+            } else {
+              clearAllAuthTokens();
+              triggerAuthError(
+                (role === 'HR' || role === 'RECRUITER')
+                  ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
+                  : "Access denied. Candidate login only."
+              );
+              return;
+            }
+          } else if (activeRole === 'hr') {
+            if (role === 'HR' || role === 'RECRUITER') {
+              window.location.href = '/recruiter/dashboard';
+              return;
+            } else {
+              clearAllAuthTokens();
+              triggerAuthError(
+                role === 'CANDIDATE'
+                  ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
+                  : "Access denied. HR / Recruiter login only."
+              );
+              return;
+            }
           } else {
+            clearAllAuthTokens();
             triggerAuthError('Unauthorized account role.');
           }
         } else {
+          clearAllAuthTokens();
           triggerAuthError(response.message || 'Invalid email or password.');
         }
       } catch {
+        clearAllAuthTokens();
         triggerAuthError('An unexpected authentication error occurred.');
       } finally {
         setIsSubmitting(false);
       }
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      triggerAuthError('Google sign-in did not return a valid credential.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    clearAuthError();
+
+    try {
+      const expectedRole = activeRole === 'candidate' ? 'CANDIDATE' : 'HR';
+      const response = await loginWithGoogle({
+        token: credentialResponse.credential,
+        expectedRole: expectedRole,
+      });
+
+      if (response.success) {
+        const role = response.role;
+        if (activeRole === 'candidate') {
+          if (role === 'CANDIDATE') {
+            window.location.href = '/candidate/dashboard';
+            return;
+          } else {
+            clearAllAuthTokens();
+            triggerAuthError(
+              (role === 'HR' || role === 'RECRUITER')
+                ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
+                : "Access denied. Candidate login only."
+            );
+            return;
+          }
+        } else if (activeRole === 'hr') {
+          if (role === 'HR' || role === 'RECRUITER') {
+            window.location.href = '/recruiter/dashboard';
+            return;
+          } else {
+            clearAllAuthTokens();
+            triggerAuthError(
+              role === 'CANDIDATE'
+                ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
+                : "Access denied. HR / Recruiter login only."
+            );
+            return;
+          }
+        }
+      } else {
+        clearAllAuthTokens();
+        triggerAuthError(response.message || 'Google login failed.');
+      }
+    } catch {
+      clearAllAuthTokens();
+      triggerAuthError('An unexpected Google authentication error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    triggerAuthError('Google sign-in was cancelled or encountered an error.');
   };
 
   return (
@@ -362,15 +448,19 @@ export default function Login() {
           <span className="relative bg-white px-3 text-xs font-bold text-slate-400">or</span>
         </div>
 
-        {/* Google OAuth visual CTA */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className="w-full max-w-full md:max-w-[340px] h-[46px] flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/50 text-xs md:text-sm font-bold text-slate-700 transition-colors focus:ring-2 focus:ring-slate-300 focus:outline-none cursor-pointer"
-          >
-            <img src="/google-image.png" alt="Google Logo" className="h-4.5 w-4.5 shrink-0 object-contain" />
-            <span>Continue with Google</span>
-          </button>
+        {/* Google OAuth Button */}
+        <div className="flex justify-center w-full">
+          <div className="w-full max-w-full md:max-w-[340px] flex justify-center [&>div]:w-full [&>div>iframe]:w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="continue_with"
+              shape="rectangular"
+              width="340"
+            />
+          </div>
         </div>
 
         {/* Shared Footer Slot: Candidate Signup link vs HR reserved space */}

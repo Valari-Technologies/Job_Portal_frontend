@@ -73,7 +73,7 @@ const DEFAULT_SESSIONS = [
   {
     id: 'sess_01',
     device: 'Mac OS • Safari',
-    location: 'Active Now • San Francisco, CA',
+    location: 'Active Now • Chennai, Tamil Nadu',
     isCurrent: true,
     iconType: 'laptop'
   },

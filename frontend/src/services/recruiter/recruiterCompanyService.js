@@ -1,4 +1,4 @@
-import { fetchWithAuth } from '../auth/adminAuthService';
+import { fetchWithAuth, getAuthenticatedUser, setAuthenticatedUser } from '../auth/adminAuthService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -10,10 +10,9 @@ export async function fetchEmployerProfileService() {
     }
     const data = await response.json();
     try {
-      const userStr = localStorage.getItem('auth_user');
-      const user = userStr ? JSON.parse(userStr) : {};
+      const user = getAuthenticatedUser() || {};
       const updatedUser = { ...user, ...data };
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      setAuthenticatedUser(updatedUser, 'HR');
     } catch {
       // ignore
     }
@@ -26,8 +25,7 @@ export async function fetchEmployerProfileService() {
 
 export function getRecruiterCompanyProfileData(dataFromApi = null) {
   try {
-    const userStr = localStorage.getItem('auth_user');
-    const user = userStr ? JSON.parse(userStr) : null;
+    const user = getAuthenticatedUser();
     const data = dataFromApi || user || {};
 
     const loc = data.location;
@@ -97,10 +95,9 @@ export async function updateCompanyProfileService(payload) {
     }
 
     try {
-      const userStr = localStorage.getItem('auth_user');
-      const user = userStr ? JSON.parse(userStr) : {};
+      const user = getAuthenticatedUser() || {};
       const updatedUser = { ...user, ...data, ...(payload.company_logo ? { company_logo: payload.company_logo } : {}) };
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      setAuthenticatedUser(updatedUser, 'HR');
       
       if (payload.company_logo) {
         const storedJobs = localStorage.getItem('tnjobz_recruiter_jobs');

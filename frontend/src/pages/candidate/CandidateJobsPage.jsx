@@ -8,8 +8,10 @@ import CandidateJobsMobileTabs from '../../components/candidate/jobs/CandidateJo
 import CandidateJobCard from '../../components/candidate/jobs/CandidateJobCard';
 import CandidateJobsMobileFilterSheet from '../../components/candidate/jobs/CandidateJobsMobileFilterSheet';
 import CandidateQuickApplyDialog from '../../components/candidate/jobs/CandidateQuickApplyDialog';
+import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import CandidateJobsEmptyState from '../../components/candidate/jobs/CandidateJobsEmptyState';
 import { getCandidateJobs, toggleSavedCandidateJob, applyCandidateJob } from '../../services/candidate/candidateJobsService';
+import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 
@@ -38,6 +40,7 @@ export default function CandidateJobsPage() {
 
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [selectedJobForApply, setSelectedJobForApply] = useState(null);
+  const [resumeRequiredJob, setResumeRequiredJob] = useState(null);
 
   // 1. Check Onboarding Guard (Allow direct page access)
   useEffect(() => {
@@ -154,10 +157,40 @@ export default function CandidateJobsPage() {
     }
   };
 
-  const handleQuickApplyConfirm = async (jobId) => {
-    const res = await applyCandidateJob(jobId);
+  const handleInitiateQuickApply = async (job) => {
+    try {
+      const resumes = await getCandidateResumes();
+      if (!resumes || resumes.length === 0) {
+        setResumeRequiredJob(job);
+        return;
+      }
+      setSelectedJobForApply(job);
+    } catch (err) {
+      console.warn('Error checking candidate resumes:', err);
+      setSelectedJobForApply(job);
+    }
+  };
+
+  const handleQuickApplyConfirm = async (jobOrId) => {
+    const jobObj = (typeof jobOrId === 'object' && jobOrId !== null) ? jobOrId : selectedJobForApply;
+    const jobId = jobObj?.id || jobOrId;
+    const payload = {
+      jobId,
+      jobTitle: jobObj?.title,
+      company: jobObj?.company || jobObj?.companyName,
+      companyName: jobObj?.company || jobObj?.companyName,
+      location: jobObj?.location,
+      workMode: jobObj?.workMode,
+      salary: jobObj?.salary
+    };
+    const res = await applyCandidateJob(jobId, payload);
+    if (res && res.requireResume) {
+      setSelectedJobForApply(null);
+      setResumeRequiredJob(jobObj);
+      return res;
+    }
     if (res && res.success) {
-      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, hasApplied: true } : j));
+      setJobs(prev => prev.map(j => (String(j.id) === String(jobId)) ? { ...j, hasApplied: true } : j));
     }
     return res;
   };
@@ -260,7 +293,7 @@ export default function CandidateJobsPage() {
                 key={job.id}
                 job={job}
                 onToggleSave={handleToggleSave}
-                onQuickApply={(j) => setSelectedJobForApply(j)}
+                onQuickApply={handleInitiateQuickApply}
               />
             ))}
           </div>
@@ -286,6 +319,13 @@ export default function CandidateJobsPage() {
         onClose={() => setSelectedJobForApply(null)}
         job={selectedJobForApply}
         onConfirmApply={handleQuickApplyConfirm}
+      />
+
+      {/* Resume Required Centered Modal */}
+      <ResumeRequiredModal
+        isOpen={Boolean(resumeRequiredJob)}
+        onClose={() => setResumeRequiredJob(null)}
+        job={resumeRequiredJob}
       />
     </CandidateLayout>
   );

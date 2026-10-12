@@ -23,12 +23,12 @@ export default function RecruiterMobileHeader() {
             setShowAccountMenu(!showAccountMenu);
             setShowNotifications(false);
           }}
-          className="h-8 w-8 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center border border-indigo-200 shadow-xs overflow-hidden cursor-pointer focus:outline-none"
+          className="h-8 w-8 rounded-full bg-white text-slate-900 font-black text-xs flex items-center justify-center border border-black shadow-xs overflow-hidden cursor-pointer focus:outline-none"
         >
           {profilePhotoUrl ? (
-            <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+            <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-contain p-0.5 rounded-full" />
           ) : (
-            <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-4.5 w-4.5 text-white" />}</span>
+            <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-4.5 w-4.5 text-slate-900" />}</span>
           )}
         </button>
         <span className="text-base font-black text-indigo-600 tracking-tight">State Jobz</span>

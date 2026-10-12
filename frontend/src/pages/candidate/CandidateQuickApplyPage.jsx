@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
+import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import { getCandidateJobDetails } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes, submitCandidateApplication } from '../../services/candidate/candidateApplicationsService';
 import { ArrowLeft, MoreVertical, FileText, ExternalLink, ArrowRight, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
@@ -20,6 +21,7 @@ export default function CandidateQuickApplyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -61,8 +63,8 @@ export default function CandidateQuickApplyPage() {
     if (!job || isSubmitting) return;
 
     const isSimpleLocal = job.applicationType === 'SIMPLE_LOCAL';
-    if (!isSimpleLocal && !selectedResumeId && resumes.length > 0) {
-      setErrorMsg('Please select a resume to attach for professional jobs.');
+    if (!isSimpleLocal && (!selectedResumeId || resumes.length === 0)) {
+      setShowResumeRequiredModal(true);
       return;
     }
 
@@ -83,6 +85,11 @@ export default function CandidateQuickApplyPage() {
       };
 
       const res = await submitCandidateApplication(payload);
+
+      if (res && res.requireResume) {
+        setShowResumeRequiredModal(true);
+        return;
+      }
 
       if (res && res.success) {
         navigate('/candidate/applications', { replace: true });
@@ -327,6 +334,13 @@ export default function CandidateQuickApplyPage() {
         </form>
 
       </div>
+
+      {/* Resume Required Centered Modal */}
+      <ResumeRequiredModal
+        isOpen={showResumeRequiredModal}
+        onClose={() => setShowResumeRequiredModal(false)}
+        job={job}
+      />
     </CandidateLayout>
   );
 }

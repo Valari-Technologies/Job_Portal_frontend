@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getCurrentRecruiterProfile, updateCurrentRecruiterProfile, uploadRecruiterProfilePhoto, removeRecruiterProfilePhoto, buildProfileFromData } from '../services/recruiter/recruiterProfileService';
 import { getRecruiterNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/recruiter/recruiterNotificationsService';
+import { getAuthenticatedUser } from '../services/auth/adminAuthService';
 
 const RecruiterUserContext = createContext(null);
 
@@ -38,9 +39,8 @@ const defaultFallbackContext = {
 export function RecruiterUserProvider({ children }) {
   const [profile, setProfile] = useState(() => {
     try {
-      const userStr = localStorage.getItem('auth_user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
+      const user = getAuthenticatedUser();
+      if (user) {
         return buildProfileFromData(user);
       }
     } catch {

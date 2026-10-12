@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   FileText
 } from 'lucide-react';
+import ClockTimePicker from '../../components/shared/ClockTimePicker';
 
 export default function CandidateInterviewsPage() {
   const navigate = useNavigate();
@@ -164,8 +165,11 @@ export default function CandidateInterviewsPage() {
     }
 
     const updateTimer = () => {
-      const text = calculateCountdown(startsAt);
-      setCountdownText(text || 'Starting soon');
+      const res = calculateCountdown(startsAt);
+      const text = typeof res === 'object' && res !== null 
+        ? (res.formattedCountdown || (res.isPast ? 'Live Now / In Progress' : 'Starting soon')) 
+        : String(res || 'Starting soon');
+      setCountdownText(text);
     };
 
     updateTimer();
@@ -175,22 +179,18 @@ export default function CandidateInterviewsPage() {
 
   // Action: Join Meeting
   const handleJoinMeeting = async (interview) => {
-    if (!interview.canJoin) {
-      triggerToast('Joining window is not open yet.');
-      return;
-    }
-
-    if (interview.joinUrl) {
-      window.open(interview.joinUrl, '_blank', 'noopener,noreferrer');
+    const meetUrl = interview.meetingLink || interview.joinUrl;
+    if (meetUrl && meetUrl !== '#') {
+      window.open(meetUrl, '_blank', 'noopener,noreferrer');
       return;
     }
 
     try {
       const res = await getInterviewJoinAccess(interview.id);
-      if (res.success && res.joinUrl) {
+      if (res && res.joinUrl && res.joinUrl !== '#') {
         window.open(res.joinUrl, '_blank', 'noopener,noreferrer');
       } else {
-        triggerToast(res.message || 'Meeting URL is not available yet.');
+        triggerToast(res?.message || 'Meeting URL is not available yet.');
       }
     } catch {
       triggerToast('Failed to retrieve join access. Please try again.');
@@ -342,7 +342,7 @@ export default function CandidateInterviewsPage() {
                 ) : summaryError ? (
                   '— Scheduled'
                 ) : (
-                  `${summary ? summary.scheduledCount : 0} Scheduled`
+                  `${summary?.scheduledCount ?? summary?.upcomingCount ?? summary?.totalInterviews ?? interviews.length} Scheduled`
                 )}
               </span>
             </div>
@@ -392,23 +392,32 @@ export default function CandidateInterviewsPage() {
               /* Interview Cards List */
               <div className="space-y-4">
                 {interviews.map((interview) => {
-                  const isOnline = interview.mode === 'ONLINE';
+                  const isOnline = interview.isOnline !== undefined 
+                    ? interview.isOnline 
+                    : (interview.mode === 'ONLINE' || interview.interviewType === 'ONLINE' || Boolean(interview.meetingLink));
                   const dateInfo = interview.dateInfo || {};
+                  const isLive = interview.isLive;
 
                   return (
                     <div
                       key={interview.id}
-                      className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 transition-all duration-200 hover:shadow-md hover:border-slate-300 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 font-sans"
+                      className={`rounded-2xl border bg-white p-5 sm:p-6 transition-all duration-200 hover:shadow-md flex flex-col sm:flex-row items-start gap-4 sm:gap-6 font-sans ${
+                        isLive 
+                          ? 'border-emerald-400 ring-2 ring-emerald-400/20 shadow-md shadow-emerald-500/10' 
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
                     >
                       {/* Date Badge Box (OCT 24 Tue) */}
-                      <div className="w-16 sm:w-20 rounded-2xl bg-slate-50 border border-slate-200/80 p-2.5 sm:p-3 text-center flex flex-col items-center justify-center shrink-0 self-start sm:self-auto">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                      <div className={`w-16 sm:w-20 rounded-2xl border p-2.5 sm:p-3 text-center flex flex-col items-center justify-center shrink-0 self-start sm:self-auto ${
+                        isLive ? 'bg-emerald-50/60 border-emerald-200' : 'bg-slate-50 border-slate-200/80'
+                      }`}>
+                        <span className={`text-[10px] font-black uppercase tracking-wider block ${isLive ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {dateInfo.month || 'OCT'}
                         </span>
                         <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none my-1 block">
                           {dateInfo.day || '24'}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-500 block">
+                        <span className={`text-[11px] font-bold block ${isLive ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
                           {dateInfo.weekday || 'Tue'}
                         </span>
                       </div>
@@ -419,7 +428,7 @@ export default function CandidateInterviewsPage() {
                         {/* Top Line: Round Name + Status Badge */}
                         <div className="flex items-start justify-between gap-3">
                           <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug truncate">
-                            {interview.roundName}
+                            {interview.roundName || 'Technical Interview - Round 1'}
                           </h3>
 
                           <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 border ${interview.statusConfig?.badgeClass || 'bg-indigo-50 text-[#3B00FF]'}`}>
@@ -437,8 +446,8 @@ export default function CandidateInterviewsPage() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-slate-500 pt-0.5">
                           {isOnline ? (
                             <div className="flex items-center gap-1.5 text-slate-700">
-                              <Video className="h-4 w-4 text-[#3B00FF] shrink-0" />
-                              <span>{interview.provider || 'Zoom Video Call'}</span>
+                              <Video className={`h-4 w-4 shrink-0 ${isLive ? 'text-emerald-500' : 'text-[#3B00FF]'}`} />
+                              <span className="font-bold">{interview.provider || 'Google Meet Video Call'}</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 text-slate-700">
@@ -466,9 +475,14 @@ export default function CandidateInterviewsPage() {
                             <button
                               type="button"
                               onClick={() => handleJoinMeeting(interview)}
-                              className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs sm:text-sm font-bold transition-colors shadow-xs cursor-pointer"
+                              className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer flex items-center gap-2 ${
+                                isLive
+                                  ? 'bg-[#00C853] hover:bg-[#00B048] shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/40 animate-pulse'
+                                  : 'bg-[#3B00FF] hover:bg-[#3000D6]'
+                              }`}
                             >
-                              Join Meeting
+                              <Video className="h-4 w-4" />
+                              <span>{isLive ? 'Join Interview Now' : 'Join Meeting'}</span>
                             </button>
                           ) : (
                             <button
@@ -515,7 +529,11 @@ export default function CandidateInterviewsPage() {
 
               {/* Countdown subtitle */}
               <p className="text-xs font-bold text-slate-600">
-                {nextInterview ? (countdownText || 'Starting soon') : 'No upcoming session'}
+                {nextInterview 
+                  ? (typeof countdownText === 'object' && countdownText !== null 
+                      ? (countdownText.formattedCountdown || 'Starting soon') 
+                      : (countdownText || 'Starting soon')) 
+                  : 'No upcoming session'}
               </p>
 
               {/* Preparation checklist items */}
@@ -652,13 +670,9 @@ export default function CandidateInterviewsPage() {
                   <label className="text-xs font-extrabold text-slate-700 block">
                     Preferred Time Slot *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 10:00 AM - 11:30 AM PST"
-                    value={rescheduleForm.preferredTime}
-                    onChange={(e) => setRescheduleForm({ ...rescheduleForm, preferredTime: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                  <ClockTimePicker
+                    value={rescheduleForm.preferredTime || '11:00 AM'}
+                    onChange={(newTime) => setRescheduleForm({ ...rescheduleForm, preferredTime: newTime })}
                   />
                 </div>
 

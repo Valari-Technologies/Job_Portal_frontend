@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
+import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import { getCandidateJobDetails, toggleSavedCandidateJob, applyCandidateJob } from '../../services/candidate/candidateJobsService';
+import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -22,6 +24,7 @@ export default function CandidateJobDetailsPage() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,9 +66,31 @@ export default function CandidateJobDetailsPage() {
 
   const handleApply = async () => {
     if (!job || job.hasApplied || isApplying) return;
+
+    try {
+      const resumes = await getCandidateResumes();
+      if (!resumes || resumes.length === 0) {
+        setShowResumeRequiredModal(true);
+        return;
+      }
+    } catch (err) {
+      console.warn('Resume check warning:', err);
+    }
+
     setIsApplying(true);
     try {
-      const res = await applyCandidateJob(job.id);
+      const res = await applyCandidateJob(job.id, {
+        jobTitle: job.title,
+        company: job.company || job.companyName,
+        companyName: job.company || job.companyName,
+        location: job.location,
+        workMode: job.workMode,
+        salary: job.salary
+      });
+      if (res && res.requireResume) {
+        setShowResumeRequiredModal(true);
+        return;
+      }
       if (res && res.success) {
         setJob(prev => ({ ...prev, hasApplied: true }));
       }
@@ -327,6 +352,13 @@ export default function CandidateJobDetailsPage() {
         </div>
 
       </div>
+
+      {/* Resume Required Centered Modal */}
+      <ResumeRequiredModal
+        isOpen={showResumeRequiredModal}
+        onClose={() => setShowResumeRequiredModal(false)}
+        job={job}
+      />
     </CandidateLayout>
   );
 }

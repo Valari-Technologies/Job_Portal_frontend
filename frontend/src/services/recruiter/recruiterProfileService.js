@@ -1,9 +1,9 @@
 import { fetchEmployerProfileService, updateCompanyProfileService } from './recruiterCompanyService';
+import { getAuthenticatedUser } from '../auth/adminAuthService';
 
 function getStoredUser() {
   try {
-    const userStr = localStorage.getItem('auth_user');
-    return userStr ? JSON.parse(userStr) : null;
+    return getAuthenticatedUser();
   } catch {
     return null;
   }
@@ -77,9 +77,13 @@ function blobToCompressedDataUrl(blob, maxWidth = 400, maxHeight = 400, quality 
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
         try {
-          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const dataUrl = canvas.toDataURL('image/png');
           resolve(dataUrl);
         } catch (err) {
           reject(err);

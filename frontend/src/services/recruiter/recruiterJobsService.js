@@ -1,60 +1,114 @@
-const STORAGE_RECRUITER_JOBS_KEY = 'tnjobz_recruiter_jobs';
+import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthService';
 
-function getRecruiterCompanyLogo() {
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+export function getAuthenticatedRecruiterInfo() {
   try {
-    const userStr = localStorage.getItem('auth_user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    return user?.company_logo || user?.profile_photo || user?.profilePhotoUrl || user?.logo || null;
+    const user = getAuthenticatedUser();
+    if (!user) return null;
+    const email = (user.email || '').toLowerCase().trim();
+    const company = (user.company_name || user.employer_profile?.company_name || '').trim();
+    return {
+      userId: user.id || user.user_id || null,
+      email,
+      companyName: company || (email.includes('kannan') ? 'Kannan Tech' : email.includes('msd') ? 'MSD Tech' : 'My Company'),
+      fullName: user.full_name || user.name || 'Recruiter',
+      logo: user.company_logo || user.profile_picture || null,
+      location: user.company_address || user.location || 'Chennai, Tamil Nadu'
+    };
   } catch {
     return null;
   }
 }
 
-export function getRecruiterJobsData() {
-  try {
-    const stored = localStorage.getItem(STORAGE_RECRUITER_JOBS_KEY);
-    const logoUrl = getRecruiterCompanyLogo();
-    let jobs = stored ? JSON.parse(stored) : [
+function getRecruiterJobsStorageKey(auth) {
+  if (!auth?.email) return 'tnjobz_recruiter_jobs_guest';
+  return `tnjobz_recruiter_jobs_${auth.email}`;
+}
+
+function getRecruiterCompanyLogo() {
+  const auth = getAuthenticatedRecruiterInfo();
+  return auth?.logo || null;
+}
+
+function getDefaultJobsForRecruiter(auth) {
+  if (!auth) return [];
+  const email = (auth.email || '').toLowerCase().trim();
+  const company = (auth.companyName || '').toLowerCase().trim();
+
+  // ONLY seeded MSD Tech gets the historical SDE job
+  if (email === 'msd@gmail.com' || company === 'msd tech') {
+    return [
       {
-        id: 'job_rec_01',
-        title: 'Senior Full-Stack Developer',
+        id: '8',
+        title: 'SDE',
         company_name: 'MSD Tech',
         employer_name: 'MSD Tech',
-        company_logo: logoUrl,
+        company_logo: auth.logo,
         employer: {
           company_name: 'MSD Tech',
           contact_name: 'MSD',
           email: 'msd@gmail.com',
-          company_logo: logoUrl,
-          profile_photo: logoUrl,
+          company_logo: auth.logo,
+          profile_photo: auth.logo,
           verification_status: 'APPROVED',
           account_status: 'ACTIVE',
           trust_level: 'VERIFIED'
         },
-        category: 'Engineering',
+        category: 'Frontend Engineer',
         workMode: 'On-site',
         location: 'Tambaram, Chennai, Tamil Nadu',
-        minExperience: '2',
+        minExperience: '3',
         maxExperience: '5',
-        experience_min: '2',
+        experience_min: '3',
         experience_max: '5',
-        minSalary: '40000',
-        maxSalary: '75000',
-        salary_min: '40000',
-        salary_max: '75000',
+        minSalary: '35000',
+        maxSalary: '50000',
+        salary_min: '35000',
+        salary_max: '50000',
         salary_period: 'month',
-        skills: ['React', 'Node.js', 'Python', 'PostgreSQL'],
-        description: 'Lead full-stack development of enterprise web applications using React, Node.js, and PostgreSQL.',
-        responsibilities: '• Design scalable backend REST APIs.\n• Build responsive React frontend components.\n• Conduct code reviews and lead technical architecture.',
-        deadline: new Date(Date.now() + 30*86400000).toISOString().split('T')[0],
-        application_deadline: new Date(Date.now() + 30*86400000).toISOString().split('T')[0],
-        status: 'PENDING_REVIEW',
-        status_label: 'Pending Review',
-        applicationsCount: 0,
-        createdAt: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString()
+        skills: ['React.js', 'JavaScript', 'Python'],
+        description: 'Software Development Engineer at MSD Tech. Skills: React.js, JavaScript, Python.',
+        responsibilities: '• Design, develop, test, and deploy resilient web applications and software services.\n• Collaborate with cross-functional teams to translate user and product requirements into technical solutions.\n• Build responsive, accessible user interfaces and integrate secure RESTful APIs.\n• Troubleshoot, debug, and optimize application performance across production environments.',
+        deadline: '2026-10-15',
+        application_deadline: '2026-10-15',
+        status: 'PUBLISHED',
+        status_label: 'Published',
+        applicationsCount: 1,
+        posted_date: '2026-10-07',
+        createdAt: '2026-10-07',
+        created_at: new Date('2026-10-07').toISOString()
       }
     ];
+  }
+
+  // All other recruiters (such as Kannan from Kannan Tech) start with 0 jobs
+  return [];
+}
+
+export function getRecruiterJobsData() {
+  try {
+    const auth = getAuthenticatedRecruiterInfo();
+    const storageKey = getRecruiterJobsStorageKey(auth);
+    const stored = localStorage.getItem(storageKey);
+    const logoUrl = getRecruiterCompanyLogo();
+
+    let jobs;
+    if (stored !== null) {
+      jobs = JSON.parse(stored);
+    } else {
+      jobs = getDefaultJobsForRecruiter(auth);
+      localStorage.setItem(storageKey, JSON.stringify(jobs));
+    }
+
+    // Strict multi-tenant isolation: enforce that jobs strictly match the current recruiter's company
+    if (auth?.companyName) {
+      const myCompany = auth.companyName.toLowerCase().trim();
+      jobs = jobs.filter(j => {
+        const jComp = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
+        return jComp === myCompany;
+      });
+    }
 
     if (logoUrl) {
       jobs = jobs.map(j => ({
@@ -68,10 +122,12 @@ export function getRecruiterJobsData() {
       }));
     }
 
+    const activeJobs = jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').length;
+
     return {
       metrics: {
-        active_jobs: jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').length,
-        total_applications: 0,
+        active_jobs: activeJobs,
+        total_applications: jobs.reduce((sum, j) => sum + (j.applicationsCount || 0), 0),
         interviews_scheduled: 0
       },
       jobs,
@@ -91,13 +147,36 @@ export function getRecruiterJobsData() {
   }
 }
 
+export async function fetchRecruiterJobsFromApi() {
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/accounts/recruiter/jobs/`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const auth = getAuthenticatedRecruiterInfo();
+        const storageKey = getRecruiterJobsStorageKey(auth);
+        const localData = getRecruiterJobsData();
+        const localDrafts = (localData.jobs || []).filter(j => String(j.id).startsWith('job_'));
+        const merged = [...data, ...localDrafts];
+        localStorage.setItem(storageKey, JSON.stringify(merged));
+        return getRecruiterJobsData();
+      }
+    }
+  } catch (err) {
+    console.warn("fetchRecruiterJobsFromApi error:", err);
+  }
+  return getRecruiterJobsData();
+}
+
 export async function createJobDraftService(jobPayload) {
   try {
+    const auth = getAuthenticatedRecruiterInfo();
     const existingData = getRecruiterJobsData();
     const existingJobs = existingData.jobs || [];
-    const locationStr = [jobPayload?.locality, jobPayload?.city, jobPayload?.district, jobPayload?.state].filter(Boolean).join(', ') || jobPayload?.location || 'Tambaram, Chennai, Tamil Nadu';
-    const logoUrl = getRecruiterCompanyLogo();
-    
+    const locationStr = [jobPayload?.locality, jobPayload?.city, jobPayload?.district, jobPayload?.state].filter(Boolean).join(', ') || jobPayload?.location || (auth?.location || 'Chennai, Tamil Nadu');
+    const logoUrl = getRecruiterCompanyLogo() || jobPayload?.company_logo;
+    const companyName = auth?.companyName || jobPayload?.companyName || 'My Company';
+
     const minExp = jobPayload?.minExperience || '0';
     const maxExp = jobPayload?.maxExperience || '3';
     const minSal = jobPayload?.minSalary || '35000';
@@ -124,15 +203,15 @@ export async function createJobDraftService(jobPayload) {
     const newJob = {
       id: `job_${Date.now()}`,
       title: jobPayload?.title?.trim() || 'Software Development Engineer',
-      company_name: jobPayload?.companyName || 'MSD Tech',
-      employer_name: 'MSD Tech',
-      company_logo: logoUrl || jobPayload?.company_logo || null,
+      company_name: companyName,
+      employer_name: companyName,
+      company_logo: logoUrl || null,
       employer: {
-        company_name: jobPayload?.companyName || 'MSD Tech',
-        contact_name: 'MSD',
-        email: 'msd@gmail.com',
-        company_logo: logoUrl || jobPayload?.company_logo || null,
-        profile_photo: logoUrl || jobPayload?.company_logo || null,
+        company_name: companyName,
+        contact_name: auth?.fullName || 'HR Manager',
+        email: auth?.email || 'hr@company.com',
+        company_logo: logoUrl || null,
+        profile_photo: logoUrl || null,
         verification_status: 'APPROVED',
         account_status: 'ACTIVE',
         trust_level: 'VERIFIED'
@@ -152,7 +231,7 @@ export async function createJobDraftService(jobPayload) {
       salary_min: minSal,
       salary_max: maxSal,
       salary_period: jobPayload?.salaryType === 'PER_YEAR' ? 'year' : 'month',
-      description: jobPayload?.description || 'Software Development Engineer responsible for designing, developing, testing, and maintaining scalable applications.',
+      description: jobPayload?.description || `${jobPayload?.title || 'Software Engineer'} role at ${companyName}.`,
       responsibilities: responsibilitiesText,
       responsibilitiesList: responsibilitiesArr,
       skills: Array.isArray(jobPayload?.skills) && jobPayload.skills.length > 0 ? jobPayload.skills : ['React', 'Node.js', 'REST APIs', 'SQL'],
@@ -166,24 +245,49 @@ export async function createJobDraftService(jobPayload) {
       created_at: new Date().toISOString()
     };
 
-    // Remove any incomplete "Untitled Job Position" drafts to keep recruiter dashboard clean
-    const cleanedJobs = existingJobs.filter(j => j.title !== 'Untitled Job Position').map(j => {
-      // Backfill missing company_logo or responsibilities on existing jobs
-      const updated = { ...j };
-      if (!updated.company_logo && logoUrl) {
-        updated.company_logo = logoUrl;
+    // Sync to backend API asynchronously
+    try {
+      const res = await authenticatedFetch(`${API_BASE_URL}/accounts/recruiter/jobs/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newJob.title,
+          description: newJob.description,
+          category: newJob.category,
+          workMode: newJob.workMode,
+          employmentType: newJob.employmentType,
+          minExperience: newJob.minExperience,
+          maxExperience: newJob.maxExperience,
+          minSalary: newJob.minSalary,
+          maxSalary: newJob.maxSalary,
+          salary_period: newJob.salary_period,
+          deadline: newJob.deadline,
+          responsibilities: newJob.responsibilities,
+          skills: newJob.skills
+        })
+      });
+      if (res && res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data && data.id) {
+          newJob.id = String(data.id);
+        }
       }
-      if (!updated.employer?.company_logo && logoUrl) {
-        updated.employer = { ...(updated.employer || {}), company_logo: logoUrl, profile_photo: logoUrl };
-      }
-      if (!updated.responsibilities || updated.responsibilities.trim() === '') {
-        updated.responsibilities = responsibilitiesText;
-      }
-      return updated;
-    });
+    } catch (e) {
+      console.warn("Backend job sync notice:", e);
+    }
 
-    const updatedJobs = [newJob, ...cleanedJobs];
-    localStorage.setItem(STORAGE_RECRUITER_JOBS_KEY, JSON.stringify(updatedJobs));
+    const storageKey = getRecruiterJobsStorageKey(auth);
+    const updatedJobs = [newJob, ...existingJobs.filter(j => String(j.id) !== String(newJob.id))];
+    localStorage.setItem(storageKey, JSON.stringify(updatedJobs));
+
+    // Also sync to global tnjobz_recruiter_jobs so Super Admin moderation review queue immediately detects it
+    try {
+      const globalStr = localStorage.getItem('tnjobz_recruiter_jobs');
+      const globalJobs = globalStr ? JSON.parse(globalStr) : [];
+      const updatedGlobal = [newJob, ...globalJobs.filter(j => String(j.id) !== String(newJob.id))];
+      localStorage.setItem('tnjobz_recruiter_jobs', JSON.stringify(updatedGlobal));
+    } catch {}
+
     return { success: true, job: newJob };
   } catch (err) {
     return { success: false, message: err.message };

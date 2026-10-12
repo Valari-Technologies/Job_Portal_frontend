@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
+import ImageCropModal from '../../components/shared/ImageCropModal';
 import { useCandidateUser } from '../../context/CandidateUserContext';
 import {
   getCandidateProfile,
@@ -50,9 +51,8 @@ export default function CandidateProfilePage() {
   const [activeEditTab, setActiveEditTab] = useState('personal'); // 'personal' | 'skills' | 'experience' | 'education' | 'links'
 
   // Photo Upload & Crop Modal State
-  const [photoCropModalOpen, setPhotoCropModalOpen] = useState(false);
-  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Edit Form States
@@ -192,31 +192,39 @@ export default function CandidateProfilePage() {
       return;
     }
 
-    setSelectedPhotoFile(file);
     const previewUrl = URL.createObjectURL(file);
-    setPhotoPreviewUrl(previewUrl);
-    setPhotoCropModalOpen(true);
+    setSelectedPhotoUrl(previewUrl);
+    setShowCropModal(true);
+    e.target.value = '';
   };
 
   // Confirm Crop & Upload Photo
-  const handleConfirmPhotoUpload = async () => {
-    if (!selectedPhotoFile) return;
+  const handleCropComplete = async (croppedBlob) => {
     setIsUploadingPhoto(true);
 
     try {
-      const res = await updatePhoto(selectedPhotoFile);
-      if (res.success) {
-        setProfile(res.profile);
-        setPhotoCropModalOpen(false);
+      const res = await updatePhoto(croppedBlob);
+      if (res && res.success) {
+        setProfile(prev => ({ 
+          ...prev, 
+          ...(res.profile || {}), 
+          avatarUrl: res.avatarUrl 
+        }));
+        await refreshProfile();
         triggerToast('Profile picture uploaded successfully!');
       } else {
-        triggerToast(res.message || 'Failed to upload photo.');
+        triggerToast(res?.message || 'Failed to upload photo.');
       }
     } catch (err) {
       console.error('Error uploading photo:', err);
       triggerToast('Failed to upload photo.');
     } finally {
       setIsUploadingPhoto(false);
+      if (selectedPhotoUrl) {
+        URL.revokeObjectURL(selectedPhotoUrl);
+        setSelectedPhotoUrl(null);
+      }
+      setShowCropModal(false);
     }
   };
 
@@ -225,8 +233,13 @@ export default function CandidateProfilePage() {
     if (!window.confirm('Are you sure you want to remove your profile picture?')) return;
     try {
       const res = await removePhoto();
-      if (res.success) {
-        setProfile(res.profile);
+      if (res && res.success) {
+        setProfile(prev => ({ 
+          ...prev, 
+          ...(res.profile || {}), 
+          avatarUrl: null 
+        }));
+        await refreshProfile();
         triggerToast('Profile picture removed.');
       }
     } catch (err) {
@@ -398,9 +411,9 @@ export default function CandidateProfilePage() {
 
   const activeAvatar = profile?.avatarUrl || contextProfile?.avatarUrl;
   const fullName = profile?.fullName || contextProfile?.fullName || 'Candidate';
-  const headline = profile?.headline || 'Senior Software Developer';
-  const location = profile?.location || 'San Francisco, CA';
-  const completionPct = profile?.completionPercentage ?? 80;
+  const headline = profile?.headline ?? '';
+  const location = profile?.location ?? '';
+  const completionPct = profile?.completionPercentage ?? 20;
 
   return (
     <CandidateLayout>
@@ -531,8 +544,8 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="flex items-center justify-center gap-1.5">
-                    <p className="text-xs font-bold text-slate-600">
-                      {headline}
+                    <p className={`text-xs ${headline ? 'font-bold text-slate-600' : 'font-normal italic text-slate-400'}`}>
+                      {headline || 'Add your professional headline'}
                     </p>
                     <button
                       type="button"
@@ -546,7 +559,9 @@ export default function CandidateProfilePage() {
 
                   <div className="flex items-center justify-center gap-1.5 pt-0.5">
                     <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-500">{location}</span>
+                    <span className={`text-xs ${location ? 'font-bold text-slate-500' : 'font-normal italic text-slate-400'}`}>
+                      {location || 'Add location'}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal('personal')}
@@ -661,14 +676,18 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {(profile?.programmingLanguages || []).map((lang, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200 text-xs font-extrabold text-slate-800"
-                      >
-                        {lang}
-                      </span>
-                    ))}
+                    {(profile?.programmingLanguages || []).length > 0 ? (
+                      profile.programmingLanguages.map((lang, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200 text-xs font-extrabold text-slate-800"
+                        >
+                          {lang}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic py-1">No programming languages added yet</p>
+                    )}
                   </div>
                 </div>
 
@@ -693,14 +712,18 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {(profile?.technologies || []).map((tech, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200 text-xs font-extrabold text-slate-800"
-                      >
-                        {tech}
-                      </span>
-                    ))}
+                    {(profile?.technologies || []).length > 0 ? (
+                      profile.technologies.map((tech, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200 text-xs font-extrabold text-slate-800"
+                        >
+                          {tech}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic py-1">No technologies added yet</p>
+                    )}
                   </div>
                 </div>
 
@@ -728,26 +751,39 @@ export default function CandidateProfilePage() {
                 </div>
 
                 {/* Timeline items list */}
-                <div className="space-y-6 border-l-2 border-indigo-100 pl-5 ml-2.5 pt-1">
-                  {(profile?.experiences || []).map((exp) => (
-                    <div key={exp.id} className="relative space-y-1">
-                      {/* Purple Timeline Dot */}
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#3B00FF] absolute -left-[26px] top-1.5 ring-4 ring-white" />
+                {(profile?.experiences || []).length > 0 ? (
+                  <div className="space-y-6 border-l-2 border-indigo-100 pl-5 ml-2.5 pt-1">
+                    {profile.experiences.map((exp) => (
+                      <div key={exp.id} className="relative space-y-1">
+                        {/* Purple Timeline Dot */}
+                        <div className="h-2.5 w-2.5 rounded-full bg-[#3B00FF] absolute -left-[26px] top-1.5 ring-4 ring-white" />
 
-                      <h4 className="text-sm font-black text-slate-900 leading-snug">
-                        {exp.roleTitle}
-                      </h4>
+                        <h4 className="text-sm font-black text-slate-900 leading-snug">
+                          {exp.roleTitle}
+                        </h4>
 
-                      <p className="text-xs font-bold text-slate-500">
-                        {exp.companyName} | {exp.period}
-                      </p>
+                        <p className="text-xs font-bold text-slate-500">
+                          {exp.companyName} | {exp.period}
+                        </p>
 
-                      <p className="text-xs text-slate-600 font-normal leading-relaxed pt-1">
-                        {exp.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                        <p className="text-xs text-slate-600 font-normal leading-relaxed pt-1">
+                          {exp.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <p className="text-xs text-slate-400 font-medium">No work experience added yet</p>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal('experience')}
+                      className="mt-2 text-xs font-bold text-[#3B00FF] hover:underline cursor-pointer"
+                    >
+                      + Add Experience
+                    </button>
+                  </div>
+                )}
 
               </div>
 
@@ -775,16 +811,20 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="space-y-3">
-                    {(profile?.education || []).map((edu) => (
-                      <div key={edu.id} className="space-y-0.5">
-                        <h4 className="text-xs font-black text-slate-900">
-                          {edu.degree}
-                        </h4>
-                        <p className="text-[11px] font-semibold text-slate-500">
-                          {edu.institution}, {edu.period}
-                        </p>
-                      </div>
-                    ))}
+                    {(profile?.education || []).length > 0 ? (
+                      profile.education.map((edu) => (
+                        <div key={edu.id} className="space-y-0.5">
+                          <h4 className="text-xs font-black text-slate-900">
+                            {edu.degree}
+                          </h4>
+                          <p className="text-[11px] font-semibold text-slate-500">
+                            {edu.institution}, {edu.period}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic py-1">No education added yet</p>
+                    )}
                   </div>
                 </div>
 
@@ -809,16 +849,20 @@ export default function CandidateProfilePage() {
                   </div>
 
                   <div className="space-y-3">
-                    {(profile?.certifications || []).map((cert) => (
-                      <div key={cert.id} className="space-y-0.5">
-                        <h4 className="text-xs font-black text-slate-900">
-                          {cert.title}
-                        </h4>
-                        <p className="text-[11px] font-semibold text-slate-500">
-                          {cert.issuedYear}
-                        </p>
-                      </div>
-                    ))}
+                    {(profile?.certifications || []).length > 0 ? (
+                      profile.certifications.map((cert) => (
+                        <div key={cert.id} className="space-y-0.5">
+                          <h4 className="text-xs font-black text-slate-900">
+                            {cert.title}
+                          </h4>
+                          <p className="text-[11px] font-semibold text-slate-500">
+                            {cert.issuedYear}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic py-1">No certifications added yet</p>
+                    )}
                   </div>
                 </div>
 
@@ -830,55 +874,18 @@ export default function CandidateProfilePage() {
         )}
 
         {/* ================= PHOTO CROP & CONFIRM MODAL ================= */}
-        {photoCropModalOpen && (
-          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-scaleUp border border-slate-100 text-center font-sans">
-              
-              <div className="flex items-center justify-between border-b border-slate-150 pb-3">
-                <h3 className="text-base font-black text-slate-900">
-                  Crop & Preview Photo
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setPhotoCropModalOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Circular Crop Preview */}
-              <div className="h-32 w-32 rounded-full border-4 border-[#3B00FF] overflow-hidden mx-auto shadow-md">
-                {photoPreviewUrl && (
-                  <img src={photoPreviewUrl} alt="Crop Preview" className="h-full w-full object-cover" />
-                )}
-              </div>
-
-              <p className="text-xs font-semibold text-slate-500">
-                Confirm your profile photo crop preview before uploading.
-              </p>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setPhotoCropModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmPhotoUpload}
-                  disabled={isUploadingPhoto}
-                  className="px-5 py-2 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold hover:bg-[#3000D6] disabled:opacity-50 cursor-pointer"
-                >
-                  {isUploadingPhoto ? 'Uploading...' : 'Save & Upload'}
-                </button>
-              </div>
-
-            </div>
-          </div>
+        {showCropModal && selectedPhotoUrl && (
+          <ImageCropModal
+            imageSrc={selectedPhotoUrl}
+            onCropComplete={handleCropComplete}
+            onClose={() => {
+              if (selectedPhotoUrl) {
+                URL.revokeObjectURL(selectedPhotoUrl);
+                setSelectedPhotoUrl(null);
+              }
+              setShowCropModal(false);
+            }}
+          />
         )}
 
         {/* ================= EDIT PROFILE MAIN MODAL ================= */}

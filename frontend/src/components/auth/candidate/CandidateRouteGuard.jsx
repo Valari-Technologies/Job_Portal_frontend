@@ -2,8 +2,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { getAuthItem } from '../../../services/auth/adminAuthService';
 
 export default function CandidateRouteGuard({ children }) {
-  const candidateToken = getAuthItem('candidate_access_token') || getAuthItem('public_access_token');
-  const candidateUserStr = getAuthItem('candidate_auth_user') || getAuthItem('public_auth_user');
+  const candidateToken = getAuthItem('candidate_access_token');
+  const candidateUserStr = getAuthItem('candidate_auth_user');
   let candidateUser = null;
   if (candidateUserStr) {
     try {
@@ -15,7 +15,7 @@ export default function CandidateRouteGuard({ children }) {
 
   const token = candidateToken;
   const user = candidateUser;
-  const role = user?.role || getAuthItem('candidate_auth_role') || getAuthItem('public_auth_role');
+  const role = user?.role || getAuthItem('candidate_auth_role');
 
   if (!token || !user || role !== 'CANDIDATE') {
     return <Navigate to="/login" replace />;

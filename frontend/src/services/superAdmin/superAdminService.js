@@ -195,16 +195,31 @@ export async function createEmployerService(payload) {
       let message = 'Failed to create employer account.';
       if (typeof data === 'object' && data !== null) {
         if (data.email) {
-          message = Array.isArray(data.email) ? data.email[0] : data.email;
+          message = Array.isArray(data.email) ? data.email.join(' ') : data.email;
         } else if (data.password) {
-          message = Array.isArray(data.password) ? data.password[0] : data.password;
+          message = Array.isArray(data.password) ? data.password.join(' ') : data.password;
         } else if (data.confirmPassword || data.confirm_password) {
           const field = data.confirmPassword || data.confirm_password;
-          message = Array.isArray(field) ? field[0] : field;
+          message = Array.isArray(field) ? field.join(' ') : field;
+        } else if (data.company_name) {
+          message = Array.isArray(data.company_name) ? data.company_name.join(' ') : data.company_name;
+        } else if (data.company_email) {
+          message = Array.isArray(data.company_email) ? data.company_email.join(' ') : data.company_email;
+        } else if (data.phone_number || data.mobile_number) {
+          const phoneField = data.phone_number || data.mobile_number;
+          message = Array.isArray(phoneField) ? phoneField.join(' ') : phoneField;
+        } else if (data.non_field_errors) {
+          message = Array.isArray(data.non_field_errors) ? data.non_field_errors.join(' ') : data.non_field_errors;
         } else if (data.detail) {
           message = data.detail;
         } else if (data.message) {
           message = data.message;
+        } else {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey) {
+            const val = data[firstKey];
+            message = `${firstKey}: ${Array.isArray(val) ? val.join(' ') : val}`;
+          }
         }
       }
       return { success: false, message, errors: data };

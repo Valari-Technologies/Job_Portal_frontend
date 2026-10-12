@@ -213,11 +213,11 @@ function RecruiterProfileContent() {
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-center md:items-start gap-6 relative">
         {/* Avatar Section */}
         <div className="relative group shrink-0">
-          <div className="h-28 w-28 rounded-full bg-indigo-600 text-white font-black text-3xl flex items-center justify-center border-4 border-white shadow-lg overflow-hidden relative">
+          <div className="h-28 w-28 rounded-full bg-white text-slate-900 font-black text-3xl flex items-center justify-center border-2 border-black shadow-md overflow-hidden relative">
             {profilePhotoUrl ? (
-              <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+              <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-contain p-1 rounded-full" />
             ) : (
-              <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-10 w-10 text-white" />}</span>
+              <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-10 w-10 text-slate-900" />}</span>
             )}
           </div>
 

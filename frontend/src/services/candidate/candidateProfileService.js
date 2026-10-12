@@ -25,9 +25,10 @@ export function getInitialProfileForCurrentUser() {
   const email = user?.email || 'candidate@example.com';
   const phone = user?.phone_number || user?.mobileNumber || '';
 
+  const userKey = user?.email || user?.id || 'anon';
   let cachedAvatar = null;
   try {
-    cachedAvatar = localStorage.getItem('tnjobz_candidate_avatar');
+    cachedAvatar = localStorage.getItem(`tnjobz_candidate_avatar_${userKey}`);
   } catch {}
 
   const avatarUrl = cachedAvatar || user?.profile_picture || user?.avatarUrl || null;
@@ -38,14 +39,17 @@ export function getInitialProfileForCurrentUser() {
     lastName,
     email,
     phone,
-    headline: 'Senior Full-Stack Developer',
-    location: 'Chennai, Tamil Nadu',
-    summary: 'Welcome to TN Jobz!',
+    headline: '',
+    location: '',
+    summary: '',
     avatarUrl,
-    completionPercentage: 85,
+    completionPercentage: 20,
     experiences: [],
     education: [],
     skills: [],
+    programmingLanguages: [],
+    technologies: [],
+    certifications: [],
     links: { github: '', linkedin: '', portfolio: '', expectedSalary: '' },
     missingSections: []
   };
@@ -63,9 +67,17 @@ export async function getCandidateProfile() {
   }
 
   const data = await response.json();
+  const user = getAuthenticatedUser();
+  const userKey = user?.email || user?.id || 'anon';
+
   if (data?.avatarUrl) {
     try {
-      localStorage.setItem('tnjobz_candidate_avatar', data.avatarUrl);
+      localStorage.setItem(`tnjobz_candidate_avatar_${userKey}`, data.avatarUrl);
+    } catch {}
+  } else {
+    try {
+      localStorage.removeItem(`tnjobz_candidate_avatar_${userKey}`);
+      localStorage.removeItem('tnjobz_candidate_avatar');
     } catch {}
   }
   return data;
@@ -96,7 +108,7 @@ export async function updateCandidateProfile(payload) {
 export async function uploadCandidateProfilePhoto(file) {
   if (!file) return { success: false, message: 'No file selected.' };
 
-  if (!file.type.startsWith('image/')) {
+  if (file.type && !file.type.startsWith('image/')) {
     return { success: false, message: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.' };
   }
   if (file.size > 5 * 1024 * 1024) {
@@ -104,7 +116,10 @@ export async function uploadCandidateProfilePhoto(file) {
   }
 
   const formData = new FormData();
-  formData.append('profile_picture', file);
+  const fileToUpload = (file instanceof Blob && !(file instanceof File))
+    ? new File([file], 'profile_picture.jpg', { type: file.type || 'image/jpeg' })
+    : file;
+  formData.append('profile_picture', fileToUpload);
 
   const url = `${API_BASE_URL}/accounts/candidate/profile/photo/`;
   const response = await authenticatedFetch(url, {
@@ -116,6 +131,16 @@ export async function uploadCandidateProfilePhoto(file) {
 
   if (!response.ok) {
     return { success: false, message: resData.detail || 'Failed to upload photo.' };
+  }
+
+  const user = getAuthenticatedUser();
+  const userKey = user?.email || user?.id || 'anon';
+
+  if (resData.avatarUrl) {
+    try {
+      localStorage.setItem(`tnjobz_candidate_avatar_${userKey}`, resData.avatarUrl);
+      localStorage.removeItem('tnjobz_candidate_avatar');
+    } catch {}
   }
 
   const updatedProfile = await getCandidateProfile();
@@ -139,6 +164,13 @@ export async function removeCandidateProfilePhoto() {
   if (!response.ok) {
     return { success: false, message: 'Failed to remove photo.' };
   }
+
+  const user = getAuthenticatedUser();
+  const userKey = user?.email || user?.id || 'anon';
+  try {
+    localStorage.removeItem(`tnjobz_candidate_avatar_${userKey}`);
+    localStorage.removeItem('tnjobz_candidate_avatar');
+  } catch {}
 
   const updatedProfile = await getCandidateProfile();
 

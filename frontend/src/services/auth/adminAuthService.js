@@ -86,17 +86,22 @@ export async function registerCandidate({ fullName, mobileNumber, email, passwor
   }
 }
 
-export async function loginAdmin({ email, password }) {
+export async function loginAdmin({ email, password, expectedRole }) {
   try {
+    const payload = {
+      email: typeof email === 'string' ? email.trim() : '',
+      password: password,
+    };
+    if (expectedRole) {
+      payload.expected_role = expectedRole;
+    }
+
     const response = await fetch(`${API_BASE_URL}/accounts/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email: typeof email === 'string' ? email.trim() : '',
-        password: password,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -124,26 +129,60 @@ export async function loginAdmin({ email, password }) {
       };
     }
 
+    // Client-side role mismatch safeguard before persisting any session tokens
+    if (expectedRole) {
+      const exp = expectedRole.toUpperCase().trim();
+      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
+        clearAllAuthTokens();
+        return {
+          success: false,
+          message: (user.role === 'HR' || user.role === 'RECRUITER')
+            ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
+            : "Access denied. Candidate login only.",
+        };
+      }
+      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
+        clearAllAuthTokens();
+        return {
+          success: false,
+          message: user.role === 'CANDIDATE'
+            ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
+            : "Access denied. HR / Recruiter login only.",
+        };
+      }
+      if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+        clearAllAuthTokens();
+        return {
+          success: false,
+          message: "Access denied. Candidate and HR users must log in at /login.",
+        };
+      }
+    }
+
     if (user.role === 'SUPER_ADMIN') {
       setAuthItem('super_admin_access_token', access);
       setAuthItem('super_admin_refresh_token', refresh);
       setAuthItem('super_admin_auth_user', JSON.stringify(user));
       setAuthItem('super_admin_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
     } else if (user.role === 'ADMIN') {
       setAuthItem('admin_access_token', access);
       setAuthItem('admin_refresh_token', refresh);
       setAuthItem('admin_auth_user', JSON.stringify(user));
       setAuthItem('admin_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
     } else if (user.role === 'HR' || user.role === 'RECRUITER') {
       setAuthItem('public_access_token', access);
       setAuthItem('public_refresh_token', refresh);
       setAuthItem('public_auth_user', JSON.stringify(user));
       setAuthItem('public_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
     } else if (user.role === 'CANDIDATE') {
       setAuthItem('candidate_access_token', access);
       setAuthItem('candidate_refresh_token', refresh);
       setAuthItem('candidate_auth_user', JSON.stringify(user));
       setAuthItem('candidate_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
     }
 
     return {
@@ -159,6 +198,118 @@ export async function loginAdmin({ email, password }) {
       message: 'Unable to connect to backend server. Please ensure Django server is running.',
     };
   }
+}
+
+export async function loginWithGoogle({ token, expectedRole }) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/google/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage =
+        data?.detail ||
+        (Array.isArray(data?.token) ? data.token[0] : data?.token) ||
+        'Google authentication failed. Please try again.';
+
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    const { access, refresh, user } = data;
+
+    if (!access || !user || !user.role) {
+      return {
+        success: false,
+        message: 'Invalid response format received from Google auth.',
+      };
+    }
+
+    if (expectedRole) {
+      const exp = expectedRole.toUpperCase().trim();
+      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
+        clearAllAuthTokens();
+        return {
+          success: false,
+          message: (user.role === 'HR' || user.role === 'RECRUITER')
+            ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
+            : "Access denied. Candidate login only.",
+        };
+      }
+      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
+        clearAllAuthTokens();
+        return {
+          success: false,
+          message: user.role === 'CANDIDATE'
+            ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
+            : "Access denied. HR / Recruiter login only.",
+        };
+      }
+    }
+
+    if (user.role === 'SUPER_ADMIN') {
+      setAuthItem('super_admin_access_token', access);
+      setAuthItem('super_admin_refresh_token', refresh);
+      setAuthItem('super_admin_auth_user', JSON.stringify(user));
+      setAuthItem('super_admin_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
+    } else if (user.role === 'ADMIN') {
+      setAuthItem('admin_access_token', access);
+      setAuthItem('admin_refresh_token', refresh);
+      setAuthItem('admin_auth_user', JSON.stringify(user));
+      setAuthItem('admin_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
+    } else if (user.role === 'HR' || user.role === 'RECRUITER') {
+      setAuthItem('public_access_token', access);
+      setAuthItem('public_refresh_token', refresh);
+      setAuthItem('public_auth_user', JSON.stringify(user));
+      setAuthItem('public_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
+    } else if (user.role === 'CANDIDATE') {
+      setAuthItem('candidate_access_token', access);
+      setAuthItem('candidate_refresh_token', refresh);
+      setAuthItem('candidate_auth_user', JSON.stringify(user));
+      setAuthItem('candidate_auth_role', user.role);
+      setAuthItem('auth_user', JSON.stringify(user));
+    }
+
+    return {
+      success: true,
+      user,
+      role: user.role,
+      access,
+      refresh,
+    };
+  } catch {
+    return {
+      success: false,
+      message: 'Unable to connect to backend server for Google login. Please ensure Django server is running.',
+    };
+  }
+}
+
+export function setAuthenticatedUser(user, role = null) {
+  if (!user) return;
+  const userRole = role || user.role || 'HR';
+  const userStr = typeof user === 'string' ? user : JSON.stringify(user);
+  if (userRole === 'SUPER_ADMIN') {
+    setAuthItem('super_admin_auth_user', userStr);
+  } else if (userRole === 'ADMIN') {
+    setAuthItem('admin_auth_user', userStr);
+  } else if (userRole === 'HR' || userRole === 'RECRUITER') {
+    setAuthItem('public_auth_user', userStr);
+  } else if (userRole === 'CANDIDATE') {
+    setAuthItem('candidate_auth_user', userStr);
+  }
+  setAuthItem('auth_user', userStr);
 }
 
 export function clearAllAuthTokens() {
@@ -201,20 +352,20 @@ export function getAuthenticatedUser() {
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
     if (pathname.startsWith('/super-admin')) {
       const stored = getAuthItem('super_admin_auth_user');
-      if (stored) return JSON.parse(stored);
+      if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
     } else if (pathname.startsWith('/admin')) {
       const stored = getAuthItem('admin_auth_user');
-      if (stored) return JSON.parse(stored);
+      if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
     } else if (pathname.startsWith('/recruiter') || pathname.startsWith('/employer')) {
       const stored = getAuthItem('public_auth_user');
-      if (stored) return JSON.parse(stored);
+      if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
     } else if (pathname.startsWith('/candidate')) {
-      const stored = getAuthItem('candidate_auth_user') || getAuthItem('public_auth_user');
-      if (stored) return JSON.parse(stored);
+      const stored = getAuthItem('candidate_auth_user');
+      if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
     }
 
-    const fallback = getAuthItem('admin_auth_user') || getAuthItem('super_admin_auth_user') || getAuthItem('public_auth_user') || getAuthItem('candidate_auth_user');
-    return fallback ? JSON.parse(fallback) : null;
+    const fallback = getAuthItem('public_auth_user') || getAuthItem('candidate_auth_user') || getAuthItem('admin_auth_user') || getAuthItem('super_admin_auth_user') || getAuthItem('auth_user');
+    return fallback ? (typeof fallback === 'string' ? JSON.parse(fallback) : fallback) : null;
   } catch {
     return null;
   }
@@ -228,6 +379,10 @@ export function getAuthenticatedRole() {
     return getAuthItem('super_admin_auth_role') || 'SUPER_ADMIN';
   } else if (pathname.startsWith('/admin')) {
     return getAuthItem('admin_auth_role') || 'ADMIN';
+  } else if (pathname.startsWith('/recruiter') || pathname.startsWith('/employer')) {
+    return getAuthItem('public_auth_role') || 'HR';
+  } else if (pathname.startsWith('/candidate')) {
+    return getAuthItem('candidate_auth_role') || 'CANDIDATE';
   }
   return getAuthItem('public_auth_role') || getAuthItem('candidate_auth_role');
 }
@@ -235,8 +390,8 @@ export function getAuthenticatedRole() {
 export async function fetchWithAuth(url, options = {}) {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
-  let tokenKey = 'admin_access_token';
-  let refreshKey = 'admin_refresh_token';
+  let tokenKey = 'public_access_token';
+  let refreshKey = 'public_refresh_token';
 
   if (pathname.startsWith('/super-admin')) {
     tokenKey = 'super_admin_access_token';
@@ -254,20 +409,6 @@ export async function fetchWithAuth(url, options = {}) {
 
   let token = getAuthItem(tokenKey);
   let refreshToken = getAuthItem(refreshKey);
-
-  // Fallback for paths if role-specific key is not set
-  if (!token) {
-    if (pathname.startsWith('/super-admin')) {
-      token = getAuthItem('super_admin_access_token') || getAuthItem('admin_access_token');
-      refreshToken = getAuthItem('super_admin_refresh_token') || getAuthItem('admin_refresh_token');
-    } else if (pathname.startsWith('/admin')) {
-      token = getAuthItem('admin_access_token');
-      refreshToken = getAuthItem('admin_refresh_token');
-    } else {
-      token = getAuthItem('public_access_token') || getAuthItem('candidate_access_token');
-      refreshToken = getAuthItem('public_refresh_token') || getAuthItem('candidate_refresh_token');
-    }
-  }
 
   const headers = {
     ...options.headers,

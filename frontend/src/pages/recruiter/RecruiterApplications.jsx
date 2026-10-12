@@ -1,17 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterApplicationsHeader from '../../components/recruiter/applications/RecruiterApplicationsHeader';
 import ApplicationMetrics from '../../components/recruiter/applications/ApplicationMetrics';
 import ApplicationFilters from '../../components/recruiter/applications/ApplicationFilters';
 import ApplicationGrid from '../../components/recruiter/applications/ApplicationGrid';
 import ApplicationDetailsDrawer from '../../components/recruiter/applications/ApplicationDetailsDrawer';
-import { getRecruiterApplicationsData, updateApplicationStatusService } from '../../services/recruiter/recruiterApplicationsService';
+import { 
+  getRecruiterApplicationsData, 
+  updateApplicationStatusService,
+  fetchRecruiterApplicationsFromApi 
+} from '../../services/recruiter/recruiterApplicationsService';
 
 export default function RecruiterApplications() {
   const [data, setData] = useState(() => getRecruiterApplicationsData());
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedJobId, setSelectedJobId] = useState('ALL');
   const [selectedApplication, setSelectedApplication] = useState(null);
+
+  useEffect(() => {
+    fetchRecruiterApplicationsFromApi().then(freshData => {
+      if (freshData) setData(freshData);
+    });
+  }, []);
 
   const metrics = data?.metrics || { total_active: 0, conversion_rate: null, average_time_to_hire_days: null };
   const statuses = data?.filters?.statuses || [];
@@ -43,13 +53,22 @@ export default function RecruiterApplications() {
     }));
   };
 
-  const selectedJob = jobs.find(j => j.id === selectedJobId);
+  const selectedJob = jobs.find(j => (j.id === selectedJobId || j.value === selectedJobId));
+
+  const filteredApplications = applications.filter(app => {
+    if (selectedStatus !== 'ALL' && app.status !== selectedStatus) return false;
+    if (selectedJobId !== 'ALL') {
+      const appJobId = String(app.job?.id || app.job_id || '');
+      if (appJobId !== String(selectedJobId)) return false;
+    }
+    return true;
+  });
 
   return (
     <RecruiterLayout activeTab="applications">
       <main className="p-4 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
         {/* 1. Header */}
-        <RecruiterApplicationsHeader selectedJobTitle={selectedJob?.title} />
+        <RecruiterApplicationsHeader selectedJobTitle={selectedJob?.title || selectedJob?.label} />
 
         {/* 2. Metrics Row */}
         <ApplicationMetrics metrics={metrics} />
@@ -66,7 +85,7 @@ export default function RecruiterApplications() {
 
         {/* 4. Applications Grid / Empty State */}
         <ApplicationGrid 
-          applications={applications}
+          applications={filteredApplications}
           pagination={pagination}
           onPageChange={handlePageChange}
           onViewDetails={(app) => setSelectedApplication(app)}

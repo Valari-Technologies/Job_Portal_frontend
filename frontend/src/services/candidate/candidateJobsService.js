@@ -11,7 +11,7 @@
  * - GET /accounts/candidate/saved-jobs/ -> List saved jobs
  */
 
-import { authenticatedFetch } from '../auth/adminAuthService';
+import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -47,11 +47,10 @@ export function resolveCompanyLogo(explicitLogo, companyName, employerObj) {
     return companyLogosCache[normName];
   }
 
-  // Check auth_user in localStorage
+  // Check authenticated user
   try {
-    const userStr = localStorage.getItem('auth_user');
-    if (userStr) {
-      const u = JSON.parse(userStr);
+    const u = getAuthenticatedUser();
+    if (u) {
       const userLogo = u.company_logo || u.profile_photo || u.profilePhotoUrl || u.logo;
       if (userLogo) {
         if (!normName || (u.company_name && u.company_name.toLowerCase().trim() === normName) || normName.includes('msd')) {
@@ -167,11 +166,60 @@ export function normalizeJobRecord(raw) {
 
 function getLocalPublishedJobs() {
   try {
-    const stored = localStorage.getItem('tnjobz_recruiter_jobs');
-    if (!stored) return [];
-    const jobs = JSON.parse(stored);
-    return jobs.filter(j => j.status === 'PUBLISHED' || j.status === 'Published').map(j => {
-      const companyName = j.company_name || j.employer_name || j.employer?.company_name || 'MSD Tech';
+    const rawJobs = [];
+    const seenIds = new Set();
+    const seenTitles = new Set();
+
+    const addIfPublished = (j) => {
+      if (!j || !j.id) return;
+      const st = (j.status || j.status_label || '').toUpperCase();
+      if (st !== 'PUBLISHED') return;
+
+      const comp = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
+      const title = (j.title || '').toLowerCase().trim();
+      const combo = `${title}__${comp}`;
+
+      if (!seenIds.has(String(j.id)) && !seenTitles.has(combo)) {
+        seenIds.add(String(j.id));
+        seenTitles.add(combo);
+        rawJobs.push(j);
+      }
+    };
+
+    // 1. Check tnjobz_candidate_jobs
+    try {
+      const candStored = localStorage.getItem('tnjobz_candidate_jobs');
+      if (candStored) {
+        const list = JSON.parse(candStored);
+        if (Array.isArray(list)) list.forEach(addIfPublished);
+      }
+    } catch {}
+
+    // 2. Check tnjobz_recruiter_jobs
+    try {
+      const stored = localStorage.getItem('tnjobz_recruiter_jobs');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (Array.isArray(list)) list.forEach(addIfPublished);
+      }
+    } catch {}
+
+    // 3. Scan all tnjobz_recruiter_jobs_*
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('tnjobz_recruiter_jobs_')) {
+        try {
+          const uStored = localStorage.getItem(key);
+          if (uStored) {
+            const list = JSON.parse(uStored);
+            if (Array.isArray(list)) list.forEach(addIfPublished);
+          }
+        } catch {}
+      }
+    }
+
+    return rawJobs.map(j => {
+      const companyName = j.company_name || j.employer_name || j.employer?.company_name || 'My Company';
       const companyLogo = resolveCompanyLogo(j.company_logo, companyName, j.employer);
       const responsibilitiesList = normalizeResponsibilities(j.responsibilities, j.requirements);
 
@@ -250,10 +298,15 @@ export async function getCandidateJobs(params = {}) {
     console.warn("Backend fetch candidate jobs warning:", err);
   }
 
-  // Merge local published jobs
+  // Merge local published jobs without duplicates
   const localPublished = getLocalPublishedJobs();
   const existingIds = new Set(backendJobs.map(j => String(j.id)));
-  const mergedLocal = localPublished.filter(j => !existingIds.has(String(j.id)));
+  const existingTitles = new Set(backendJobs.map(j => `${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`));
+  
+  const mergedLocal = localPublished.filter(j => 
+    !existingIds.has(String(j.id)) &&
+    !existingTitles.has(`${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`)
+  );
 
   let jobs = [...backendJobs, ...mergedLocal];
 

@@ -50,10 +50,10 @@ export default function RecruiterSidebar({ activeTab }) {
                 type="button"
                 aria-label="Open sidebar"
                 onClick={toggleCollapse}
-                className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 transition-colors"
+                className="h-10 w-10 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 overflow-hidden"
               >
                 {profilePhotoUrl ? (
-                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full rounded-xl object-cover" />
+                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full rounded-full object-contain p-0.5" />
                 ) : (
                   <span className="font-extrabold text-xs">{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-5 w-5" />}</span>
                 )}
@@ -61,9 +61,9 @@ export default function RecruiterSidebar({ activeTab }) {
             </SidebarTooltip>
           ) : (
             <Link to="/recruiter/profile" className="flex items-center gap-3 min-w-0 group cursor-pointer">
-              <div className="h-10 w-10 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center border border-indigo-200 shadow-xs shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-indigo-600/30 transition-all">
+              <div className="h-10 w-10 rounded-full bg-white text-slate-900 font-black text-xs flex items-center justify-center border border-black shadow-xs shrink-0 overflow-hidden group-hover:ring-2 group-hover:ring-black/20 transition-all">
                 {profilePhotoUrl ? (
-                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+                  <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-contain p-0.5 rounded-full" />
                 ) : (
                   <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-5 w-5" />}</span>
                 )}

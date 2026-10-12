@@ -54,7 +54,7 @@ function getDefaultBaseResume() {
         id: 'exp_01',
         roleTitle: 'Senior Product Designer',
         companyName: 'TechFlow Solutions',
-        location: 'San Francisco, CA',
+        location: '',
         period: 'Jan 2021 - Present',
         bullets: [
           'Led end-to-end design for the flagship SaaS product, increasing user retention by 24% within the first quarter of launch.',
@@ -749,7 +749,7 @@ function escapeXml(str) {
  */
 export function generateResumePdfBlob(targetResume) {
   const name = targetResume?.candidateName || targetResume?.title || 'RESUME';
-  const contact = targetResume?.contactInfo || 'San Francisco, CA • contact@email.com';
+  const contact = targetResume?.contactInfo || '';
   const experience = targetResume?.sections?.experience || [];
   const competencies = targetResume?.sections?.competencies || {};
 
@@ -901,7 +901,7 @@ ${450 + streamLength}
  */
 export function generateResumeDocxBlob(targetResume) {
   const name = targetResume?.candidateName || targetResume?.title || 'RESUME';
-  const contact = targetResume?.contactInfo || 'San Francisco, CA • contact@email.com';
+  const contact = targetResume?.contactInfo || '';
   const experience = targetResume?.sections?.experience || [];
   const competencies = targetResume?.sections?.competencies || {};
 

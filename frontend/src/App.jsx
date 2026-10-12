@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { SignOutProvider } from './context/SignOutContext';
 import { CandidateUserProvider } from './context/CandidateUserContext';
 import { RecruiterUserProvider } from './context/RecruiterUserContext';
@@ -7,6 +8,7 @@ import { SuperAdminUserProvider } from './context/SuperAdminUserContext';
 import SuperAdminRouteGuard from './components/auth/superAdmin/SuperAdminRouteGuard';
 import CandidateRouteGuard from './components/auth/candidate/CandidateRouteGuard';
 import RecruiterRouteGuard from './components/auth/recruiter/RecruiterRouteGuard';
+import ErrorBoundary from './components/shared/ErrorBoundary';
 import SuperAdminLayout from './components/superAdmin/common/SuperAdminLayout';
 import SuperAdminOverview from './pages/superAdmin/superAdminOverview/SuperAdminOverview';
 import SuperAdminCandidates from './pages/superAdmin/superAdminCandidates/SuperAdminCandidates';
@@ -311,9 +313,11 @@ export default function App() {
       <Route 
         path="/admin/*" 
         element={
-          <AdminRouteGuard>
-            <AdminLayout searchPlaceholder="Search recruiters..." />
-          </AdminRouteGuard>
+          <ErrorBoundary portalTitle="Admin Portal">
+            <AdminRouteGuard>
+              <AdminLayout searchPlaceholder="Search recruiters..." />
+            </AdminRouteGuard>
+          </ErrorBoundary>
         }
       >
         <Route path="dashboard" element={<AdminDashboard />} />
@@ -369,50 +373,58 @@ export default function App() {
     </Routes>
   );
 
-  return (
-    <BrowserRouter>
-      <SignOutProvider>
-        {/* Toast Alert Banner */}
-        {toastMessage && (
-          <div className="fixed bottom-5 right-5 z-50 transform animate-slideUp">
-            <div className="flex items-center gap-2.5 rounded-xl bg-slate-900 px-4.5 py-3 text-xs font-bold text-white shadow-xl">
-              <svg className="h-4.5 w-4.5 text-teal-455" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{toastMessage}</span>
-            </div>
-          </div>
-        )}
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '315795032694-7tradphkgc090ken6kekneut5mnh1hsr.apps.googleusercontent.com';
 
-        <LayoutWrapper 
-          notifications={notifications}
-          setNotifications={setNotifications}
-          setGlobalDetailsRecord={setGlobalDetailsRecord}
-          handleToast={handleToast}
-          routeContent={routeContent}
-        />
-      </SignOutProvider>
-    </BrowserRouter>
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <SignOutProvider>
+          {/* Toast Alert Banner */}
+          {toastMessage && (
+            <div className="fixed bottom-5 right-5 z-50 transform animate-slideUp">
+              <div className="flex items-center gap-2.5 rounded-xl bg-slate-900 px-4.5 py-3 text-xs font-bold text-white shadow-xl">
+                <svg className="h-4.5 w-4.5 text-teal-455" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{toastMessage}</span>
+              </div>
+            </div>
+          )}
+
+          <LayoutWrapper 
+            notifications={notifications}
+            setNotifications={setNotifications}
+            setGlobalDetailsRecord={setGlobalDetailsRecord}
+            handleToast={handleToast}
+            routeContent={routeContent}
+          />
+        </SignOutProvider>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }
 
 function CandidatePortalWrapper() {
   return (
-    <CandidateRouteGuard>
-      <CandidateUserProvider>
-        <Outlet />
-      </CandidateUserProvider>
-    </CandidateRouteGuard>
+    <ErrorBoundary portalTitle="Candidate Portal">
+      <CandidateRouteGuard>
+        <CandidateUserProvider>
+          <Outlet />
+        </CandidateUserProvider>
+      </CandidateRouteGuard>
+    </ErrorBoundary>
   );
 }
 
 function RecruiterPortalWrapper() {
   return (
-    <RecruiterRouteGuard>
-      <RecruiterUserProvider>
-        <Outlet />
-      </RecruiterUserProvider>
-    </RecruiterRouteGuard>
+    <ErrorBoundary portalTitle="Recruiter / HR Portal">
+      <RecruiterRouteGuard>
+        <RecruiterUserProvider>
+          <Outlet />
+        </RecruiterUserProvider>
+      </RecruiterRouteGuard>
+    </ErrorBoundary>
   );
 }
 
@@ -424,20 +436,26 @@ function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord
 
   if (isSuperAdminRoute) {
     return (
-      <SuperAdminUserProvider>
-        <SuperAdminRouteGuard>
-          <SuperAdminLayout 
-            onToast={handleToast} 
-            notifications={notifications}
-            setNotifications={setNotifications}
-            onOpenDrawerDetails={setGlobalDetailsRecord}
-          >
-            {routeContent}
-          </SuperAdminLayout>
-        </SuperAdminRouteGuard>
-      </SuperAdminUserProvider>
+      <ErrorBoundary portalTitle="Super Admin Portal">
+        <SuperAdminUserProvider>
+          <SuperAdminRouteGuard>
+            <SuperAdminLayout 
+              onToast={handleToast} 
+              notifications={notifications}
+              setNotifications={setNotifications}
+              onOpenDrawerDetails={setGlobalDetailsRecord}
+            >
+              {routeContent}
+            </SuperAdminLayout>
+          </SuperAdminRouteGuard>
+        </SuperAdminUserProvider>
+      </ErrorBoundary>
     );
   }
 
-  return routeContent;
+  return (
+    <ErrorBoundary portalTitle="TN Jobz Platform">
+      {routeContent}
+    </ErrorBoundary>
+  );
 }

@@ -22,8 +22,11 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
         }
       }
       if (name === 'password') {
+        const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
         if (value.length < 8) {
           err = "Password must be at least 8 characters long.";
+        } else if (!passwordComplexityRegex.test(value)) {
+          err = "Password must include uppercase, lowercase, number, and special character.";
         }
       }
       if (name === 'confirmPassword') {
@@ -132,6 +135,7 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
               <span>{errors.password}</span>
             </div>
           )}
+          <p className="text-[11px] text-slate-400 font-medium">Must contain min 8 characters with uppercase, lowercase, number, and special symbol.</p>
         </div>
 
         <div className="space-y-1.5">

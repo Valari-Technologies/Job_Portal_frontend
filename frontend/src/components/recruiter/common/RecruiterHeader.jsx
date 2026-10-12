@@ -72,9 +72,9 @@ export default function RecruiterHeader() {
             }}
             className="flex items-center gap-2 focus:outline-none cursor-pointer group"
           >
-            <div className="h-9 w-9 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center border border-indigo-200 shadow-xs overflow-hidden group-hover:ring-2 group-hover:ring-indigo-600/30 transition-all">
+            <div className="h-9 w-9 rounded-full bg-white text-slate-900 font-black text-xs flex items-center justify-center border border-black shadow-xs overflow-hidden group-hover:ring-2 group-hover:ring-black/20 transition-all">
               {profilePhotoUrl ? (
-                <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-cover" />
+                <img src={profilePhotoUrl} alt={fullName || "Recruiter"} className="h-full w-full object-contain p-0.5 rounded-full" />
               ) : (
                 <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-4.5 w-4.5" />}</span>
               )}

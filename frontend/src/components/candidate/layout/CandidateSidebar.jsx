@@ -40,9 +40,9 @@ export default function CandidateSidebar() {
       {/* 1. Brand & Account Header Card */}
       <div className="p-6 border-b border-slate-100 flex items-center gap-3.5">
         <div className="h-11 w-11 rounded-full bg-white border border-black overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
-          {(profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')) ? (
+          {profile?.avatarUrl ? (
             <img 
-              src={profile?.avatarUrl || localStorage.getItem('tnjobz_candidate_avatar')} 
+              src={profile.avatarUrl} 
               alt={profile?.fullName || 'Candidate Avatar'} 
               className="h-full w-full object-cover"
             />

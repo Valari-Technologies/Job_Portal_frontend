@@ -35,9 +35,13 @@ export default function ApplicationFilters({
             className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
           >
             <option value="ALL">All Roles</option>
-            {jobs.map((job) => (
-              <option key={job.id} value={job.id}>{job.title}</option>
-            ))}
+            {jobs.filter(j => (j.id || j.value) !== 'ALL').map((job) => {
+              const val = String(job.id || job.value);
+              const label = job.title || job.label || val;
+              return (
+                <option key={val} value={val}>{label}</option>
+              );
+            })}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         </div>

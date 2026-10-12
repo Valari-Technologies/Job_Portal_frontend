@@ -9,6 +9,7 @@ import {
 } from '../services/candidate/candidateDashboardService';
 import { getCandidateOnboardingStatus } from '../services/candidate/candidateOnboardingService';
 import { getInitialProfileForCurrentUser } from '../services/candidate/candidateProfileService';
+import { getAuthenticatedUser, setAuthenticatedUser } from '../services/auth/adminAuthService';
 
 const CandidateUserContext = createContext(null);
 
@@ -109,7 +110,22 @@ export function CandidateUserProvider({ children }) {
     try {
       const res = await updateCandidateProfilePhoto(photoFile);
       if (res && res.avatarUrl) {
-        setProfile(prev => ({ ...prev, avatarUrl: res.avatarUrl }));
+        setProfile(prev => ({ 
+          ...prev, 
+          ...(res.profile || {}), 
+          avatarUrl: res.avatarUrl 
+        }));
+        try {
+          const authUser = getAuthenticatedUser() || {};
+          const userKey = authUser?.email || authUser?.id || 'anon';
+          localStorage.setItem(`tnjobz_candidate_avatar_${userKey}`, res.avatarUrl);
+          localStorage.removeItem('tnjobz_candidate_avatar');
+          if (authUser && typeof authUser === 'object') {
+            authUser.profile_picture = res.avatarUrl;
+            authUser.avatarUrl = res.avatarUrl;
+            setAuthenticatedUser(authUser, 'CANDIDATE');
+          }
+        } catch {}
       }
       return res;
     } catch (err) {
@@ -121,7 +137,22 @@ export function CandidateUserProvider({ children }) {
   const removePhoto = async () => {
     try {
       const res = await removeCandidateProfilePhoto();
-      setProfile(prev => ({ ...prev, avatarUrl: null }));
+      setProfile(prev => ({ 
+        ...prev, 
+        ...(res?.profile || {}), 
+        avatarUrl: null 
+      }));
+      try {
+        const authUser = getAuthenticatedUser() || {};
+        const userKey = authUser?.email || authUser?.id || 'anon';
+        localStorage.removeItem(`tnjobz_candidate_avatar_${userKey}`);
+        localStorage.removeItem('tnjobz_candidate_avatar');
+        if (authUser && typeof authUser === 'object') {
+          authUser.profile_picture = null;
+          authUser.avatarUrl = null;
+          setAuthenticatedUser(authUser, 'CANDIDATE');
+        }
+      } catch {}
       return res;
     } catch (err) {
       console.error("Failed to remove candidate avatar:", err);
