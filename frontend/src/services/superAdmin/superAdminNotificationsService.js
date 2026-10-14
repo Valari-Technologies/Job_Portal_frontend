@@ -87,3 +87,67 @@ export async function markAllNotificationsAsRead() {
     throw error;
   }
 }
+
+/**
+ * Super Admin Broadcast Notification to Candidates, Employers, or All users.
+ */
+export async function sendBroadcastNotificationService({ targetRole = 'ALL', title, message, notificationType = 'SYSTEM_ANNOUNCEMENT' }) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/notifications/broadcast/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        target_role: targetRole,
+        title,
+        message,
+        notification_type: notificationType
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorMsg = data.detail || data.message || 'Failed to broadcast announcement';
+      return { success: false, message: errorMsg, errors: data };
+    }
+    return { success: true, data };
+  } catch (error) {
+    console.error("sendBroadcastNotificationService error:", error);
+    return { success: false, message: error.message || 'Network error sending broadcast' };
+  }
+}
+
+/**
+ * Delete a single notification from database.
+ */
+export async function deleteNotificationService(id) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/notifications/${id}/delete/`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to delete notification');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("deleteNotificationService error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Clear all notifications from database.
+ */
+export async function clearAllNotificationsService() {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/notifications/clear-all/`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to clear all notifications');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("clearAllNotificationsService error:", error);
+    throw error;
+  }
+}

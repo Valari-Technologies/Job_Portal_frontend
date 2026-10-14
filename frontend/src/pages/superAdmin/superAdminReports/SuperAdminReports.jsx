@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import ReportsTable from '../../../components/superAdmin/superAdminReports/ReportsTable';
 import ReportDetailsPanel from '../../../components/superAdmin/superAdminReports/ReportDetailsPanel';
+import InspectReportModal from '../../../components/superAdmin/superAdminReports/InspectReportModal';
 import { fetchJobReportsService, reportDecisionService } from '../../../services/superAdmin/superAdminReportsService';
 
 export default function SuperAdminReports() {
   const [reports, setReports] = useState([]);
   const [summary, setSummary] = useState({ open_count: 0, reviewed_count: 0, dismissed_count: 0, total_count: 0 });
   const [selectedReport, setSelectedReport] = useState(null);
+  const [inspectModalReport, setInspectModalReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -57,6 +59,7 @@ export default function SuperAdminReports() {
       if (res.success) {
         setActionFeedback({ message: res.data?.message || 'Report decision recorded successfully.', isError: false });
         await loadReports();
+        setInspectModalReport(null);
       } else {
         setActionFeedback({ message: res.message || 'Failed to submit decision.', isError: true });
       }
@@ -202,13 +205,17 @@ export default function SuperAdminReports() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
           {/* Left Table */}
           <div className="lg:col-span-2 space-y-4">
             <ReportsTable 
               reports={reports}
               selectedReport={selectedReport}
               onSelectReport={setSelectedReport}
+              onOpenInspectModal={(r) => {
+                setSelectedReport(r);
+                setInspectModalReport(r);
+              }}
               isLoading={isLoading}
             />
             <div className="text-xs font-bold text-slate-500">
@@ -216,16 +223,26 @@ export default function SuperAdminReports() {
             </div>
           </div>
 
-          {/* Right Details Panel */}
-          <div className="space-y-6">
+          {/* Right Details Panel - Sticky with internal scroll */}
+          <div className="lg:sticky lg:top-6 self-start max-h-[calc(100vh-90px)] overflow-y-auto space-y-6 pr-1">
             <ReportDetailsPanel 
               selectedReport={selectedReport}
               onDecision={handleDecision}
+              onOpenInspectModal={(r) => setInspectModalReport(r || selectedReport)}
               isSubmitting={isSubmitting}
             />
           </div>
         </div>
       )}
+
+      {/* Inspect / Moderation Modal */}
+      <InspectReportModal
+        report={inspectModalReport}
+        isOpen={!!inspectModalReport}
+        onClose={() => setInspectModalReport(null)}
+        onDecision={handleDecision}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

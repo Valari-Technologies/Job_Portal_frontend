@@ -32,6 +32,11 @@ export default function SuperAdminCandidates({ onToast }) {
         status: accountStatus
       });
       setCandidates(data);
+      if (data && data.length > 0) {
+        setSelectedCandidate(prev => prev ? (data.find(c => c.id === prev.id) || data[0]) : data[0]);
+      } else {
+        setSelectedCandidate(null);
+      }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
     } finally {
@@ -212,7 +217,9 @@ export default function SuperAdminCandidates({ onToast }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
+                  <span className="text-base font-extrabold text-slate-800">
+                    {candidates.filter(c => Number(c.profile_completion || 0) < 60).length}
+                  </span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
@@ -263,16 +270,80 @@ export default function SuperAdminCandidates({ onToast }) {
             </div>
           </div>
 
-          {/* Selected Candidate Card */}
-          <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <h4 className="text-sm font-extrabold text-slate-800 mt-3">No candidate selected</h4>
-            <p className="text-xs text-slate-500 mt-1">
-              Select a candidate from the table list to preview details.
-            </p>
-          </div>
+          {/* Selected Candidate preview card */}
+          {selectedCandidate ? (
+            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
+              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
+                {selectedCandidate.profile_photo || selectedCandidate.profile_picture ? (
+                  <img 
+                    src={selectedCandidate.profile_photo || selectedCandidate.profile_picture} 
+                    alt="" 
+                    className="h-12 w-12 rounded-full object-cover border-2 border-black bg-white shrink-0" 
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-white border-2 border-black text-slate-900 font-extrabold text-lg flex items-center justify-center shrink-0">
+                    {(selectedCandidate.full_name || selectedCandidate.first_name || 'C').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-base font-extrabold text-slate-900 truncate">
+                    {selectedCandidate.full_name || `${selectedCandidate.first_name || ''} ${selectedCandidate.last_name || ''}`.trim() || 'Candidate'}
+                  </h4>
+                  <p className="text-xs text-slate-500 font-medium truncate">
+                    {selectedCandidate.email || selectedCandidate.phone_number || selectedCandidate.mobile_number || 'No contact email'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs font-semibold text-slate-700">
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Location</span>
+                  <span className="font-extrabold text-slate-800 truncate max-w-[180px]">
+                    {selectedCandidate.location?.full_path || selectedCandidate.location?.name || selectedCandidate.location?.city || selectedCandidate.city || selectedCandidate.location?.state || selectedCandidate.state || 'Tamil Nadu'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Applications</span>
+                  <span className="font-extrabold text-slate-800">
+                    {selectedCandidate.applications ?? selectedCandidate.applications_count ?? 0} submitted
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Profile completion</span>
+                  <span className="font-extrabold text-teal-700">
+                    {selectedCandidate.profile_completion ?? 20}%
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-400">Account status</span>
+                  <span className={`font-extrabold uppercase ${selectedCandidate.is_active !== false ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {selectedCandidate.is_active !== false ? 'Active' : 'Suspended'}
+                  </span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => handleTriggerAction('VIEW', selectedCandidate)}
+                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs py-3 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
+              >
+                View full profile
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs text-center py-12 space-y-4">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="space-y-1.5">
+                <h4 className="text-base font-extrabold text-slate-800">No candidate selected</h4>
+                <p className="text-xs text-slate-500 font-medium max-w-[200px] mx-auto">
+                  Select a candidate from the table list to preview details.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

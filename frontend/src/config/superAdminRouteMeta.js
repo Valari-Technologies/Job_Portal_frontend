@@ -75,11 +75,11 @@ export const superAdminRouteMeta = {
     ]
   },
   "/super-admin/notifications": {
-    section: null,
+    section: "Communication",
     label: "Notifications"
   },
   "/super-admin/reports": {
-    section: "Insights",
+    section: "Communication",
     label: "Reports"
   },
   "/super-admin/analytics": {

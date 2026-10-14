@@ -3,6 +3,7 @@ import { useState } from 'react';
 export default function ReportDetailsPanel({ 
   selectedReport, 
   onDecision,
+  onOpenInspectModal,
   isSubmitting 
 }) {
   const [showDismissModal, setShowDismissModal] = useState(false);
@@ -70,7 +71,21 @@ export default function ReportDetailsPanel({
   return (
     <div className="rounded-2xl border border-slate-155 bg-white p-6 shadow-2xs space-y-6">
       <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-        <h3 className="text-base font-extrabold text-slate-800">Report Details</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-extrabold text-slate-800">Report Details</h3>
+          {onOpenInspectModal && (
+            <button
+              type="button"
+              onClick={() => onOpenInspectModal(selectedReport)}
+              title="Open full inspector modal"
+              className="p-1 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </button>
+          )}
+        </div>
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
           selectedReport.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
           selectedReport.status === 'REVIEWED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :

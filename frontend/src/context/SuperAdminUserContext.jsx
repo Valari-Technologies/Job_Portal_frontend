@@ -9,7 +9,9 @@ import {
 import { 
   getSuperAdminNotifications, 
   markNotificationAsRead, 
-  markAllNotificationsAsRead 
+  markAllNotificationsAsRead,
+  deleteNotificationService,
+  clearAllNotificationsService
 } from '../services/superAdmin/superAdminNotificationsService';
 
 const SuperAdminUserContext = createContext(null);
@@ -115,6 +117,16 @@ export function SuperAdminUserProvider({ children }) {
     setNotifications(prev => (Array.isArray(prev) ? prev : []).map(n => ({ ...n, is_read: true })));
   };
 
+  const handleDeleteNotification = async (id) => {
+    await deleteNotificationService(id);
+    setNotifications(prev => (Array.isArray(prev) ? prev : []).filter(n => n.id !== id));
+  };
+
+  const handleClearAllNotifications = async () => {
+    await clearAllNotificationsService();
+    setNotifications([]);
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const value = {
@@ -132,7 +144,9 @@ export function SuperAdminUserProvider({ children }) {
     removePhoto: handleRemovePhoto,
     updateSettings: handleUpdateSettings,
     markAsRead: handleMarkAsRead,
-    markAllAsRead: handleMarkAllAsRead
+    markAllAsRead: handleMarkAllAsRead,
+    deleteNotification: handleDeleteNotification,
+    clearAllNotifications: handleClearAllNotifications
   };
 
   return (

@@ -256,15 +256,15 @@ export default function CandidateSidePanel({
                       <div className="grid grid-cols-2 gap-4.5 rounded-2xl border border-slate-150 p-5 bg-slate-50/20 text-sm">
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Candidate ID</span>
-                          <span className="font-bold text-slate-800">{candidate.candidate_id}</span>
+                          <span className="font-bold text-slate-800">{candidate.candidate_id || `CND-${candidate.id || 'N/A'}`}</span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Account status</span>
-                          <span className="font-bold text-teal-650">{candidate.status}</span>
+                          <span className="font-bold text-teal-650">{candidate.status || (candidate.is_active !== false ? 'Active' : 'Suspended')}</span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Phone number</span>
-                          <span className="font-bold text-slate-800">{candidate.mobile_number}</span>
+                          <span className="font-bold text-slate-800">{candidate.mobile_number || candidate.phone_number || 'N/A'}</span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Email address</span>
@@ -273,16 +273,16 @@ export default function CandidateSidePanel({
                         <div className="space-y-1 col-span-2">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Location</span>
                           <span className="font-bold text-slate-800">
-                            {candidate.location?.city}, {candidate.location?.district}, {candidate.location?.state}
+                            {candidate.location?.full_path || candidate.location?.name || [candidate.location?.city || candidate.city, candidate.location?.district || candidate.district, candidate.location?.state || candidate.state || 'Tamil Nadu'].filter(Boolean).join(', ')}
                           </span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Job Preference</span>
-                          <span className="font-bold text-slate-800">{candidate.preferred_job_type || 'Full-time'}</span>
+                          <span className="font-bold text-slate-800">{candidate.preferred_job_type || candidate.job_preference || 'Full-time'}</span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Registered on</span>
-                          <span className="font-bold text-slate-800">{candidate.created_at || '12 Jan 2024'}</span>
+                          <span className="font-bold text-slate-800">{candidate.created_at ? new Date(candidate.created_at).toLocaleDateString() : (candidate.date_joined ? new Date(candidate.date_joined).toLocaleDateString() : 'Recent')}</span>
                         </div>
                       </div>
 
