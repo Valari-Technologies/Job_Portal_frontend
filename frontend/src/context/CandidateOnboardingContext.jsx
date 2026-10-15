@@ -1,23 +1,44 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   getActiveIndustries, 
   getSpecializationsByIndustry, 
   getCandidateOnboardingSelection, 
+  loadStoredOnboarding,
   saveCandidateIndustry, 
-  saveCandidateSpecialization 
+  saveCandidateSpecializations 
 } from '../services/candidate/candidateOnboardingService';
 
 const CandidateOnboardingContext = createContext(null);
 
 export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const currentStep = initialStep;
+  // Derive current step dynamically from the active URL
+  const currentStep = location.pathname.includes('specialization') 
+    ? 2 
+    : (location.pathname.includes('industry') ? 1 : initialStep);
   
-  // Structured payloads: { source: "catalog" | "custom", id: string | null, title: string }
-  const [industryPayload, setIndustryPayload] = useState(null);
-  const [specializationPayload, setSpecializationPayload] = useState(null);
+  // Structured industry payload: synchronously initialized from storage to eliminate any blank frame
+  const [industryPayload, setIndustryPayload] = useState(() => {
+    try {
+      const stored = loadStoredOnboarding();
+      return stored?.industry || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Structured multi-select specializations: synchronously initialized
+  const [selectedSpecializations, setSelectedSpecializations] = useState(() => {
+    try {
+      const stored = loadStoredOnboarding();
+      return stored?.specializations || (stored?.specialization ? [stored.specialization] : []);
+    } catch {
+      return [];
+    }
+  });
 
   const [industries, setIndustries] = useState([]);
   const [specializations, setSpecializations] = useState([]);
@@ -26,20 +47,22 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
   const [isLoadingSpecializations, setIsLoadingSpecializations] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [error, setError] = useState(null);
+  // Separate error states so Step 2 specialization errors never break Step 1 industry view
+  const [industryError, setIndustryError] = useState(null);
+  const [specializationError, setSpecializationError] = useState(null);
   const [validationError, setValidationError] = useState(null);
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showCustomIndustryModal, setShowCustomIndustryModal] = useState(false);
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
 
-  // Initial load of stored selection & active industries catalog
+  // Initial load of active industries catalog from backend
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       setIsLoadingIndustries(true);
-      setError(null);
+      setIndustryError(null);
       try {
         const [indsList, stored] = await Promise.all([
           getActiveIndustries(),
@@ -48,43 +71,54 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
 
         if (!isMounted) return;
 
-        setIndustries(indsList);
+        setIndustries(indsList || []);
 
-        // Normalize stored selection
+        // Normalize stored industry and verify it exists in live indsList
         let loadedInd = null;
         if (stored?.industry && typeof stored.industry === 'object') {
-          loadedInd = stored.industry;
+          if (stored.industry.source === 'catalog') {
+            const foundCat = (indsList || []).find(i => String(i.id) === String(stored.industry.id));
+            if (foundCat) {
+              loadedInd = {
+                source: 'catalog',
+                id: foundCat.id,
+                title: foundCat.name
+              };
+            }
+          } else {
+            loadedInd = stored.industry;
+          }
         } else if (stored?.industryId) {
-          const cat = indsList.find(i => i.id === stored.industryId);
-          loadedInd = {
-            source: 'catalog',
-            id: stored.industryId,
-            title: cat ? cat.name : stored.industryId
-          };
+          const foundCat = (indsList || []).find(i => String(i.id) === String(stored.industryId));
+          if (foundCat) {
+            loadedInd = {
+              source: 'catalog',
+              id: foundCat.id,
+              title: foundCat.name
+            };
+          }
         }
 
-        let loadedSpec = null;
-        if (stored?.specialization && typeof stored.specialization === 'object') {
-          loadedSpec = stored.specialization;
-        } else if (stored?.specializationId) {
-          loadedSpec = {
-            source: 'catalog',
-            id: stored.specializationId,
-            title: stored.specializationId
-          };
+        // Normalize stored specializations (array)
+        let loadedSpecs = [];
+        if (Array.isArray(stored?.specializations) && stored.specializations.length > 0) {
+          loadedSpecs = stored.specializations.filter(s => s.source !== 'catalog' || !String(s.id).startsWith('spec_'));
+        } else if (stored?.specialization && typeof stored.specialization === 'object') {
+          if (stored.specialization.source !== 'catalog' || !String(stored.specialization.id).startsWith('spec_')) {
+            loadedSpecs = [stored.specialization];
+          }
         }
 
-        setIndustryPayload(loadedInd);
-        setSpecializationPayload(loadedSpec);
-
-        // Direct access rule: If step 2 is opened without valid industry selection, redirect to step 1
-        if (initialStep === 2 && (!loadedInd || (!loadedInd.id && !loadedInd.title))) {
-          navigate('/candidate/onboarding/industry', { replace: true });
+        if (loadedInd) {
+          setIndustryPayload(loadedInd);
+        }
+        if (loadedSpecs.length > 0) {
+          setSelectedSpecializations(loadedSpecs);
         }
       } catch (err) {
         console.error('Failed to load candidate onboarding data:', err);
         if (isMounted) {
-          setError("We couldn't load your options. Please try again.");
+          setIndustryError("We couldn't load your options. Please try again.");
         }
       } finally {
         if (isMounted) {
@@ -98,28 +132,44 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     return () => {
       isMounted = false;
     };
-  }, [initialStep, navigate]);
+  }, []);
 
-  // Fetch specializations when catalog industry is selected
+  // Direct access rule: If step 2 is opened without valid industry selection, redirect to step 1
+  useEffect(() => {
+    if (currentStep === 2 && (!industryPayload || (!industryPayload.id && !industryPayload.title))) {
+      navigate('/candidate/onboarding/industry', { replace: true });
+    }
+  }, [currentStep, industryPayload, navigate]);
+
+  // Fetch / prefetch specializations when catalog industry is selected
   useEffect(() => {
     let isMounted = true;
 
     async function fetchSpecs() {
       if (!industryPayload || industryPayload.source !== 'catalog' || !industryPayload.id) {
         setSpecializations([]);
+        setSpecializationError(null);
+        return;
+      }
+
+      // If id is not numeric (legacy mock), skip
+      if (isNaN(Number(industryPayload.id)) || String(industryPayload.id).startsWith('ind_')) {
+        setSpecializations([]);
+        setSpecializationError(null);
         return;
       }
 
       setIsLoadingSpecializations(true);
+      setSpecializationError(null);
       try {
         const specList = await getSpecializationsByIndustry(industryPayload.id);
         if (isMounted) {
-          setSpecializations(specList);
+          setSpecializations(specList || []);
         }
       } catch (err) {
         console.error('Failed to fetch specializations:', err);
         if (isMounted) {
-          setError("We couldn't load specializations for this field.");
+          setSpecializationError("We couldn't load specializations for this field.");
         }
       } finally {
         if (isMounted) {
@@ -133,12 +183,13 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     return () => {
       isMounted = false;
     };
-  }, [industryPayload]);
+  }, [industryPayload?.id]);
 
-  // Select a standard catalogue Industry
+  // Select a standard catalogue Industry (Single Select)
   const selectCatalogIndustry = (industryId) => {
     setValidationError(null);
-    const indObj = industries.find(i => i.id === industryId);
+    setIndustryError(null);
+    const indObj = industries.find(i => String(i.id) === String(industryId));
     if (!indObj) return;
 
     const newPayload = {
@@ -148,9 +199,9 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     };
 
     setIndustryPayload(newPayload);
-    // Clear specialization if industry changed
-    if (!specializationPayload || specializationPayload.id !== industryId) {
-      setSpecializationPayload(null);
+    // Clear specializations if industry changed
+    if (!industryPayload || String(industryPayload.id) !== String(industryId)) {
+      setSelectedSpecializations([]);
     }
     saveCandidateIndustry(newPayload);
   };
@@ -166,7 +217,7 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     };
 
     setIndustryPayload(newPayload);
-    setSpecializationPayload(null);
+    setSelectedSpecializations([]);
     setIsSaving(true);
 
     try {
@@ -180,55 +231,85 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     }
   };
 
-  // Select a standard catalogue Specialization
-  const selectCatalogSpecialization = (specId) => {
+  // Toggle a standard catalogue Specialization (Multi-Select)
+  const toggleCatalogSpecialization = (specId) => {
     setValidationError(null);
-    const specObj = specializations.find(s => s.id === specId);
-    const title = specObj ? specObj.name : specId;
+    const isAlreadySelected = selectedSpecializations.some(s => String(s.id) === String(specId));
 
-    const newPayload = {
-      source: 'catalog',
-      id: specId,
-      title
-    };
+    let updatedList = [];
+    if (isAlreadySelected) {
+      updatedList = selectedSpecializations.filter(s => String(s.id) !== String(specId));
+    } else {
+      const specObj = specializations.find(s => String(s.id) === String(specId));
+      const title = specObj ? specObj.name : String(specId);
+      const newItem = {
+        source: 'catalog',
+        id: specId,
+        title
+      };
+      updatedList = [...selectedSpecializations, newItem];
+    }
 
-    setSpecializationPayload(newPayload);
-    saveCandidateSpecialization(newPayload);
+    setSelectedSpecializations(updatedList);
+    saveCandidateSpecializations(updatedList);
   };
 
-  // Select a custom Specialization role & automatically complete step
-  const selectCustomSpecializationAndContinue = async (customTitle) => {
+  // Add a custom Specialization role (Multi-Select friendly)
+  const selectCustomSpecialization = (customTitle) => {
     setValidationError(null);
     const trimmedTitle = customTitle.trim();
-    const newPayload = {
+    if (!trimmedTitle) return;
+
+    const isAlreadySelected = selectedSpecializations.some(
+      s => s.source === 'custom' && s.title.toLowerCase() === trimmedTitle.toLowerCase()
+    );
+
+    if (isAlreadySelected) return;
+
+    const newItem = {
       source: 'custom',
       id: null,
       title: trimmedTitle
     };
 
-    return completeSpecializationStep(newPayload);
+    const updatedList = [...selectedSpecializations, newItem];
+    setSelectedSpecializations(updatedList);
+    saveCandidateSpecializations(updatedList);
   };
 
-  // Shared completion function for Step 2 (both standard & custom flow)
+  // Remove a specialization by id or custom title
+  const removeSpecialization = (specIdentifier) => {
+    setValidationError(null);
+    const updatedList = selectedSpecializations.filter(s => {
+      if (s.source === 'catalog') {
+        return String(s.id) !== String(specIdentifier);
+      }
+      return s.title !== specIdentifier;
+    });
+    setSelectedSpecializations(updatedList);
+    saveCandidateSpecializations(updatedList);
+  };
+
+  // Shared completion function for Step 2
   const completeSpecializationStep = async (targetPayload = null) => {
     setValidationError(null);
-    const payloadToSave = targetPayload || specializationPayload;
+    const payloadToSave = targetPayload || selectedSpecializations;
 
-    if (!payloadToSave || (!payloadToSave.id && !payloadToSave.title)) {
-      setValidationError('Please select a specialization to continue.');
+    if (!payloadToSave || payloadToSave.length === 0) {
+      setValidationError('Please select at least one specialization to continue.');
       return;
     }
 
     setIsSaving(true);
     try {
-      await saveCandidateSpecialization(payloadToSave);
-      setSpecializationPayload(payloadToSave);
+      await saveCandidateSpecializations(payloadToSave);
+      setSelectedSpecializations(payloadToSave);
       setIsSaving(false);
       navigate('/candidate/dashboard', { replace: true });
     } catch (err) {
       console.error('Failed to complete specialization step:', err);
       setIsSaving(false);
-      setValidationError("We couldn't save your specialization. Please try again.");
+      setValidationError("We couldn't save your specializations. Please try again.");
       throw err;
     }
   };
@@ -261,26 +342,29 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
 
   // Step 2 finish action
   const completeOnboarding = async () => {
-    return completeSpecializationStep(specializationPayload);
+    return completeSpecializationStep(selectedSpecializations);
   };
 
   const selectedIndustryObj = industryPayload?.source === 'catalog' 
-    ? industries.find(ind => ind.id === industryPayload.id) 
+    ? industries.find(ind => String(ind.id) === String(industryPayload.id)) 
     : null;
 
   const value = {
     currentStep,
     industryPayload,
-    specializationPayload,
+    selectedSpecializations,
+    specializationPayload: selectedSpecializations[0] || null, // Backward compatibility
     selectedIndustryId: industryPayload?.id || null,
-    selectedSpecializationId: specializationPayload?.id || null,
+    selectedSpecializationId: selectedSpecializations[0]?.id || null,
     selectedIndustry: selectedIndustryObj,
     industries,
     specializations,
     isLoadingIndustries,
     isLoadingSpecializations,
     isSaving,
-    error,
+    error: industryError,
+    industryError,
+    specializationError,
     validationError,
     showExitModal,
     setShowExitModal,
@@ -290,19 +374,40 @@ export function CandidateOnboardingProvider({ children, initialStep = 1 }) {
     setShowCustomRoleModal,
     selectCatalogIndustry,
     selectCustomIndustry,
-    selectCatalogSpecialization,
-    selectCustomSpecialization: selectCustomSpecializationAndContinue,
-    selectCustomSpecializationAndContinue,
+    toggleCatalogSpecialization,
+    selectCatalogSpecialization: toggleCatalogSpecialization, // Alias
+    selectCustomSpecialization,
+    selectCustomSpecializationAndContinue: (title) => {
+      selectCustomSpecialization(title);
+    },
+    removeSpecialization,
     completeSpecializationStep,
     proceedToNextStep,
     proceedToPreviousStep,
     completeOnboarding,
     refetchData: async () => {
-      if (industryPayload?.id) {
+      if (currentStep === 2 && industryPayload?.id) {
         setIsLoadingSpecializations(true);
-        const specList = await getSpecializationsByIndustry(industryPayload.id);
-        setSpecializations(specList);
-        setIsLoadingSpecializations(false);
+        setSpecializationError(null);
+        try {
+          const specList = await getSpecializationsByIndustry(industryPayload.id);
+          setSpecializations(specList || []);
+        } catch {
+          setSpecializationError("We couldn't load specializations for this field.");
+        } finally {
+          setIsLoadingSpecializations(false);
+        }
+      } else {
+        setIsLoadingIndustries(true);
+        setIndustryError(null);
+        try {
+          const indsList = await getActiveIndustries();
+          setIndustries(indsList || []);
+        } catch {
+          setIndustryError("We couldn't load your options. Please try again.");
+        } finally {
+          setIsLoadingIndustries(false);
+        }
       }
     }
   };
@@ -322,4 +427,3 @@ export function useCandidateOnboarding() {
   }
   return ctx;
 }
-

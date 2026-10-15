@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCandidateOnboarding } from '../../../context/CandidateOnboardingContext';
-import { X, ArrowRight, AlertCircle } from 'lucide-react';
+import { X, Plus, AlertCircle } from 'lucide-react';
 
 export default function AddCustomRoleModal({ isOpen, onClose }) {
-  const { selectCustomSpecializationAndContinue, specializations, industryPayload } = useCandidateOnboarding();
+  const { selectCustomSpecialization, specializations, industryPayload } = useCandidateOnboarding();
   const [title, setTitle] = useState('');
   const [errorMsg, setErrorMsg] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,7 +71,7 @@ export default function AddCustomRoleModal({ isOpen, onClose }) {
     setErrorMsg(null);
 
     try {
-      await selectCustomSpecializationAndContinue(trimmedTitle);
+      selectCustomSpecialization(trimmedTitle);
       handleClose();
     } catch (err) {
       console.error('Failed to submit custom specialization:', err);
@@ -162,8 +162,8 @@ export default function AddCustomRoleModal({ isOpen, onClose }) {
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
               }`}
             >
-              <span>{isSubmitting ? 'Saving...' : 'Add & Continue'}</span>
-              <ArrowRight className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
+              <span>{isSubmitting ? 'Adding...' : 'Add Specialization'}</span>
             </button>
           </div>
         </form>

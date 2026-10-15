@@ -20,25 +20,10 @@ export default function CategoryModal({ isOpen, onClose, categoryToEdit = null, 
 
     async function loadParents() {
       setLoadingParents(true);
-      const list = await fetchAllCategoriesForSelect();
-
-      // In edit mode, exclude category itself and its descendants
-      if (categoryToEdit) {
-        const excludeIds = new Set([categoryToEdit.id]);
-        let addedNew = true;
-        while (addedNew) {
-          addedNew = false;
-          list.forEach(c => {
-            if (c.parent && excludeIds.has(c.parent) && !excludeIds.has(c.id)) {
-              excludeIds.add(c.id);
-              addedNew = true;
-            }
-          });
-        }
-        setParentOptions(list.filter(c => !excludeIds.has(c.id)));
-      } else {
-        setParentOptions(list);
-      }
+      const list = await fetchAllCategoriesForSelect({ topLevelOnly: true });
+      // Only keep top-level categories and exclude self if editing
+      const topLevel = (list || []).filter(c => !c.parent && !c.parent_name && (!categoryToEdit || c.id !== categoryToEdit.id));
+      setParentOptions(topLevel);
       setLoadingParents(false);
     }
 
@@ -198,7 +183,7 @@ export default function CategoryModal({ isOpen, onClose, categoryToEdit = null, 
                 <option value="">None (Top Level Category)</option>
                 {parentOptions.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.parent_name ? `${cat.parent_name} > ${cat.name}` : cat.name}
+                    {cat.name}
                   </option>
                 ))}
               </select>

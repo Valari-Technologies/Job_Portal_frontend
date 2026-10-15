@@ -336,28 +336,32 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
           </div>
         </div>
         <div className="space-y-4">
-          {districts.map((d, idx) => (
-            <div key={idx} className="flex items-center justify-between text-sm font-semibold">
-              <span className="text-slate-850 font-bold">{d.district}</span>
-              <div className="flex items-center gap-6">
-                <span className="text-slate-900 font-extrabold">{d.count.toLocaleString()}</span>
-                <div className="flex items-center gap-2.5 w-28">
-                  <div className="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
-                    <div 
-                      className="h-full bg-teal-600 rounded-full" 
-                      style={{ width: d.share }}
-                    />
+          {districts.length > 0 ? (
+            districts.map((d, idx) => (
+              <div key={idx} className="flex items-center justify-between text-sm font-semibold">
+                <span className="text-slate-850 font-bold">{d.district}</span>
+                <div className="flex items-center gap-6">
+                  <span className="text-slate-900 font-extrabold">{(d.count ?? 0).toLocaleString()}</span>
+                  <div className="flex items-center gap-2.5 w-28">
+                    <div className="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                      <div 
+                        className="h-full bg-teal-600 rounded-full" 
+                        style={{ width: d.share || '0%' }}
+                      />
+                    </div>
+                    <span className="text-xs font-extrabold text-slate-500 w-8 text-right">{d.share || '0%'}</span>
                   </div>
-                  <span className="text-xs font-extrabold text-slate-500 w-8 text-right">{d.share}</span>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-sm text-slate-400 font-medium py-6 text-center">No district data available.</p>
+          )}
         </div>
       </div>
       <div className="border-t border-slate-100 pt-4.5 mt-6 flex items-center justify-between text-base font-extrabold text-slate-800">
         <span>Total live jobs</span>
-        <span>{districts.reduce((acc, curr) => acc + (curr.district !== 'Others' ? curr.count : 0), 1100).toLocaleString()}</span>
+        <span>{districts.reduce((acc, curr) => acc + (curr.count || 0), 0).toLocaleString()}</span>
       </div>
     </div>
   );
@@ -368,78 +372,82 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
  */
 export function RecentActivityCard({ activities, onOpenRecord }) {
   // Activity icon picker
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'VERIFICATION_SUBMITTED':
-        return (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-150 shrink-0">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
-            </svg>
-          </div>
-        );
-      case 'JOB_APPROVED':
-        return (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-150 shrink-0">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-            </svg>
-          </div>
-        );
-      case 'PROFILE_COMPLETED':
-        return (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-150 shrink-0">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-        );
-      case 'JOB_REPORTED':
-        return (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700 border border-red-150 shrink-0">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5" />
-            </svg>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-50 text-purple-700 border border-purple-150 shrink-0">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9" />
-            </svg>
-          </div>
-        );
+  const getActivityIcon = (type = '') => {
+    const t = String(type).toUpperCase();
+    if (t.includes('REPORT') || t.includes('FAIL') || t.includes('REJECT')) {
+      return (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700 border border-red-150 shrink-0">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+      );
     }
+    if (t.includes('VERIF') || t.includes('PENDING')) {
+      return (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-150 shrink-0">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
+          </svg>
+        </div>
+      );
+    }
+    if (t.includes('JOB') || t.includes('APPROV') || t.includes('CREATE')) {
+      return (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-150 shrink-0">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      );
+    }
+    if (t.includes('LOGIN') || t.includes('USER') || t.includes('PROFILE')) {
+      return (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-150 shrink-0">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-50 text-teal-700 border border-teal-150 shrink-0">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+    );
   };
 
   return (
     <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-slate-900">Recent activity</h3>
-        <button className="text-base font-bold text-teal-600 hover:text-teal-700 hover:underline">
-          View all
-        </button>
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live stream</span>
       </div>
       <div className="space-y-4">
-        {activities.map((act) => (
-          <div 
-            key={act.id} 
-            onClick={() => onOpenRecord({ type: act.type, title: act.message, details: act.details })}
-            className="flex items-center justify-between py-2 hover:bg-slate-50/50 cursor-pointer rounded-xl p-2.5 transition-colors border border-transparent hover:border-slate-150"
-          >
-            <div className="flex items-center gap-3.5">
-              {getActivityIcon(act.type)}
-              <div>
-                <p className="text-base font-extrabold text-slate-800 leading-snug">{act.message}</p>
-                <span className="text-sm font-bold text-slate-450 mt-1.5 block">{act.time}</span>
+        {activities.length > 0 ? (
+          activities.map((act) => (
+            <div 
+              key={act.id} 
+              onClick={() => onOpenRecord({ type: act.type, title: act.message, details: act.details })}
+              className="flex items-center justify-between py-2 hover:bg-slate-50/50 cursor-pointer rounded-xl p-2.5 transition-colors border border-transparent hover:border-slate-150"
+            >
+              <div className="flex items-center gap-3.5">
+                {getActivityIcon(act.type)}
+                <div>
+                  <p className="text-base font-extrabold text-slate-800 leading-snug">{act.message}</p>
+                  <span className="text-sm font-bold text-slate-450 mt-1.5 block">{act.time}</span>
+                </div>
               </div>
+              <svg className="h-4.5 w-4.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-            <svg className="h-4.5 w-4.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-sm text-slate-400 font-medium py-6 text-center">No recent activity recorded.</p>
+        )}
       </div>
     </div>
   );

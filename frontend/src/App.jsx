@@ -72,6 +72,8 @@ import RecruiterSettings from './pages/recruiter/RecruiterSettings';
 import RecruiterNotifications from './pages/recruiter/RecruiterNotifications';
 import RecruiterProfile from './pages/recruiter/RecruiterProfile';
 import CandidateOnboardingPage from './pages/candidate/CandidateOnboardingPage';
+import IndustrySelection from './components/candidate/onboarding/IndustrySelection';
+import SpecializationSelection from './components/candidate/onboarding/SpecializationSelection';
 import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import CandidateJobsPage from './pages/candidate/CandidateJobsPage';
 import CandidateJobDetailsPage from './pages/candidate/CandidateJobDetailsPage';
@@ -214,19 +216,21 @@ export default function App() {
         <Route path="/candidate/settings" element={<CandidateSettingsPage />} />
       </Route>
 
-      {/* Candidate Onboarding Routes */}
-      <Route 
-        path="/candidate/onboarding" 
-        element={<Navigate to="/candidate/onboarding/industry" replace />} 
-      />
-      <Route 
-        path="/candidate/onboarding/industry" 
-        element={<CandidateOnboardingPage step={1} />} 
-      />
-      <Route 
-        path="/candidate/onboarding/specialization" 
-        element={<CandidateOnboardingPage step={2} />} 
-      />
+      {/* Candidate Onboarding Routes (Shared Provider & Layout to eliminate white flash) */}
+      <Route element={<CandidateOnboardingPage />}>
+        <Route 
+          path="/candidate/onboarding" 
+          element={<Navigate to="/candidate/onboarding/industry" replace />} 
+        />
+        <Route 
+          path="/candidate/onboarding/industry" 
+          element={<IndustrySelection />} 
+        />
+        <Route 
+          path="/candidate/onboarding/specialization" 
+          element={<SpecializationSelection />} 
+        />
+      </Route>
 
       {/* Auth Routes */}
       <Route 

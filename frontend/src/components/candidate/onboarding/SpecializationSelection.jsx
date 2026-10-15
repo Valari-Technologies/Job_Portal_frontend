@@ -27,16 +27,19 @@ import {
   ShoppingBag,
   Wrench,
   Utensils,
-  Coffee
+  Coffee,
+  X
 } from 'lucide-react';
 
 export default function SpecializationSelection() {
   const {
     industryPayload,
-    specializationPayload,
+    selectedSpecializations,
     specializations,
-    selectCatalogSpecialization,
+    toggleCatalogSpecialization,
+    removeSpecialization,
     isLoadingSpecializations,
+    specializationError,
     error,
     validationError,
     setShowCustomRoleModal,
@@ -77,28 +80,38 @@ export default function SpecializationSelection() {
   const handleCardKeyDown = (e, specId) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      selectCatalogSpecialization(specId);
+      toggleCatalogSpecialization(specId);
     }
   };
 
   const industryTitle = industryPayload?.title || 'Selected Industry';
-  const isCustomSpecialization = specializationPayload?.source === 'custom';
-  const customSpecTitle = isCustomSpecialization ? specializationPayload.title : '';
+  const customSpecs = selectedSpecializations.filter(s => s.source === 'custom');
+
+  const isActuallyLoading = isLoadingSpecializations || (industryPayload?.source === 'catalog' && specializations.length === 0 && !specializationError && !error);
 
   return (
     <div className="space-y-8 font-sans animate-fadeIn">
       {/* Title Header with Selected Industry Chip */}
       <div className="space-y-3 text-left">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E0E7FF] text-[#3B00FF] text-xs font-black">
-          <span className="opacity-70">Industry:</span>
-          <span>{industryTitle}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E0E7FF] text-[#3B00FF] text-xs font-black">
+            <span className="opacity-70">Industry:</span>
+            <span>{industryTitle}</span>
+          </div>
+
+          {selectedSpecializations.length > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#3B00FF] text-white text-xs font-extrabold shadow-xs">
+              <Check className="h-3.5 w-3.5 stroke-[3]" />
+              <span>{selectedSpecializations.length} selected</span>
+            </div>
+          )}
         </div>
 
         <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Choose your specialization
+          Choose your specializations
         </h1>
         <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-3xl">
-          Select the specialization that best matches your career direction.
+          Select one or more specializations that match your career direction. You can pick multiple.
         </p>
       </div>
 
@@ -111,18 +124,18 @@ export default function SpecializationSelection() {
       )}
 
       {/* Specialization Cards Grid */}
-      {isLoadingSpecializations ? (
+      {isActuallyLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3, 4, 5].map((n) => (
+          {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="h-40 rounded-2xl bg-slate-200 animate-pulse" />
           ))}
         </div>
-      ) : error ? (
+      ) : (specializationError || error) ? (
         <div className="rounded-3xl border border-red-200 bg-red-50/50 p-8 text-center space-y-4">
           <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
           <div>
             <h3 className="text-base font-extrabold text-slate-900">We couldn't load specializations</h3>
-            <p className="text-xs font-semibold text-slate-500 mt-1">{error}</p>
+            <p className="text-xs font-semibold text-slate-500 mt-1">{specializationError || error}</p>
           </div>
           <button
             type="button"
@@ -135,19 +148,31 @@ export default function SpecializationSelection() {
         </div>
       ) : (
         <div 
-          role="radiogroup"
-          aria-label="Select your specialization"
+          role="group"
+          aria-label="Select your specializations"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
         >
+          {specializations.length === 0 && customSpecs.length === 0 && (
+            <div className="col-span-full py-8 px-6 text-center bg-white border border-slate-200 rounded-2xl shadow-2xs">
+              <p className="text-sm font-extrabold text-slate-800">
+                No subcategories created under "{industryTitle}" yet.
+              </p>
+              <p className="text-xs font-medium text-slate-500 mt-1">
+                You can add your desired specialization role using the button below.
+              </p>
+            </div>
+          )}
+
+          {/* Catalog Specializations from Backend */}
           {specializations.map((spec) => {
-            const isSelected = specializationPayload?.source === 'catalog' && specializationPayload?.id === spec.id;
+            const isSelected = selectedSpecializations.some(s => String(s.id) === String(spec.id));
             return (
               <div
                 key={spec.id}
-                role="radio"
+                role="checkbox"
                 aria-checked={isSelected}
                 tabIndex={0}
-                onClick={() => selectCatalogSpecialization(spec.id)}
+                onClick={() => toggleCatalogSpecialization(spec.id)}
                 onKeyDown={(e) => handleCardKeyDown(e, spec.id)}
                 className={`relative rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between select-none min-h-[160px] focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/20 ${
                   isSelected
@@ -163,82 +188,94 @@ export default function SpecializationSelection() {
                     {getSpecializationIcon(spec.icon)}
                   </div>
 
-                  {isSelected && (
-                    <div className="h-6 w-6 rounded-full border-2 border-[#3B00FF] bg-[#3B00FF] text-white flex items-center justify-center shadow-2xs">
-                      <Check className="h-3.5 w-3.5 stroke-[3]" />
-                    </div>
-                  )}
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                    isSelected 
+                      ? 'border-[#3B00FF] bg-[#3B00FF] text-white shadow-2xs' 
+                      : 'border-slate-300 bg-white text-transparent'
+                  }`}>
+                    <Check className="h-3.5 w-3.5 stroke-[3]" />
+                  </div>
                 </div>
 
                 {/* Content */}
                 <div className="space-y-1 flex-1">
-                  <h3 className={`text-sm font-extrabold leading-snug ${
+                  <h3 className={`text-sm font-extrabold leading-snug line-clamp-2 ${
                     isSelected ? 'text-[#3B00FF]' : 'text-slate-900'
                   }`}>
                     {spec.name}
                   </h3>
-                  <p className="text-xs font-medium text-slate-500 leading-relaxed">
-                    {spec.description}
-                  </p>
+                  {spec.description && (
+                    <p className="text-xs font-medium text-slate-500 leading-relaxed line-clamp-3">
+                      {spec.description}
+                    </p>
+                  )}
                 </div>
               </div>
             );
           })}
 
-          {/* Selected Custom Specialization Card OR Add Custom Role Card */}
-          {isCustomSpecialization ? (
+          {/* Selected Custom Specializations */}
+          {customSpecs.map((cs) => (
             <div
-              role="radio"
+              key={cs.title}
+              role="checkbox"
               aria-checked={true}
               tabIndex={0}
-              onClick={() => setShowCustomRoleModal(true)}
               className="relative rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between select-none min-h-[160px] bg-white border-2 border-[#3B00FF] shadow-md shadow-[#3B00FF]/10 ring-2 ring-[#3B00FF]/10 focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/20"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="h-10 w-10 rounded-xl bg-[#3B00FF] text-white flex items-center justify-center">
                   <Check className="h-5 w-5 stroke-[3]" />
                 </div>
-                <div className="h-6 w-6 rounded-full border-2 border-[#3B00FF] bg-[#3B00FF] text-white flex items-center justify-center shadow-2xs">
-                  <Check className="h-3.5 w-3.5 stroke-[3]" />
-                </div>
+                <button
+                  type="button"
+                  title="Remove custom specialization"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeSpecialization(cs.title);
+                  }}
+                  className="h-6 w-6 rounded-full border-2 border-[#3B00FF] bg-[#3B00FF] text-white hover:bg-red-500 hover:border-red-500 flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5 stroke-[3]" />
+                </button>
               </div>
 
               <div className="space-y-1 flex-1">
                 <span className="text-[10px] font-extrabold uppercase text-[#3B00FF] tracking-wider">
                   Custom Specialization
                 </span>
-                <h3 className="text-sm font-extrabold text-[#3B00FF]">
-                  {customSpecTitle}
+                <h3 className="text-sm font-extrabold text-[#3B00FF] line-clamp-2">
+                  {cs.title}
                 </h3>
               </div>
             </div>
-          ) : (
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setShowCustomRoleModal(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setShowCustomRoleModal(true);
-                }
-              }}
-              className="rounded-2xl border-2 border-dashed border-[#3B00FF]/60 bg-white p-5 sm:p-6 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center select-none min-h-[160px] hover:border-[#3B00FF] hover:bg-indigo-50/20 focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/20"
-            >
-              <div className="h-10 w-10 rounded-xl bg-[#E0E7FF] text-[#3B00FF] flex items-center justify-center mb-3">
-                <Plus className="h-5 w-5 stroke-[3]" />
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900">
-                Add Custom Role
-              </h3>
-              <p className="text-[11px] font-medium text-slate-400 mt-1">
-                Can't find your specialty? Add it here.
-              </p>
+          ))}
+
+          {/* Add Custom Role Card */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowCustomRoleModal(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowCustomRoleModal(true);
+              }
+            }}
+            className="rounded-2xl border-2 border-dashed border-[#3B00FF]/60 bg-white p-5 sm:p-6 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center select-none min-h-[160px] hover:border-[#3B00FF] hover:bg-indigo-50/20 focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/20"
+          >
+            <div className="h-10 w-10 rounded-xl bg-[#E0E7FF] text-[#3B00FF] flex items-center justify-center mb-3">
+              <Plus className="h-5 w-5 stroke-[3]" />
             </div>
-          )}
+            <h3 className="text-sm font-extrabold text-slate-900">
+              Add Custom Role
+            </h3>
+            <p className="text-[11px] font-medium text-slate-400 mt-1">
+              Can't find your specialty? Add it here.
+            </p>
+          </div>
         </div>
       )}
     </div>
   );
 }
-

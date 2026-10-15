@@ -43,13 +43,19 @@ export async function fetchCategories(params = {}) {
   }
 }
 
-export async function fetchAllCategoriesForSelect() {
+export async function fetchAllCategoriesForSelect(options = {}) {
   try {
-    const url = `${API_BASE_URL}/accounts/admin/categories/?page_size=200`;
+    const isTopLevelOnly = typeof options === 'boolean' ? options : Boolean(options?.topLevelOnly);
+    const parentQuery = isTopLevelOnly ? '&parent_id=null' : '';
+    const url = `${API_BASE_URL}/accounts/admin/categories/?page_size=200${parentQuery}`;
     const response = await fetchWithAuth(url);
     if (!response.ok) return [];
     const data = await response.json();
-    return data.results || (Array.isArray(data) ? data : []);
+    const list = data.results || (Array.isArray(data) ? data : []);
+    if (isTopLevelOnly) {
+      return list.filter(c => !c.parent && !c.parent_name);
+    }
+    return list;
   } catch (error) {
     console.error("fetchAllCategoriesForSelect error:", error);
     return [];

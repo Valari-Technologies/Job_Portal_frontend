@@ -8,7 +8,7 @@ export default function ApplicationCard({ application, onViewDetails, onUpdateSt
   const candidate = application?.candidate || {};
   const job = application?.job || {};
 
-  const skillsList = Array.isArray(candidate.skills) ? candidate.skills.slice(0, 3) : ['Python', 'React.js', 'Django'];
+  const skillsList = Array.isArray(candidate.skills) ? candidate.skills.slice(0, 3) : [];
 
   return (
     <div 
@@ -34,9 +34,11 @@ export default function ApplicationCard({ application, onViewDetails, onUpdateSt
             <h3 className="text-base font-black text-slate-900 leading-tight truncate group-hover:text-[#3B00FF] transition-colors">
               {candidate.full_name || 'Candidate Name'}
             </h3>
-            <p className="text-xs font-bold text-[#3B00FF] truncate mt-0.5">
-              {candidate.headline || 'Senior Full-Stack Developer'}
-            </p>
+            {candidate.headline && (
+              <p className="text-xs font-bold text-[#3B00FF] truncate mt-0.5">
+                {candidate.headline}
+              </p>
+            )}
             <span className="text-[10px] font-semibold text-slate-400 mt-0.5 block">
               Applied {application.applied_time || 'recently'}
             </span>
@@ -117,10 +119,12 @@ export default function ApplicationCard({ application, onViewDetails, onUpdateSt
       {/* Candidate Contact & Details Row */}
       <div className="space-y-1.5 text-xs font-semibold text-slate-600">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-slate-400" />
-            {candidate.location || 'Chennai, Tamil Nadu'}
-          </span>
+          {candidate.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-slate-400" />
+              {candidate.location}
+            </span>
+          )}
           {candidate.phone && (
             <span className="flex items-center gap-1 font-mono text-[11px] text-slate-700">
               <Phone className="h-3 w-3 text-emerald-600" />

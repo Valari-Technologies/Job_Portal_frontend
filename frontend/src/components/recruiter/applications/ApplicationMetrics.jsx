@@ -3,11 +3,11 @@ import { Users, TrendingUp, Clock } from 'lucide-react';
 export default function ApplicationMetrics({ metrics }) {
   const totalActive = metrics?.total_active !== undefined ? metrics.total_active : 0;
   const conversionRate = metrics?.conversion_rate !== null && metrics?.conversion_rate !== undefined 
-    ? `${metrics.conversion_rate}%` 
+    ? (String(metrics.conversion_rate).endsWith('%') ? metrics.conversion_rate : `${metrics.conversion_rate}%`) 
     : '—';
   const avgTimeToHire = metrics?.average_time_to_hire_days !== null && metrics?.average_time_to_hire_days !== undefined 
     ? `${metrics.average_time_to_hire_days}d` 
-    : '—';
+    : (metrics?.avg_time_to_hire || '—');
 
   return (
     <div className="bg-white rounded-2xl border border-slate-150 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-around gap-4 sm:gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-150 shadow-xs">

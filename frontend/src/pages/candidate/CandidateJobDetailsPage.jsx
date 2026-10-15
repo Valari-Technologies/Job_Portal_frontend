@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
+import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
 import { getCandidateJobDetails, toggleSavedCandidateJob, applyCandidateJob } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
 import { 
@@ -25,6 +26,8 @@ export default function CandidateJobDetailsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
+  const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
+  const [currentProfileCompletion, setCurrentProfileCompletion] = useState(40);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,6 +71,19 @@ export default function CandidateJobDetailsPage() {
     if (!job || job.hasApplied || isApplying) return;
 
     try {
+      const { getCandidateProfile } = await import('../../services/candidate/candidateProfileService');
+      const profile = await getCandidateProfile();
+      const comp = profile?.completionPercentage || 0;
+      if (comp < 70) {
+        setCurrentProfileCompletion(comp);
+        setShowProfileCompletionModal(true);
+        return;
+      }
+    } catch (err) {
+      console.warn('Profile completion check warning:', err);
+    }
+
+    try {
       const resumes = await getCandidateResumes();
       if (!resumes || resumes.length === 0) {
         setShowResumeRequiredModal(true);
@@ -87,6 +103,11 @@ export default function CandidateJobDetailsPage() {
         workMode: job.workMode,
         salary: job.salary
       });
+      if (res && res.requireProfileCompletion) {
+        setCurrentProfileCompletion(res.currentCompletion || 40);
+        setShowProfileCompletionModal(true);
+        return;
+      }
       if (res && res.requireResume) {
         setShowResumeRequiredModal(true);
         return;
@@ -358,6 +379,14 @@ export default function CandidateJobDetailsPage() {
         isOpen={showResumeRequiredModal}
         onClose={() => setShowResumeRequiredModal(false)}
         job={job}
+      />
+
+      {/* Profile Completion Required Centered Modal */}
+      <ProfileCompletionRequiredModal
+        isOpen={showProfileCompletionModal}
+        onClose={() => setShowProfileCompletionModal(false)}
+        job={job}
+        currentCompletion={currentProfileCompletion}
       />
     </CandidateLayout>
   );

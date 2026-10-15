@@ -103,11 +103,12 @@ export function getRecruiterApplicationsData() {
     rawApps = [];
   }
 
-  // Strict company filter to guarantee no cross-company leak
+  // Multi-tenant check: if app specifies company and recruiter has company, verify match
   if (myCompany) {
     rawApps = rawApps.filter(app => {
       const appComp = (app.job?.company_name || app.company_name || '').toLowerCase().trim();
-      return appComp === myCompany;
+      if (!appComp) return true;
+      return appComp === myCompany || appComp.includes(myCompany) || myCompany.includes(appComp);
     });
   }
 

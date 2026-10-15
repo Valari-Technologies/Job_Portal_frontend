@@ -23,8 +23,9 @@ export default function AddCategoryForm() {
   useEffect(() => {
     async function loadParents() {
       setLoadingParents(true);
-      const list = await fetchAllCategoriesForSelect();
-      setParentOptions(list);
+      const list = await fetchAllCategoriesForSelect({ topLevelOnly: true });
+      const topLevelParents = (list || []).filter(c => !c.parent && !c.parent_name);
+      setParentOptions(topLevelParents);
       setLoadingParents(false);
     }
     loadParents();
@@ -155,7 +156,7 @@ export default function AddCategoryForm() {
             <option value="">None (Top Level Category)</option>
             {parentOptions.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.parent_name ? `${cat.parent_name} > ${cat.name}` : cat.name}
+                {cat.name}
               </option>
             ))}
           </select>

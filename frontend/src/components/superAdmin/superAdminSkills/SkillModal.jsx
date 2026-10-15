@@ -159,7 +159,7 @@ export default function SkillModal({ isOpen, onClose, skillToEdit = null, onSucc
                 <option value="">None / Select Category</option>
                 {categoryOptions.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.parent_name ? `${cat.parent_name} > ${cat.name}` : cat.name}
+                    {cat.parent_name ? `${cat.name} (Sub-category of ${cat.parent_name})` : cat.name}
                   </option>
                 ))}
               </select>

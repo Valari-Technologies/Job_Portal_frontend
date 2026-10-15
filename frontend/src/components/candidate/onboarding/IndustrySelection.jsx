@@ -11,7 +11,24 @@ import {
   Plus, 
   AlertCircle, 
   RotateCcw,
-  Check
+  Check,
+  Code,
+  BarChart,
+  Cloud,
+  Layers,
+  Headphones,
+  HeartPulse,
+  FlaskConical,
+  Building2,
+  Activity,
+  Calculator,
+  TrendingUp,
+  FileCheck,
+  Film,
+  PenTool,
+  BookOpen,
+  Coffee,
+  Briefcase
 } from 'lucide-react';
 
 export default function IndustrySelection() {
@@ -26,27 +43,39 @@ export default function IndustrySelection() {
     refetchData
   } = useCandidateOnboarding();
 
-  // Dynamic Icon Resolver matching Figma reference design
+  // Dynamic Icon Resolver matching Super Admin categories
   const getIndustryIcon = (iconName) => {
     switch (iconName) {
-      case 'Laptop':
-        return <Laptop className="h-6 w-6" />;
-      case 'ShieldCross':
-        return <Shield className="h-6 w-6" />;
+      case 'Laptop': return <Laptop className="h-6 w-6" />;
+      case 'Shield':
+      case 'ShieldCross': return <Shield className="h-6 w-6" />;
       case 'Bank':
-        return <Landmark className="h-6 w-6" />;
-      case 'Palette':
-        return <Palette className="h-6 w-6" />;
-      case 'GraduationCap':
-        return <GraduationCap className="h-6 w-6" />;
+      case 'Landmark': return <Landmark className="h-6 w-6" />;
+      case 'Palette': return <Palette className="h-6 w-6" />;
+      case 'GraduationCap': return <GraduationCap className="h-6 w-6" />;
       case 'Storefront':
-        return <ShoppingBag className="h-6 w-6" />;
+      case 'ShoppingBag': return <ShoppingBag className="h-6 w-6" />;
       case 'RoboticArm':
-        return <Wrench className="h-6 w-6" />;
-      case 'Utensils':
-        return <Utensils className="h-6 w-6" />;
-      default:
-        return <Laptop className="h-6 w-6" />;
+      case 'Wrench': return <Wrench className="h-6 w-6" />;
+      case 'Utensils': return <Utensils className="h-6 w-6" />;
+      case 'Code': return <Code className="h-6 w-6" />;
+      case 'BarChart': return <BarChart className="h-6 w-6" />;
+      case 'Cloud': return <Cloud className="h-6 w-6" />;
+      case 'Layers': return <Layers className="h-6 w-6" />;
+      case 'Headphones': return <Headphones className="h-6 w-6" />;
+      case 'HeartPulse': return <HeartPulse className="h-6 w-6" />;
+      case 'FlaskConical': return <FlaskConical className="h-6 w-6" />;
+      case 'Building2': return <Building2 className="h-6 w-6" />;
+      case 'Activity': return <Activity className="h-6 w-6" />;
+      case 'Calculator': return <Calculator className="h-6 w-6" />;
+      case 'TrendingUp': return <TrendingUp className="h-6 w-6" />;
+      case 'FileCheck': return <FileCheck className="h-6 w-6" />;
+      case 'Film': return <Film className="h-6 w-6" />;
+      case 'PenTool': return <PenTool className="h-6 w-6" />;
+      case 'BookOpen': return <BookOpen className="h-6 w-6" />;
+      case 'Coffee': return <Coffee className="h-6 w-6" />;
+      case 'Briefcase': return <Briefcase className="h-6 w-6" />;
+      default: return <Laptop className="h-6 w-6" />;
     }
   };
 
@@ -110,7 +139,7 @@ export default function IndustrySelection() {
           className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5"
         >
           {industries.map((ind) => {
-            const isSelected = industryPayload?.source === 'catalog' && industryPayload?.id === ind.id;
+            const isSelected = industryPayload?.source === 'catalog' && String(industryPayload?.id) === String(ind.id);
             return (
               <div
                 key={ind.id}
@@ -133,7 +162,7 @@ export default function IndustrySelection() {
                 </div>
 
                 {/* Industry Label */}
-                <h3 className={`text-xs sm:text-sm font-extrabold leading-snug ${
+                <h3 className={`text-xs sm:text-sm font-extrabold leading-snug line-clamp-2 ${
                   isSelected ? 'text-[#3B00FF]' : 'text-slate-900'
                 }`}>
                   {ind.name}
@@ -142,7 +171,7 @@ export default function IndustrySelection() {
             );
           })}
 
-          {/* 9th Card: Add Custom Industry or Selected Custom Industry Card */}
+          {/* Add Custom Industry or Selected Custom Industry Card */}
           {isCustomSelected ? (
             <div
               role="radio"
@@ -187,4 +216,3 @@ export default function IndustrySelection() {
     </div>
   );
 }
-

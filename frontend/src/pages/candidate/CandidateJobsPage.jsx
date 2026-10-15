@@ -9,6 +9,7 @@ import CandidateJobCard from '../../components/candidate/jobs/CandidateJobCard';
 import CandidateJobsMobileFilterSheet from '../../components/candidate/jobs/CandidateJobsMobileFilterSheet';
 import CandidateQuickApplyDialog from '../../components/candidate/jobs/CandidateQuickApplyDialog';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
+import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
 import CandidateJobsEmptyState from '../../components/candidate/jobs/CandidateJobsEmptyState';
 import { getCandidateJobs, toggleSavedCandidateJob, applyCandidateJob } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
@@ -41,6 +42,7 @@ export default function CandidateJobsPage() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [selectedJobForApply, setSelectedJobForApply] = useState(null);
   const [resumeRequiredJob, setResumeRequiredJob] = useState(null);
+  const [profileCompletionRequiredData, setProfileCompletionRequiredData] = useState(null);
 
   // 1. Check Onboarding Guard (Allow direct page access)
   useEffect(() => {
@@ -159,6 +161,17 @@ export default function CandidateJobsPage() {
 
   const handleInitiateQuickApply = async (job) => {
     try {
+      const { getCandidateProfile } = await import('../../services/candidate/candidateProfileService');
+      const profile = await getCandidateProfile();
+      if ((profile?.completionPercentage || 0) < 70) {
+        setProfileCompletionRequiredData({ job, currentCompletion: profile?.completionPercentage || 0 });
+        return;
+      }
+    } catch (err) {
+      console.warn('Profile completion check warning:', err);
+    }
+
+    try {
       const resumes = await getCandidateResumes();
       if (!resumes || resumes.length === 0) {
         setResumeRequiredJob(job);
@@ -184,6 +197,11 @@ export default function CandidateJobsPage() {
       salary: jobObj?.salary
     };
     const res = await applyCandidateJob(jobId, payload);
+    if (res && res.requireProfileCompletion) {
+      setSelectedJobForApply(null);
+      setProfileCompletionRequiredData({ job: jobObj, currentCompletion: res.currentCompletion || 0 });
+      return res;
+    }
     if (res && res.requireResume) {
       setSelectedJobForApply(null);
       setResumeRequiredJob(jobObj);
@@ -326,6 +344,14 @@ export default function CandidateJobsPage() {
         isOpen={Boolean(resumeRequiredJob)}
         onClose={() => setResumeRequiredJob(null)}
         job={resumeRequiredJob}
+      />
+
+      {/* Profile Completion Required Centered Modal */}
+      <ProfileCompletionRequiredModal
+        isOpen={Boolean(profileCompletionRequiredData)}
+        onClose={() => setProfileCompletionRequiredData(null)}
+        job={profileCompletionRequiredData?.job}
+        currentCompletion={profileCompletionRequiredData?.currentCompletion}
       />
     </CandidateLayout>
   );

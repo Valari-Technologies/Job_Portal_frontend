@@ -23,25 +23,28 @@ export function getRecruiterCandidatesData() {
     const candidateId = String(cand.id || app.id || '1');
 
     if (!candidateMap.has(candidateId)) {
-      const topSkills = cand.skills || cand.top_skills || ['React', 'JavaScript', 'Python', 'Node.js', 'Tailwind CSS'];
+      const topSkills = cand.skills || cand.top_skills || [];
       const candidateObj = {
         id: candidateId,
-        full_name: cand.full_name || 'DSS',
-        email: cand.email || 'ds@gmail.com',
-        phone: cand.phone || '6365865876',
-        location: cand.location || 'Chennai, Tamil Nadu',
+        full_name: cand.full_name || 'Candidate',
+        email: cand.email || '',
+        phone: cand.phone || '',
+        location: cand.location || '',
         profile_photo: cand.profile_photo || null,
-        initials: cand.initials || 'DSS',
-        current_title: cand.headline || cand.current_title || 'Senior Full-Stack Developer',
+        initials: cand.initials || (cand.full_name ? cand.full_name.charAt(0).toUpperCase() : 'C'),
+        current_title: cand.headline || cand.current_title || '',
         top_skills: topSkills,
-        total_experience_years: 4,
-        willing_to_relocate: true
+        total_experience_years: (cand.experiences && cand.experiences.length > 0) ? cand.experiences.length : 0,
+        willing_to_relocate: false,
+        experiences: cand.experiences || [],
+        education: cand.education || cand.educations || [],
+        links: cand.links || {}
       };
 
       const jobObj = {
-        id: String(app.job?.id || '8'),
-        title: app.job?.title || 'SDE',
-        company_name: app.job?.company_name || 'MSD Tech'
+        id: String(app.job?.id || ''),
+        title: app.job?.title || 'Job Position',
+        company_name: app.job?.company_name || 'Company'
       };
 
       candidateMap.set(candidateId, {
@@ -65,12 +68,15 @@ export function getRecruiterCandidatesData() {
         company_name: jobObj.company_name,
         status: app.status || 'APPLIED',
         applied_at: app.applied_at || new Date().toISOString(),
-        applied_time: app.applied_time || 'Oct 9, 2026',
+        applied_time: app.applied_time || 'Recently',
         candidate_note: app.candidate_note,
-        resume_filename: app.resume_filename || 'DHANAIS RESUME (1)',
-        resume_url: app.resume_url || 'http://127.0.0.1:8000/media/resumes/DHANAIS_RESUME_1.pdf',
-        experience: '4+ Years',
-        skills: topSkills
+        resume_filename: app.resume_filename || '',
+        resume_url: app.resume_url || '',
+        experience: candidateObj.total_experience_years > 0 ? `${candidateObj.total_experience_years} Years` : 'Fresher',
+        skills: topSkills,
+        experiences: candidateObj.experiences,
+        education: candidateObj.education,
+        links: candidateObj.links
       });
     }
   });
@@ -80,7 +86,7 @@ export function getRecruiterCandidatesData() {
   return {
     candidates,
     filters: {
-      jobs: appsData.filters?.jobs || [{ id: '8', title: 'SDE' }],
+      jobs: appsData.filters?.jobs || [],
       statuses: appsData.filters?.statuses || ['APPLIED', 'VIEWED', 'SHORTLISTED', 'INTERVIEW', 'SELECTED', 'REJECTED']
     },
     pagination: {
@@ -95,57 +101,48 @@ export function getRecruiterCandidatesData() {
 export async function getCandidateDetailsData(candidateId, applicationId) {
   const { candidates } = getRecruiterCandidatesData();
   const item = candidates.find(c => 
+    String(c.application_id) === String(applicationId) ||
     String(c.candidate?.id) === String(candidateId) || 
-    String(c.id) === String(candidateId) || 
-    String(c.application_id) === String(applicationId)
+    String(c.id) === String(candidateId)
   ) || candidates[0];
 
   if (item) {
     const cand = item.candidate || item;
+    const candLinks = cand.links || item.links || {};
     return {
       candidate: {
         id: cand.id,
-        full_name: cand.full_name,
-        current_title: cand.current_title || cand.headline,
-        location: cand.location,
-        willing_to_relocate: true,
-        email: cand.email,
-        phone: cand.phone,
-        profile_photo: cand.profile_photo,
-        initials: cand.initials || 'DSS',
-        linkedin_url: 'https://linkedin.com/in/dss-developer',
-        github_url: 'https://github.com/DSS'
+        full_name: cand.full_name || 'Candidate',
+        current_title: cand.current_title || cand.headline || '',
+        location: cand.location || '',
+        willing_to_relocate: false,
+        email: cand.email || '',
+        phone: cand.phone || '',
+        profile_photo: cand.profile_photo || null,
+        initials: cand.initials || (cand.full_name ? cand.full_name.charAt(0).toUpperCase() : 'C'),
+        linkedin_url: candLinks.linkedin || cand.linkedin_url || '',
+        github_url: candLinks.github || cand.github_url || ''
       },
       application_status: item.application_status || item.status || 'APPLIED',
-      resume_url: item.resume_url || 'http://127.0.0.1:8000/media/resumes/DHANAIS_RESUME_1.pdf',
-      resume_filename: item.resume_filename || 'DHANAIS RESUME (1)',
-      skills: cand.top_skills || item.skills || ['React', 'JavaScript', 'Python', 'Django', 'Tailwind CSS'],
-      experiences: [
-        {
-          title: cand.current_title || 'Senior Full-Stack Developer',
-          company: 'MSD Tech Solutions',
-          dates: '2023 - Present',
-          description: 'Designed and deployed scalable web applications using React, JavaScript, and Python backend services.'
-        },
-        {
-          title: 'Frontend Developer',
-          company: 'CSC Global',
-          dates: '2021 - 2023',
-          description: 'Built customer portals, responsive UIs, and integrated REST APIs.'
-        }
-      ],
-      educations: [
-        {
-          degree: 'B.Tech in Information Technology',
-          school: 'Anna University, Chennai',
-          year: '2017 - 2021'
-        }
-      ],
+      resume_url: item.resume_url || '',
+      resume_filename: item.resume_filename || '',
+      skills: cand.skills || cand.top_skills || [],
+      experiences: (cand.experiences && cand.experiences.length > 0) ? cand.experiences.map(e => ({
+        title: e.roleTitle || e.title || e.designation || '',
+        company: e.companyName || e.company || '',
+        dates: e.period || e.dates || '',
+        description: e.description || ''
+      })) : [],
+      educations: (cand.education || cand.educations || []).map(e => ({
+        degree: e.degree || '',
+        institution: e.institution || e.school || e.college || '',
+        dates: e.period || e.year || e.dates || ''
+      })),
       history: [
         {
           title: 'Application Submitted',
-          date: item.applied_time || 'Oct 9, 2026',
-          description: `Applied for ${item.job?.title || item.applied_job_title || 'SDE'}`
+          date: item.applied_time || 'Recently',
+          description: `Applied for ${item.job?.title || item.applied_job_title || 'Position'}`
         }
       ],
       feedback: []

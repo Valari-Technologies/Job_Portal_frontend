@@ -29,6 +29,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
   const [jobActivity, setJobActivity] = useState({});
   const [districts, setDistricts] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
   // Refactored Side Panel Drawer states
   const [panelOpen, setPanelOpen] = useState(false);
@@ -79,6 +80,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
           setJobActivity(j);
           setDistricts(d);
           setActivities(a);
+          setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           setError(null);
         }
       } catch (err) {
@@ -224,7 +226,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-slate-650 bg-slate-100 rounded-lg px-3.5 py-1.5 border border-slate-200">
-            Last updated: Today, 10:45 AM
+            Last updated: Today, {lastUpdated}
           </span>
           <button 
             onClick={handleExportCSV}

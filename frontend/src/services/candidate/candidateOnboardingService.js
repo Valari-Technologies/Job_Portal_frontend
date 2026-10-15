@@ -1,30 +1,40 @@
 /**
  * Candidate Onboarding Service
  * 
- * Manages taxonomy fetching, selection persistence, and onboarding progress for Candidates.
- * Supports structured catalog and custom selections without polluting global taxonomy.
+ * Manages live taxonomy fetching from Super Admin Categories API, selection persistence,
+ * and onboarding progress for Candidates.
+ * Strictly uses live backend data without any hardcoded/mock catalogs.
  * 
  * Payload Structure:
  * {
- *   industry: { source: "catalog" | "custom", id: string | null, title: string },
- *   specialization: { source: "catalog" | "custom", id: string | null, title: string }
+ *   industry: { source: "catalog" | "custom", id: number | string | null, title: string },
+ *   specializations: Array<{ source: "catalog" | "custom", id: number | string | null, title: string }>,
+ *   isCompleted: boolean,
+ *   updatedAt: string
  * }
  * 
- * Django Backend Integration Boundary:
- * - GET /api/v1/industries/ -> List active industries with icons and IDs
- * - GET /api/v1/departments/?industry_id={id} -> List active specializations for selected industry
- * - GET /api/v1/candidates/onboarding/status/ -> Fetch candidate onboarding completion state
- * - POST /api/v1/candidates/onboarding/select/ -> Save candidate industry & specialization payload
+ * Backend API Endpoints:
+ * - GET /accounts/job-categories/?parent_id=null -> Active parent industries created by Super Admin
+ * - GET /accounts/job-categories/?parent_id={id} -> Active subcategories (specializations) for that industry
+ * - PATCH /accounts/candidate/profile/ -> Sync onboarding choices into candidate extra_data
  */
 
-import { getAuthenticatedUser } from '../auth/adminAuthService';
+import { getAuthenticatedUser, fetchWithAuth, getAuthItem } from '../auth/adminAuthService';
 
+const API_BASE_URL = 'http://127.0.0.1:8000';
 const ONBOARDING_STORAGE_KEY = 'statejobz_candidate_onboarding';
 
 function getOnboardingStorageKey() {
   try {
+    const candidateUserStr = getAuthItem('candidate_auth_user');
+    if (candidateUserStr) {
+      const user = JSON.parse(candidateUserStr);
+      if (user && user.email) {
+        return `${ONBOARDING_STORAGE_KEY}_${user.email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+      }
+    }
     const user = getAuthenticatedUser();
-    if (user && user.email) {
+    if (user && user.email && user.role === 'CANDIDATE') {
       return `${ONBOARDING_STORAGE_KEY}_${user.email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
     }
   } catch {
@@ -33,79 +43,145 @@ function getOnboardingStorageKey() {
   return ONBOARDING_STORAGE_KEY;
 }
 
-// Exact Industry Catalog matching Figma reference design (Step 1)
-const DEV_INDUSTRIES_CATALOG = [
-  { id: 'ind_it', name: 'Information Technology', shortName: 'IT', icon: 'Laptop', is_active: true },
-  { id: 'ind_healthcare', name: 'Healthcare', shortName: 'Healthcare', icon: 'ShieldCross', is_active: true },
-  { id: 'ind_finance', name: 'Finance', shortName: 'Finance', icon: 'Bank', is_active: true },
-  { id: 'ind_creative', name: 'Creative & Design', shortName: 'Creative & Design', icon: 'Palette', is_active: true },
-  { id: 'ind_education', name: 'Education', shortName: 'Education', icon: 'GraduationCap', is_active: true },
-  { id: 'ind_sales', name: 'Sales & Retail', shortName: 'Sales & Retail', icon: 'Storefront', is_active: true },
-  { id: 'ind_manufacturing', name: 'Manufacturing', shortName: 'Manufacturing', icon: 'RoboticArm', is_active: true },
-  { id: 'ind_hospitality', name: 'Hospitality', shortName: 'Hospitality', icon: 'Utensils', is_active: true }
-];
+/**
+ * Smart dynamic icon resolver based on Category / Subcategory title and description
+ */
+export function resolveCategoryIcon(name = '', description = '') {
+  const text = `${name} ${description}`.toLowerCase();
 
-// Exact Specialization Catalog matching Figma reference design (Step 2)
-const DEV_SPECIALIZATIONS_CATALOG = {
-  ind_it: [
-    { id: 'spec_dev', name: 'Software Development', icon: 'Code', description: 'Building applications, systems, and tools. Includes Backend, Frontend, and Full-Stack roles.' },
-    { id: 'spec_data', name: 'Data Science & AI', icon: 'BarChart', description: 'Extracting insights from data, machine learning, and AI engineering.' },
-    { id: 'spec_cyber', name: 'Cybersecurity', icon: 'Shield', description: 'Protecting systems, networks, and data from digital attacks. Ethical hacking and analysis.' },
-    { id: 'spec_cloud', name: 'Cloud Computing', icon: 'Cloud', description: 'Designing and managing cloud infrastructure. AWS, Azure, GCP architecture and DevOps.' },
-    { id: 'spec_product', name: 'Product Management', icon: 'Layers', description: 'Agile product strategy, user experience roadmaps, and feature prioritization.' },
-    { id: 'spec_support', name: 'IT Support & Systems', icon: 'Headphones', description: 'System administration, network infrastructure, and helpdesk technical support.' }
-  ],
-  ind_healthcare: [
-    { id: 'spec_clinical', name: 'Clinical & Nursing', icon: 'HeartPulse', description: 'Patient care, registered nursing, and specialized clinical medical practice.' },
-    { id: 'spec_pharma', name: 'Pharmacy & Research', icon: 'FlaskConical', description: 'Pharmaceutical formulation, drug safety, and clinical trial research.' },
-    { id: 'spec_hosp_admin', name: 'Hospital Administration', icon: 'Building2', description: 'Medical facility operations, healthcare records, and patient administration.' },
-    { id: 'spec_med_tech', name: 'Medical Technology', icon: 'Activity', description: 'Laboratory technology, radiology imaging, and diagnostic equipment operations.' }
-  ],
-  ind_finance: [
-    { id: 'spec_banking', name: 'Banking & Financial Services', icon: 'Landmark', description: 'Retail banking, commercial lending, credit analysis, and branch operations.' },
-    { id: 'spec_accounting', name: 'Accounting & Taxation', icon: 'Calculator', description: 'Corporate auditing, tax compliance, GST filing, and financial reporting.' },
-    { id: 'spec_investment', name: 'Investment & Wealth Management', icon: 'TrendingUp', description: 'Portfolio management, equity research, mutual funds, and trading.' },
-    { id: 'spec_risk', name: 'Risk & Compliance', icon: 'FileCheck', description: 'Financial risk modeling, fraud prevention, and regulatory compliance.' }
-  ],
-  ind_creative: [
-    { id: 'spec_design', name: 'Graphic & UI/UX Design', icon: 'Palette', description: 'Digital product design, visual identity, user research, and wireframing.' },
-    { id: 'spec_multimedia', name: 'Animation & Motion Graphics', icon: 'Film', description: '3D animation, video production, visual effects, and motion design.' },
-    { id: 'spec_writing', name: 'Content Writing & Journalism', icon: 'PenTool', description: 'Copywriting, technical documentation, editorial writing, and SEO content.' }
-  ],
-  ind_education: [
-    { id: 'spec_teaching', name: 'Academic Instruction & Teaching', icon: 'GraduationCap', description: 'Primary, secondary, and higher education academic instruction.' },
-    { id: 'spec_elearning', name: 'E-Learning & Curriculum Design', icon: 'BookOpen', description: 'Instructional design, online course creation, and educational technology.' }
-  ],
-  ind_sales: [
-    { id: 'spec_retail_ops', name: 'Retail Operations & Store Mgmt', icon: 'Storefront', description: 'Store management, visual merchandising, and inventory control.' },
-    { id: 'spec_b2b_sales', name: 'B2B & Enterprise Sales', icon: 'Briefcase', description: 'Business development, client acquisition, and key account management.' }
-  ],
-  ind_manufacturing: [
-    { id: 'spec_mech_eng', name: 'Mechanical & Production Eng', icon: 'Wrench', description: 'CAD/CAM design, assembly line management, and plant operations.' },
-    { id: 'spec_qa_qc', name: 'Quality Assurance & Control', icon: 'CheckCircle2', description: 'Six Sigma quality control, ISO standards, and manufacturing testing.' }
-  ],
-  ind_hospitality: [
-    { id: 'spec_hotel', name: 'Hotel & Resort Management', icon: 'Utensils', description: 'Front desk management, housekeeping, and guest hospitality services.' },
-    { id: 'spec_food_bev', name: 'Food & Beverage Operations', icon: 'Coffee', description: 'Culinary management, fine dining, kitchen operations, and catering.' }
-  ]
-};
+  // Tech / Software / IT
+  if (text.includes('code') || text.includes('software') || text.includes('developer') || text.includes('programming') || text.includes('frontend') || text.includes('backend') || text.includes('full stack')) {
+    return 'Code';
+  }
+  if (text.includes('data') || text.includes('ai') || text.includes('machine learning') || text.includes('analytics') || text.includes('intelligence')) {
+    return 'BarChart';
+  }
+  if (text.includes('cyber') || text.includes('security') || text.includes('protection') || text.includes('firewall')) {
+    return 'Shield';
+  }
+  if (text.includes('cloud') || text.includes('devops') || text.includes('aws') || text.includes('azure') || text.includes('infrastructure')) {
+    return 'Cloud';
+  }
+  if (text.includes('it') || text.includes('tech') || text.includes('computer') || text.includes('system') || text.includes('information technology')) {
+    return 'Laptop';
+  }
+  if (text.includes('support') || text.includes('helpdesk') || text.includes('customer service') || text.includes('call center')) {
+    return 'Headphones';
+  }
 
-function loadStoredOnboarding() {
+  // Healthcare / Medical
+  if (text.includes('health') || text.includes('medic') || text.includes('clinic') || text.includes('doctor') || text.includes('nurse') || text.includes('care')) {
+    return 'HeartPulse';
+  }
+  if (text.includes('pharma') || text.includes('lab') || text.includes('drug') || text.includes('biotech') || text.includes('research')) {
+    return 'FlaskConical';
+  }
+  if (text.includes('hospital') || text.includes('facility')) {
+    return 'Building2';
+  }
+
+  // Finance / Banking / Accounts
+  if (text.includes('bank') || text.includes('financ') || text.includes('wealth')) {
+    return 'Landmark';
+  }
+  if (text.includes('account') || text.includes('tax') || text.includes('audit') || text.includes('cpa') || text.includes('gst')) {
+    return 'Calculator';
+  }
+  if (text.includes('invest') || text.includes('trading') || text.includes('stock') || text.includes('equity') || text.includes('growth')) {
+    return 'TrendingUp';
+  }
+  if (text.includes('risk') || text.includes('compliance') || text.includes('legal') || text.includes('law')) {
+    return 'FileCheck';
+  }
+
+  // Design / Creative / Media
+  if (text.includes('design') || text.includes('art') || text.includes('ui') || text.includes('ux') || text.includes('graphic') || text.includes('creative')) {
+    return 'Palette';
+  }
+  if (text.includes('film') || text.includes('video') || text.includes('motion') || text.includes('animat') || text.includes('media')) {
+    return 'Film';
+  }
+  if (text.includes('writing') || text.includes('content') || text.includes('journal') || text.includes('copywrit') || text.includes('editor')) {
+    return 'PenTool';
+  }
+
+  // Education / Teaching
+  if (text.includes('educat') || text.includes('teach') || text.includes('school') || text.includes('college') || text.includes('academic') || text.includes('professor')) {
+    return 'GraduationCap';
+  }
+  if (text.includes('learn') || text.includes('course') || text.includes('curriculum') || text.includes('book')) {
+    return 'BookOpen';
+  }
+
+  // Sales / Retail / Marketing
+  if (text.includes('store') || text.includes('retail') || text.includes('merchandis') || text.includes('shop')) {
+    return 'Storefront';
+  }
+  if (text.includes('sales') || text.includes('business development') || text.includes('marketing') || text.includes('commerce') || text.includes('b2b')) {
+    return 'Briefcase';
+  }
+
+  // Manufacturing / Engineering / Construction
+  if (text.includes('manufactur') || text.includes('mechanic') || text.includes('plant') || text.includes('robot') || text.includes('industry')) {
+    return 'Wrench';
+  }
+  if (text.includes('build') || text.includes('construct') || text.includes('civil') || text.includes('architect')) {
+    return 'Building2';
+  }
+
+  // Hospitality / Food / Travel
+  if (text.includes('hotel') || text.includes('resort') || text.includes('hospitality') || text.includes('travel') || text.includes('tour')) {
+    return 'Utensils';
+  }
+  if (text.includes('food') || text.includes('beverag') || text.includes('culinary') || text.includes('kitchen') || text.includes('restaurant') || text.includes('chef') || text.includes('coffee')) {
+    return 'Coffee';
+  }
+
+  // Product / General
+  if (text.includes('product') || text.includes('agile') || text.includes('scrum') || text.includes('strat')) {
+    return 'Layers';
+  }
+
+  return 'Laptop';
+}
+
+export function loadStoredOnboarding() {
   try {
     const key = getOnboardingStorageKey();
     const raw = localStorage.getItem(key);
     if (!raw) {
       return {
         industry: null,
+        specializations: [],
         specialization: null,
         isCompleted: false,
         updatedAt: null
       };
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    let industry = parsed?.industry || null;
+    if (industry && industry.source === 'catalog' && (isNaN(Number(industry.id)) || String(industry.id).startsWith('ind_'))) {
+      industry = null;
+    }
+
+    // Backward compatibility normalization: ensure specializations is an array
+    let specializations = [];
+    if (Array.isArray(parsed?.specializations)) {
+      specializations = parsed.specializations;
+    } else if (parsed?.specialization && typeof parsed.specialization === 'object') {
+      specializations = [parsed.specialization];
+    }
+    specializations = specializations.filter(s => s && (s.source !== 'catalog' || (!isNaN(Number(s.id)) && !String(s.id).startsWith('spec_'))));
+
+    return {
+      ...parsed,
+      industry,
+      specializations,
+      specialization: specializations[0] || null
+    };
   } catch (err) {
     console.error('Error reading Candidate onboarding storage:', err);
-    return { industry: null, specialization: null, isCompleted: false, updatedAt: null };
+    return { industry: null, specializations: [], specialization: null, isCompleted: false, updatedAt: null };
   }
 }
 
@@ -113,7 +189,11 @@ function saveOnboardingToStorage(data) {
   try {
     const key = getOnboardingStorageKey();
     const current = loadStoredOnboarding();
-    const updated = { ...current, ...data, updatedAt: new Date().toISOString() };
+    const updated = { 
+      ...current, 
+      ...data, 
+      updatedAt: new Date().toISOString() 
+    };
     localStorage.setItem(key, JSON.stringify(updated));
     return updated;
   } catch (err) {
@@ -122,32 +202,104 @@ function saveOnboardingToStorage(data) {
 }
 
 /**
- * Fetch active catalogue industries
+ * Async background sync to candidate profile extra_data in Django
  */
-export async function getActiveIndustries() {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  return DEV_INDUSTRIES_CATALOG.filter(ind => ind.is_active);
+async function syncOnboardingToBackend(onboardingData) {
+  try {
+    const user = getAuthenticatedUser();
+    if (!user) return;
+    await fetchWithAuth(`${API_BASE_URL}/accounts/candidate/profile/`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        onboarding: onboardingData
+      })
+    });
+  } catch (err) {
+    console.warn('Could not sync onboarding selection to backend profile:', err);
+  }
 }
 
 /**
- * Fetch specializations for an industry ID
+ * Fetch active parent industries created by Super Admin (parent_id = null)
+ * ZERO hardcoded data.
+ */
+export async function getActiveIndustries() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/job-categories/?parent_id=null`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch industries (${response.status})`);
+    }
+    const data = await response.json();
+    const list = Array.isArray(data) ? data : (data.results || []);
+
+    return list.map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description || '',
+      icon: resolveCategoryIcon(item.name, item.description),
+      is_active: item.is_active,
+      children_count: item.children_count || 0,
+      skills_count: item.skills_count || 0,
+      jobs_count: item.jobs_count || 0
+    }));
+  } catch (err) {
+    console.error('Error fetching live industries:', err);
+    throw err;
+  }
+}
+
+/**
+ * Fetch active subcategories (Specializations) for a selected parent industry ID
+ * ZERO hardcoded data.
  */
 export async function getSpecializationsByIndustry(industryId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  if (!industryId) return [];
-  return DEV_SPECIALIZATIONS_CATALOG[industryId] || [];
+  if (!industryId || isNaN(Number(industryId)) || String(industryId).startsWith('ind_')) return [];
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/job-categories/?parent_id=${industryId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch specializations (${response.status})`);
+    }
+    const data = await response.json();
+    const list = Array.isArray(data) ? data : (data.results || []);
+
+    return list.map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description || `Specialization in ${item.name}`,
+      icon: resolveCategoryIcon(item.name, item.description),
+      parent: item.parent,
+      parent_name: item.parent_name,
+      is_active: item.is_active,
+      children_count: item.children_count || 0,
+      skills_count: item.skills_count || 0,
+      jobs_count: item.jobs_count || 0
+    }));
+  } catch (err) {
+    console.error(`Error fetching specializations for industry ${industryId}:`, err);
+    throw err;
+  }
+}
+
+/**
+ * Synchronous check if candidate onboarding is completed
+ */
+export function isCandidateOnboardingCompleted() {
+  const data = loadStoredOnboarding();
+  const hasSpecialization = (Array.isArray(data.specializations) && data.specializations.length > 0) || Boolean(data.specialization);
+  return Boolean(data.isCompleted && data.industry && hasSpecialization);
 }
 
 /**
  * Get Candidate onboarding completion status
  */
 export async function getCandidateOnboardingStatus() {
-  await new Promise(resolve => setTimeout(resolve, 100));
   const data = loadStoredOnboarding();
+  const hasSpecialization = (Array.isArray(data.specializations) && data.specializations.length > 0) || Boolean(data.specialization);
   return {
-    isCompleted: Boolean(data.isCompleted && data.industry && data.specialization),
+    isCompleted: Boolean(data.isCompleted && data.industry && hasSpecialization),
     industry: data.industry,
-    specialization: data.specialization
+    specializations: data.specializations || (data.specialization ? [data.specialization] : []),
+    specialization: data.specialization || (data.specializations ? data.specializations[0] : null)
   };
 }
 
@@ -155,15 +307,14 @@ export async function getCandidateOnboardingStatus() {
  * Get current saved candidate onboarding payload
  */
 export async function getCandidateOnboardingSelection() {
-  await new Promise(resolve => setTimeout(resolve, 100));
   return loadStoredOnboarding();
 }
 
 /**
  * Save Candidate Industry selection payload (Step 1)
+ * Single selection of industry. If changed, clears specializations.
  */
 export async function saveCandidateIndustry(industryPayload) {
-  await new Promise(resolve => setTimeout(resolve, 150));
   const current = loadStoredOnboarding();
   
   // Clear specialization if industry title/id changed
@@ -172,24 +323,51 @@ export async function saveCandidateIndustry(industryPayload) {
     (industryPayload.source === 'custom' && current.industry.title === industryPayload.title)
   );
 
-  const specialization = isSameIndustry ? current.specialization : null;
+  const specializations = isSameIndustry ? (current.specializations || []) : [];
+  const specialization = specializations[0] || null;
 
   const updated = saveOnboardingToStorage({
     industry: industryPayload,
+    specializations,
     specialization,
     isCompleted: false
   });
+
+  // Sync to backend profile
+  syncOnboardingToBackend({
+    industry: industryPayload,
+    specializations,
+    isCompleted: false
+  });
+
   return updated;
 }
 
 /**
- * Save Candidate Specialization payload (Step 2)
+ * Save Candidate Specializations payload (Step 2 - Multiple Selections)
+ */
+export async function saveCandidateSpecializations(specializationsList) {
+  const list = Array.isArray(specializationsList) ? specializationsList : (specializationsList ? [specializationsList] : []);
+  const updated = saveOnboardingToStorage({
+    specializations: list,
+    specialization: list[0] || null,
+    isCompleted: list.length > 0
+  });
+
+  // Sync to backend profile
+  syncOnboardingToBackend({
+    specializations: list,
+    specialization: list[0] || null,
+    isCompleted: list.length > 0
+  });
+
+  return updated;
+}
+
+/**
+ * Backward compatible single-specialization saver
  */
 export async function saveCandidateSpecialization(specializationPayload) {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  const updated = saveOnboardingToStorage({
-    specialization: specializationPayload,
-    isCompleted: true
-  });
-  return updated;
+  const list = specializationPayload ? [specializationPayload] : [];
+  return saveCandidateSpecializations(list);
 }

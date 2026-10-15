@@ -511,15 +511,27 @@ export async function submitCandidateApplication(payload) {
     console.warn("Candidate profile resolution warning:", err);
   }
 
+  // Enforce minimum 70% profile completion rule
+  const completionPercentage = fullProfile?.completionPercentage || 0;
+  if (completionPercentage < 70) {
+    return {
+      success: false,
+      requireProfileCompletion: true,
+      currentCompletion: completionPercentage,
+      requiredCompletion: 70,
+      message: `Your profile completion is currently ${completionPercentage}%. A minimum profile completion of 70% is required to apply for jobs. Please complete your profile first.`
+    };
+  }
+
   const candidateProfile = {
     id: fullProfile?.id || candidateUser?.id || 'cand_1',
     full_name: fullProfile?.fullName || candidateUser?.fullName || (candidateUser?.first_name || candidateUser?.last_name ? `${candidateUser.first_name || ''} ${candidateUser.last_name || ''}`.trim() : '') || 'Candidate',
-    headline: fullProfile?.headline || 'Candidate',
+    headline: fullProfile?.headline || '',
     email: fullProfile?.email || candidateUser?.email || '',
     phone: fullProfile?.phone || candidateUser?.mobileNumber || candidateUser?.phone_number || '',
-    location: fullProfile?.location || candidateUser?.location || 'Tamil Nadu',
+    location: fullProfile?.location || candidateUser?.location || '',
     profile_photo: fullProfile?.avatarUrl || candidateUser?.profilePhotoUrl || candidateUser?.profile_photo || null,
-    profile_completion: fullProfile?.completionPercentage || 0,
+    profile_completion: completionPercentage,
     initials: (fullProfile?.fullName || candidateUser?.fullName || 'C').charAt(0).toUpperCase(),
     skills: (fullProfile?.skills && fullProfile.skills.length > 0) ? fullProfile.skills : [],
     experiences: (fullProfile?.experiences && fullProfile.experiences.length > 0) ? fullProfile.experiences : [],
@@ -539,6 +551,15 @@ export async function submitCandidateApplication(payload) {
       createdAppRecord = normalizeApplicationRecord(resData);
     } else {
       const errData = await response.json().catch(() => ({}));
+      if (errData?.require_profile_completion || String(errData?.detail || '').toLowerCase().includes('profile completion')) {
+        return {
+          success: false,
+          requireProfileCompletion: true,
+          currentCompletion: errData.profile_completion || completionPercentage,
+          requiredCompletion: 70,
+          message: errData.detail || `A minimum profile completion of 70% is required to apply for jobs. Please complete your profile first.`
+        };
+      }
       if (errData?.resume_id) {
         return {
           success: false,
@@ -546,9 +567,17 @@ export async function submitCandidateApplication(payload) {
           message: Array.isArray(errData.resume_id) ? errData.resume_id[0] : errData.resume_id
         };
       }
+      return {
+        success: false,
+        message: errData?.detail || 'Failed to submit application. Please check requirements.'
+      };
     }
   } catch (err) {
-    console.warn("Backend application submit warning, fallback to local application:", err);
+    console.warn("Backend application submit warning:", err);
+    return {
+      success: false,
+      message: 'Failed to connect to application server. Please try again.'
+    };
   }
 
   // Always sync local applications storage so Recruiter HR portal can view applicants seamlessly

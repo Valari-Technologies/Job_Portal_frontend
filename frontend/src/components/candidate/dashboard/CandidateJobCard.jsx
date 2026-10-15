@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Bookmark, Zap, CheckCircle2 } from 'lucide-react';
 import { toggleSavedJob, quickApplyJob } from '../../../services/candidate/candidateDashboardService';
+import ProfileCompletionRequiredModal from '../jobs/ProfileCompletionRequiredModal';
 
 export default function CandidateJobCard({ job, onStatusChange }) {
   const [isSaved, setIsSaved] = useState(job.isSaved || false);
   const [isApplied, setIsApplied] = useState(job.isApplied || false);
   const [isApplying, setIsApplying] = useState(false);
+  const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState(40);
 
   const handleToggleBookmark = async (e) => {
     e.stopPropagation();
@@ -31,7 +34,12 @@ export default function CandidateJobCard({ job, onStatusChange }) {
         title: job.title,
         company: job.company
       });
-      if (res.success) {
+      if (res && res.requireProfileCompletion) {
+        setProfileCompletion(res.currentCompletion || 40);
+        setShowProfileCompletionModal(true);
+        return;
+      }
+      if (res && res.success) {
         setIsApplied(true);
         if (onStatusChange) onStatusChange();
       }
@@ -155,6 +163,13 @@ export default function CandidateJobCard({ job, onStatusChange }) {
         </button>
       </div>
 
+      {/* Profile Completion Required Modal */}
+      <ProfileCompletionRequiredModal
+        isOpen={showProfileCompletionModal}
+        onClose={() => setShowProfileCompletionModal(false)}
+        job={job}
+        currentCompletion={profileCompletion}
+      />
     </div>
   );
 }

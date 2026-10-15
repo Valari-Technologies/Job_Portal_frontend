@@ -11,6 +11,13 @@ export default function SuperAdminCategories({ onToast }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toastFeedback, setToastFeedback] = useState(null);
+
+  const triggerToast = (msg, type = 'success') => {
+    if (onToast) onToast(msg);
+    setToastFeedback({ msg, type });
+    setTimeout(() => setToastFeedback(null), 5000);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -95,19 +102,19 @@ export default function SuperAdminCategories({ onToast }) {
       const nextStatus = !targetCategory.is_active;
       const res = await updateCategoryStatus(targetCategory.id, nextStatus);
       if (res.success) {
-        if (onToast) onToast(res.data.message || `Category ${nextStatus ? 'activated' : 'deactivated'}.`);
+        triggerToast(res.data?.message || `Category ${nextStatus ? 'activated' : 'deactivated'}.`, 'success');
         loadCategoriesData();
       } else {
-        if (onToast) onToast(res.message || 'Status update failed.');
+        triggerToast(res.message || 'Status update failed.', 'error');
       }
     } else if (actionType === 'delete') {
       const res = await deleteCategory(targetCategory.id);
       if (res.success) {
-        if (onToast) onToast(`Category "${targetCategory.name}" deleted.`);
+        triggerToast(`Category "${targetCategory.name}" deleted.`, 'success');
         if (selectedCategory?.id === targetCategory.id) setSelectedCategory(null);
         loadCategoriesData();
       } else {
-        if (onToast) onToast(res.message || 'Deletion failed.');
+        triggerToast(res.message || 'Cannot delete category. Jobs or subcategories are using it.', 'error');
       }
     }
 
@@ -116,6 +123,16 @@ export default function SuperAdminCategories({ onToast }) {
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      {/* Toast Feedback Alert Banner */}
+      {toastFeedback && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between text-xs font-bold animate-fadeIn shadow-sm ${
+          toastFeedback.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
+          <span>{toastFeedback.msg}</span>
+          <button onClick={() => setToastFeedback(null)} className="p-1 cursor-pointer hover:opacity-75 font-black">✕</button>
+        </div>
+      )}
+
       {/* Title Header */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-slate-150 pb-5">
         <div>

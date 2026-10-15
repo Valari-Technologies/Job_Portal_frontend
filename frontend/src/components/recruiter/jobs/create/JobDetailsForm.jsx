@@ -1,7 +1,8 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowRight } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
+import { getActiveIndustries, getSpecializationsByIndustry } from '../../../../services/candidate/candidateOnboardingService';
 
 export default function JobDetailsForm() {
   const navigate = useNavigate();
@@ -11,39 +12,82 @@ export default function JobDetailsForm() {
   const [errors, setErrors] = useState({});
   const [newSkillInput, setNewSkillInput] = useState('');
 
-  // Sample taxonomy options for catalog selects
-  const industryOptions = ['Information Technology', 'Hospitality & Hotels', 'Retail & Sales', 'Healthcare', 'Manufacturing'];
-  const departmentMap = {
-    'Information Technology': ['Engineering', 'Product', 'Design', 'QA & Testing'],
-    'Hospitality & Hotels': ['Front Desk', 'Housekeeping', 'Food & Beverage', 'Kitchen'],
-    'Retail & Sales': ['Store Operations', 'Sales & Marketing', 'Inventory'],
-    'Healthcare': ['Clinical', 'Nursing', 'Administration'],
-    'Manufacturing': ['Production', 'Quality Assurance', 'Supply Chain']
-  };
-  const categoryMap = {
-    'Engineering': ['Frontend Engineer', 'Backend Engineer', 'Full Stack Engineer', 'Mobile Developer'],
-    'Product': ['Product Manager', 'UX Researcher', 'Product Analyst'],
-    'Design': ['UI/UX Designer', 'Graphic Designer'],
-    'QA & Testing': ['QA Engineer', 'Automation Tester']
-  };
+  // Live Super Admin taxonomy state
+  const [industriesList, setIndustriesList] = useState([]);
+  const [subcategoriesList, setSubcategoriesList] = useState([]);
+  const [isLoadingIndustries, setIsLoadingIndustries] = useState(true);
+  const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
 
-  const currentDepartments = formState.industry ? (departmentMap[formState.industry] || ['General']) : [];
-  const currentCategories = formState.department ? (categoryMap[formState.department] || ['General Role']) : [];
+  // Fetch live parent categories (Industries) from Super Admin
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchIndustries() {
+      setIsLoadingIndustries(true);
+      try {
+        const list = await getActiveIndustries();
+        if (isMounted) {
+          setIndustriesList(list || []);
+        }
+      } catch (err) {
+        console.error('Failed to load industries from Super Admin:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingIndustries(false);
+        }
+      }
+    }
+    fetchIndustries();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Fetch live subcategories (Job Categories / Specializations) when industry changes or on initial restore
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchSubcategories() {
+      if (!formState.industry) {
+        setSubcategoriesList([]);
+        return;
+      }
+
+      // Find selected industry ID
+      const selectedInd = industriesList.find(
+        i => i.name === formState.industry || String(i.id) === String(formState.industryId) || String(i.id) === String(formState.industry)
+      );
+
+      if (!selectedInd?.id) {
+        return;
+      }
+
+      setIsLoadingSubcategories(true);
+      try {
+        const subList = await getSpecializationsByIndustry(selectedInd.id);
+        if (isMounted) {
+          setSubcategoriesList(subList || []);
+        }
+      } catch (err) {
+        console.error('Failed to load subcategories for industry:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingSubcategories(false);
+        }
+      }
+    }
+
+    if (industriesList.length > 0) {
+      fetchSubcategories();
+    }
+    return () => { isMounted = false; };
+  }, [formState.industry, formState.industryId, industriesList]);
 
   const handleIndustryChange = (val) => {
+    const selectedInd = industriesList.find(i => i.name === val || String(i.id) === String(val));
     setFormState(prev => ({
       ...prev,
-      industry: val,
-      department: '',
-      category: ''
-    }));
-  };
-
-  const handleDepartmentChange = (val) => {
-    setFormState(prev => ({
-      ...prev,
-      department: val,
-      category: ''
+      industry: selectedInd ? selectedInd.name : val,
+      industryId: selectedInd?.id || null,
+      category: '',
+      categoryId: null,
+      department: ''
     }));
   };
 
@@ -100,7 +144,6 @@ export default function JobDetailsForm() {
 
     if (!formState.title.trim()) newErrors.title = 'Job Title is required.';
     if (!formState.industry) newErrors.industry = 'Industry is required.';
-    if (!formState.department) newErrors.department = 'Department is required.';
     if (!formState.category) newErrors.category = 'Job Category is required.';
     if (!formState.workMode) newErrors.workMode = 'Work Mode is required.';
     if (!formState.employmentType) newErrors.employmentType = 'Employment Type is required.';
@@ -186,54 +229,49 @@ export default function JobDetailsForm() {
             {errors.title && <p className="text-xs text-red-500 font-semibold">{errors.title}</p>}
           </div>
 
-          {/* Industry */}
+          {/* Industry (Super Admin Parent Categories) */}
           <div className="space-y-1.5" data-error={!!errors.industry}>
             <label htmlFor="industry" className="text-[13px] font-bold text-slate-700">Industry *</label>
             <select
               id="industry"
+              disabled={isLoadingIndustries}
               value={formState.industry}
               onChange={(e) => handleIndustryChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
             >
-              <option value="">Select Industry</option>
-              {industryOptions.map((ind) => (
-                <option key={ind} value={ind}>{ind}</option>
+              <option value="">{isLoadingIndustries ? 'Loading industries...' : 'Select Industry'}</option>
+              {industriesList.map((ind) => (
+                <option key={ind.id} value={ind.name}>{ind.name}</option>
               ))}
             </select>
             {errors.industry && <p className="text-xs text-red-500 font-semibold">{errors.industry}</p>}
           </div>
 
-          {/* Department */}
-          <div className="space-y-1.5" data-error={!!errors.department}>
-            <label htmlFor="department" className="text-[13px] font-bold text-slate-700">Department *</label>
-            <select
-              id="department"
-              disabled={!formState.industry}
-              value={formState.department}
-              onChange={(e) => handleDepartmentChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-            >
-              <option value="">Select Department</option>
-              {currentDepartments.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
-            {errors.department && <p className="text-xs text-red-500 font-semibold">{errors.department}</p>}
-          </div>
-
-          {/* Job Category */}
-          <div className="space-y-1.5 md:col-span-2" data-error={!!errors.category}>
-            <label htmlFor="category" className="text-[13px] font-bold text-slate-700">Job Category *</label>
+          {/* Job Category (Super Admin Subcategories / Specializations) */}
+          <div className="space-y-1.5" data-error={!!errors.category}>
+            <label htmlFor="category" className="text-[13px] font-bold text-slate-700">Job Category / Specialization *</label>
             <select
               id="category"
-              disabled={!formState.department}
+              disabled={!formState.industry || isLoadingSubcategories}
               value={formState.category}
-              onChange={(e) => setFormState(prev => ({ ...prev, category: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                const matched = subcategoriesList.find(c => c.name === val || String(c.id) === String(val));
+                setFormState(prev => ({
+                  ...prev,
+                  category: val,
+                  categoryId: matched?.id || null
+                }));
+              }}
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
             >
-              <option value="">Select Job Category</option>
-              {currentCategories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+              <option value="">
+                {!formState.industry 
+                  ? 'Select Industry first' 
+                  : (isLoadingSubcategories ? 'Loading specializations...' : (subcategoriesList.length === 0 ? 'No specializations under this industry' : 'Select Job Category'))}
+              </option>
+              {subcategoriesList.map((cat) => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
               ))}
             </select>
             {errors.category && <p className="text-xs text-red-500 font-semibold">{errors.category}</p>}

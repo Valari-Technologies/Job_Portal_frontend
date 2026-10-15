@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
+import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
 import { getCandidateJobDetails } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes, submitCandidateApplication } from '../../services/candidate/candidateApplicationsService';
 import { ArrowLeft, MoreVertical, FileText, ExternalLink, ArrowRight, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
@@ -22,6 +23,8 @@ export default function CandidateQuickApplyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
+  const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState(40);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,6 +88,12 @@ export default function CandidateQuickApplyPage() {
       };
 
       const res = await submitCandidateApplication(payload);
+
+      if (res && res.requireProfileCompletion) {
+        setProfileCompletion(res.currentCompletion || 40);
+        setShowProfileCompletionModal(true);
+        return;
+      }
 
       if (res && res.requireResume) {
         setShowResumeRequiredModal(true);
@@ -340,6 +349,14 @@ export default function CandidateQuickApplyPage() {
         isOpen={showResumeRequiredModal}
         onClose={() => setShowResumeRequiredModal(false)}
         job={job}
+      />
+
+      {/* Profile Completion Required Centered Modal */}
+      <ProfileCompletionRequiredModal
+        isOpen={showProfileCompletionModal}
+        onClose={() => setShowProfileCompletionModal(false)}
+        job={job}
+        currentCompletion={profileCompletion}
       />
     </CandidateLayout>
   );

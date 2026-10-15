@@ -1,3 +1,4 @@
+import { Outlet } from 'react-router-dom';
 import { useCandidateOnboarding } from '../../../context/CandidateOnboardingContext';
 import AddCustomIndustryModal from './AddCustomIndustryModal';
 import AddCustomRoleModal from './AddCustomRoleModal';
@@ -11,6 +12,7 @@ export default function CandidateOnboardingLayout({ children }) {
     showCustomRoleModal,
     setShowCustomRoleModal,
     industryPayload,
+    selectedSpecializations,
     specializationPayload,
     selectCustomIndustry,
     selectCustomSpecialization,
@@ -30,7 +32,10 @@ export default function CandidateOnboardingLayout({ children }) {
   };
 
   const isIndustrySelected = Boolean(industryPayload && (industryPayload.id || industryPayload.title));
-  const isSpecializationSelected = Boolean(specializationPayload && (specializationPayload.id || specializationPayload.title));
+  const isSpecializationSelected = Boolean(
+    (Array.isArray(selectedSpecializations) && selectedSpecializations.length > 0) ||
+    Boolean(specializationPayload && (specializationPayload.id || specializationPayload.title))
+  );
 
   const isPrimaryDisabled = currentStep === 1 
     ? (!isIndustrySelected || isSaving)
@@ -53,7 +58,7 @@ export default function CandidateOnboardingLayout({ children }) {
       {/* 2. Main Page Content Container */}
       <main className="flex-1 flex flex-col justify-start px-4 sm:px-8 py-8 sm:py-12">
         <div className="mx-auto w-full max-w-6xl">
-          {children}
+          {children || <Outlet />}
         </div>
       </main>
 
@@ -83,7 +88,13 @@ export default function CandidateOnboardingLayout({ children }) {
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             }`}
           >
-            <span>{isSaving ? 'Processing...' : 'Continue'}</span>
+            <span>
+              {isSaving ? 'Processing...' : (
+                currentStep === 2 && selectedSpecializations?.length > 1
+                  ? `Continue (${selectedSpecializations.length} selected)`
+                  : 'Continue'
+              )}
+            </span>
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

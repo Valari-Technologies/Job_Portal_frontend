@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import logoJobz from '../../assets/logo-jobz.png';
 import { loginAdmin, loginWithGoogle, clearAllAuthTokens } from '../../services/auth/adminAuthService';
+import { isCandidateOnboardingCompleted } from '../../services/candidate/candidateOnboardingService';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -141,7 +142,8 @@ export default function Login() {
           const role = response.role;
           if (activeRole === 'candidate') {
             if (role === 'CANDIDATE') {
-              window.location.href = '/candidate/dashboard';
+              const isCompleted = isCandidateOnboardingCompleted();
+              window.location.href = isCompleted ? '/candidate/dashboard' : '/candidate/onboarding/industry';
               return;
             } else {
               clearAllAuthTokens();
@@ -202,7 +204,8 @@ export default function Login() {
         const role = response.role;
         if (activeRole === 'candidate') {
           if (role === 'CANDIDATE') {
-            window.location.href = '/candidate/dashboard';
+            const isCompleted = isCandidateOnboardingCompleted();
+            window.location.href = isCompleted ? '/candidate/dashboard' : '/candidate/onboarding/industry';
             return;
           } else {
             clearAllAuthTokens();

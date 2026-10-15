@@ -469,16 +469,20 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           {/* Candidate Skills Pill Grid */}
           <div className="space-y-3">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Candidate Skills</h4>
-            <div className="flex flex-wrap gap-1.5">
-              {(candidate.skills || ['Python', 'JavaScript', 'React.js', 'Django REST Framework', 'PostgreSQL', 'Docker', 'Tailwind CSS', 'Git']).map((sk, i) => (
-                <span 
-                  key={i} 
-                  className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold"
-                >
-                  {sk}
-                </span>
-              ))}
-            </div>
+            {candidate.skills && candidate.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {candidate.skills.map((sk, i) => (
+                  <span 
+                    key={i} 
+                    className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold"
+                  >
+                    {sk}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs font-medium text-slate-450 italic py-1">No skills listed by candidate.</p>
+            )}
           </div>
 
           {/* Candidate Work Experiences */}
