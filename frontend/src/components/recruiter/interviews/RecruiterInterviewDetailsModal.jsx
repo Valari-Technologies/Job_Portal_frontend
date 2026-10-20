@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, Clock, Video, MapPin, Phone } from 'lucide-react';
+import { X, Calendar, Clock, Video, MapPin, Phone, CheckCircle2 } from 'lucide-react';
 
 export default function RecruiterInterviewDetailsModal({ interview, onClose, onUpdateStatus }) {
   const [resultNote, setResultNote] = useState(interview?.notes || '');
@@ -9,6 +9,7 @@ export default function RecruiterInterviewDetailsModal({ interview, onClose, onU
 
   const candidate = interview.candidate || {};
   const job = interview.job || {};
+  const isPast = Boolean(interview.isPast || interview.status === 'COMPLETED');
 
   const handleSaveResult = (e) => {
     e.preventDefault();
@@ -36,6 +37,14 @@ export default function RecruiterInterviewDetailsModal({ interview, onClose, onU
 
         {/* Content */}
         <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Status Alert if concluded */}
+          {isPast && (
+            <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200 flex items-center gap-2.5 text-xs font-bold text-emerald-800">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>Meeting session has concluded. Please evaluate candidate and record your hiring decision.</span>
+            </div>
+          )}
+
           {/* Applied Role */}
           <div className="bg-indigo-50/70 rounded-xl p-4 border border-indigo-100 space-y-1">
             <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider block">Position Role</span>

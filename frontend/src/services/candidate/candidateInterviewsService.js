@@ -131,22 +131,49 @@ export function formatInterviewDate(startsAtStr, endsAtStr, timezoneStr = 'IST')
   }
 }
 
+export function parseInterviewDateTime(scheduledDate, scheduledTime) {
+  if (!scheduledDate) return null;
+  const d = String(scheduledDate).trim();
+  const t = String(scheduledTime || '').trim();
+
+  if (d.includes('T') && !t) {
+    const res = new Date(d);
+    if (!isNaN(res.getTime())) return res;
+  }
+
+  let hours = 10;
+  let minutes = 0;
+  if (t) {
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (m) {
+      hours = parseInt(m[1], 10);
+      minutes = parseInt(m[2], 10);
+      const ampm = m[3] ? m[3].toUpperCase() : null;
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+    }
+  }
+
+  const parts = d.split('-');
+  if (parts.length === 3) {
+    const dt = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), hours, minutes);
+    if (!isNaN(dt.getTime())) return dt;
+  }
+
+  const fallback = new Date(`${d} ${t}`);
+  if (!isNaN(fallback.getTime())) return fallback;
+  return null;
+}
+
 export function normalizeInterviewRecord(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
   const id = String(raw.id || raw.pk || '');
   let statusConfig = getInterviewStatusConfig(raw.status || 'SCHEDULED');
 
-  let combinedDateTime = raw.scheduled_date || raw.scheduled_at || '';
-  if (raw.scheduled_date && raw.scheduled_time) {
-    const timeVal = String(raw.scheduled_time).trim();
-    if (timeVal.includes('T')) {
-      combinedDateTime = timeVal;
-    } else {
-      combinedDateTime = `${raw.scheduled_date}T${timeVal}`;
-    }
-  }
-  const dateInfo = formatInterviewDate(combinedDateTime, null);
+  const parsedDateObj = parseInterviewDateTime(raw.scheduled_date || raw.scheduled_at, raw.scheduled_time);
+  let combinedDateTime = parsedDateObj ? parsedDateObj.toISOString() : (raw.scheduled_date || raw.scheduled_at || '');
+  const dateInfo = formatInterviewDate(parsedDateObj || combinedDateTime, null);
 
   const rawType = String(raw.interview_type || raw.mode || 'ONLINE').toUpperCase();
   const isOnline = rawType.includes('ONLINE') || rawType.includes('MEET') || rawType.includes('ZOOM');
@@ -162,30 +189,54 @@ export function normalizeInterviewRecord(raw) {
   let isLive = false;
   let isPast = false;
 
-  if (combinedDateTime && (raw.status === 'SCHEDULED' || raw.status === 'UPCOMING' || !raw.status)) {
-    const scheduledTimeMs = new Date(combinedDateTime).getTime();
+  const rawStatus = String(raw.status || 'SCHEDULED').toUpperCase();
+  if (rawStatus === 'COMPLETED') {
+    isPast = true;
+    statusConfig = {
+      label: 'Completed',
+      badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+      color: '#475569'
+    };
+  } else if (parsedDateObj && (rawStatus === 'SCHEDULED' || rawStatus === 'UPCOMING' || !raw.status)) {
+    const scheduledTimeMs = parsedDateObj.getTime();
     const nowMs = Date.now();
-    if (!isNaN(scheduledTimeMs)) {
-      const diffMinutes = (scheduledTimeMs - nowMs) / (1000 * 60);
+    const diffMinutes = (scheduledTimeMs - nowMs) / (1000 * 60);
 
-      // If within 15 minutes before scheduled start time, up to 90 minutes after:
-      if (diffMinutes <= 15 && diffMinutes >= -90) {
-        isLive = true;
-        statusConfig = {
-          label: '● Live Now',
-          badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-400/20 font-black animate-pulse',
-          color: '#10B981'
-        };
-      } else if (diffMinutes < -90) {
+    // If within 15 minutes before scheduled start time, up to 90 minutes after:
+    if (diffMinutes <= 15 && diffMinutes >= -90) {
+      isLive = true;
+      statusConfig = {
+        label: '● Live Now',
+        badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-400/20 font-black animate-pulse',
+        color: '#10B981'
+      };
+    } else if (diffMinutes < -90) {
+      isPast = true;
+      statusConfig = {
+        label: 'Completed',
+        badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+        color: '#475569'
+      };
+    }
+  } else if (raw.scheduled_date) {
+    try {
+      const dOnly = new Date(raw.scheduled_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dOnly.setHours(0, 0, 0, 0);
+      if (dOnly < today) {
         isPast = true;
         statusConfig = {
-          label: 'Past Session',
-          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+          label: 'Completed',
+          badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
           color: '#475569'
         };
       }
-    }
+    } catch {}
   }
+
+  const canJoin = !isPast && rawStatus !== 'COMPLETED' && rawStatus !== 'CANCELLED';
+  const canReschedule = !isPast && rawStatus !== 'COMPLETED' && rawStatus !== 'CANCELLED';
 
   return {
     id,
@@ -200,7 +251,7 @@ export function normalizeInterviewRecord(raw) {
     isOnline,
     isLive,
     isPast,
-    status: isLive ? 'LIVE' : (raw.status || 'SCHEDULED'),
+    status: isLive ? 'LIVE' : (isPast ? 'COMPLETED' : rawStatus),
     statusConfig,
     provider,
     scheduledDate: raw.scheduled_date || '',
@@ -211,11 +262,11 @@ export function normalizeInterviewRecord(raw) {
     location: typeof raw.location === 'object' ? raw.location : { address: raw.location || 'Company Office' },
     meetingLink,
     joinUrl: meetingLink,
-    canJoin: true,
+    canJoin,
     phoneNumber: raw.phone_number || '',
     notes: raw.notes || '',
     result: raw.result || 'PENDING',
-    canReschedule: !isPast && raw.status !== 'COMPLETED'
+    canReschedule
   };
 }
 
@@ -348,12 +399,16 @@ export async function getCandidateInterviewSummary() {
   }
 
   const { interviews } = await getCandidateInterviews();
+  const upcoming = interviews.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+  const completed = interviews.filter(i => i.isPast || i.status === 'COMPLETED');
+  const cancelled = interviews.filter(i => i.status === 'CANCELLED');
+
   return {
     totalInterviews: interviews.length,
-    scheduledCount: interviews.length,
-    upcomingCount: interviews.length,
-    completedCount: 0,
-    cancelledCount: 0
+    scheduledCount: upcoming.length,
+    upcomingCount: upcoming.length,
+    completedCount: completed.length,
+    cancelledCount: cancelled.length
   };
 }
 
@@ -378,7 +433,8 @@ export async function requestInterviewReschedule(interviewId, payload) {
 
 export async function getCandidateNextInterview() {
   const { interviews } = await getCandidateInterviews({ tab: 'upcoming' });
-  return interviews.length > 0 ? interviews[0] : null;
+  const activeUpcoming = interviews.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+  return activeUpcoming.length > 0 ? activeUpcoming[0] : null;
 }
 
 export async function getInterviewJoinAccess(interviewId) {

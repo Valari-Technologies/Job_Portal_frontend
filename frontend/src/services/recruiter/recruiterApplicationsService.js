@@ -366,7 +366,46 @@ export async function scheduleRecruiterInterviewService(applicationId, payload) 
     console.warn("Candidate interview schedule sync warning:", candErr);
   }
 
-  // 3. Update in backend API
+  // 3. Sync to Recruiter Interview Schedule storage so /recruiter/interviews immediately shows it
+  try {
+    const recIntsKey = 'statejobz_recruiter_interviews';
+    const recStored = localStorage.getItem(recIntsKey);
+    let recList = recStored ? JSON.parse(recStored) : [];
+
+    const storedApps = localStorage.getItem(storageKey);
+    const parsedApps = storedApps ? JSON.parse(storedApps) : [];
+    const targetApp = parsedApps.find(a => String(a.id) === String(applicationId));
+
+    const candName = targetApp?.candidate?.full_name || payload.candidate_name || 'Candidate';
+    const jTitle = targetApp?.job?.title || payload.job_title || 'Position';
+
+    const normalizedRecInterview = {
+      id: newInterview.id,
+      application_id: String(applicationId),
+      candidate: targetApp?.candidate || { full_name: candName },
+      candidateName: candName,
+      job: targetApp?.job || { title: jTitle },
+      jobTitle: jTitle,
+      scheduled_by: { full_name: 'You' },
+      interview_type: payload.interview_type || 'ONLINE',
+      scheduled_date: payload.scheduled_date,
+      scheduled_time: payload.scheduled_time || '10:00 AM',
+      meeting_link: payload.meeting_link || '',
+      location: payload.location || '',
+      phone_number: payload.phone_number || targetApp?.candidate?.phone || '',
+      notes: payload.notes || '',
+      status: 'SCHEDULED',
+      result: 'PENDING',
+      created_at: new Date().toISOString()
+    };
+
+    recList = [normalizedRecInterview, ...recList.filter(i => String(i.id) !== String(newInterview.id) && String(i.application_id) !== String(applicationId))];
+    localStorage.setItem(recIntsKey, JSON.stringify(recList));
+  } catch (recErr) {
+    console.warn("Recruiter interview storage sync notice:", recErr);
+  }
+
+  // 4. Update in backend API
   try {
     const url = `${API_BASE_URL}/accounts/recruiter/applications/${applicationId}/interview/`;
     await authenticatedFetch(url, {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase,
@@ -18,14 +18,43 @@ import {
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterMetricCard from '../../components/recruiter/dashboard/RecruiterMetricCard';
 import RecruiterMobileHeroIllustration from '../../components/recruiter/dashboard/RecruiterMobileHeroIllustration';
-import { getRecruiterDashboardData } from '../../services/recruiter/recruiterDashboardService';
+import { getRecruiterDashboardData, fetchRecruiterDashboardFromApi } from '../../services/recruiter/recruiterDashboardService';
 import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
+import { updateApplicationStatusService } from '../../services/recruiter/recruiterApplicationsService';
 import { useRecruiterUser } from '../../context/RecruiterUserContext';
 
 export default function RecruiterDashboard() {
   const { profile } = useRecruiterUser();
-  const [data] = useState(() => getRecruiterDashboardData());
+  const [data, setData] = useState(() => getRecruiterDashboardData());
   const [commerceSummary] = useState(() => getRecruiterCommerceSummary());
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchRecruiterDashboardFromApi().then(freshData => {
+      if (isMounted && freshData) {
+        setData(freshData);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleShortlistApplicant = async (appId) => {
+    try {
+      await updateApplicationStatusService(appId, 'SHORTLISTED');
+      setData(getRecruiterDashboardData());
+    } catch (err) {
+      console.error("Failed to shortlist applicant", err);
+    }
+  };
+
+  const handleRejectApplicant = async (appId) => {
+    try {
+      await updateApplicationStatusService(appId, 'REJECTED');
+      setData(getRecruiterDashboardData());
+    } catch (err) {
+      console.error("Failed to reject applicant", err);
+    }
+  };
 
   const metrics = data?.metrics || {
     active_jobs: 0,
@@ -217,6 +246,12 @@ export default function RecruiterDashboard() {
                 <p className="text-[11px] font-medium text-slate-450 mt-1 max-w-xs">
                   Interviews scheduled with candidates for your company jobs will appear here.
                 </p>
+                <Link
+                  to="/recruiter/interviews/schedule"
+                  className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors"
+                >
+                  + Schedule Interview
+                </Link>
               </div>
             ) : (
               <div className="divide-y divide-slate-100 space-y-3 pt-1">
@@ -274,17 +309,36 @@ export default function RecruiterDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                        item.status === 'SHORTLISTED' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        item.status === 'INTERVIEW' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                        item.status === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        item.status === 'REJECTED' ? 'bg-red-50 text-red-600 border border-red-200' :
+                        'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {item.status || 'APPLIED'}
+                      </span>
                       <button 
                         type="button" 
                         title="Shortlist applicant"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
+                        onClick={() => handleShortlistApplicant(item.id)}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          item.status === 'SHORTLISTED' 
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-300' 
+                            : 'border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200'
+                        }`}
                       >
                         <ThumbsUp className="h-4 w-4" />
                       </button>
                       <button 
                         type="button" 
                         title="Reject applicant"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 transition-colors"
+                        onClick={() => handleRejectApplicant(item.id)}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          item.status === 'REJECTED' 
+                            ? 'bg-red-50 text-red-600 border-red-300' 
+                            : 'border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200'
+                        }`}
                       >
                         <ThumbsDown className="h-4 w-4" />
                       </button>

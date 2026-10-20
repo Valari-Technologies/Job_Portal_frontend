@@ -5,7 +5,7 @@ import ProfileCompletionRequiredModal from '../jobs/ProfileCompletionRequiredMod
 
 export default function CandidateJobCard({ job, onStatusChange }) {
   const [isSaved, setIsSaved] = useState(job.isSaved || false);
-  const [isApplied, setIsApplied] = useState(job.isApplied || false);
+  const [isApplied, setIsApplied] = useState(Boolean(job.isApplied || job.hasApplied));
   const [isApplying, setIsApplying] = useState(false);
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
   const [profileCompletion, setProfileCompletion] = useState(40);
@@ -148,7 +148,7 @@ export default function CandidateJobCard({ job, onStatusChange }) {
           disabled={isApplied || isApplying}
           className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all shadow-xs min-h-[42px] ${
             isApplied
-              ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-default'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none'
               : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/20'
           }`}
         >

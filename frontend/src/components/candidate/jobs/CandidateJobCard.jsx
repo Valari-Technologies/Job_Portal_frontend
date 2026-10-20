@@ -18,9 +18,11 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
     }
   };
 
+  const isApplied = Boolean(job.hasApplied || job.isApplied);
+
   const handleApplyClick = async (e) => {
     e.stopPropagation();
-    if (job.hasApplied || isApplying) return;
+    if (isApplied || isApplying) return;
     setIsApplying(true);
     try {
       await onQuickApply(job);
@@ -147,14 +149,14 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
           <button
             type="button"
             onClick={handleApplyClick}
-            disabled={job.hasApplied || isApplying}
+            disabled={isApplied || isApplying}
             className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-xs ${
-              job.hasApplied
-                ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-default'
+              isApplied
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none'
                 : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/20'
             }`}
           >
-            {job.hasApplied ? (
+            {isApplied ? (
               <>
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 <span>Applied</span>
@@ -229,14 +231,14 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
           <button
             type="button"
             onClick={handleApplyClick}
-            disabled={job.hasApplied || isApplying}
+            disabled={isApplied || isApplying}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all shadow-xs ${
-              job.hasApplied
-                ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-default'
+              isApplied
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none'
                 : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/20'
             }`}
           >
-            {job.hasApplied ? 'Applied' : isApplying ? 'Applying...' : 'Quick Apply'}
+            {isApplied ? 'Applied' : isApplying ? 'Applying...' : 'Quick Apply'}
           </button>
         </div>
       </div>

@@ -106,8 +106,10 @@ export default function CandidateInterviewsPage() {
         setSummaryError(true);
       }
 
-      setInterviews(intData.interviews || []);
-      setNextInterview(nextData || (intData.interviews && intData.interviews.length > 0 ? intData.interviews[0] : null));
+      const interviewList = intData.interviews || [];
+      const activeUpcomingList = interviewList.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+      setInterviews(interviewList);
+      setNextInterview(nextData || (activeUpcomingList.length > 0 ? activeUpcomingList[0] : null));
     } catch (err) {
       console.error('Failed to load candidate interviews:', err);
       setError("We couldn't load your interviews. Please try again.");
@@ -139,8 +141,10 @@ export default function CandidateInterviewsPage() {
           } else {
             setSummaryError(true);
           }
-          setInterviews(intData.interviews || []);
-          setNextInterview(nextData || (intData.interviews && intData.interviews.length > 0 ? intData.interviews[0] : null));
+          const interviewList = intData.interviews || [];
+          const activeUpcomingList = interviewList.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+          setInterviews(interviewList);
+          setNextInterview(nextData || (activeUpcomingList.length > 0 ? activeUpcomingList[0] : null));
         }
       } catch (err) {
         console.error('Failed to load candidate interviews:', err);
@@ -327,7 +331,7 @@ export default function CandidateInterviewsPage() {
         {/* --- MAIN 2-COLUMN LAYOUT (Left list + Right side panels) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           
-          {/* ================= LEFT COLUMN: UPCOMING SESSIONS LIST ================= */}
+          {/* ================= LEFT COLUMN: INTERVIEW SESSIONS LIST ================= */}
           <div className="lg:col-span-2 space-y-6">
             
             {/* Header row: Green "Upcoming Sessions" + "X Scheduled" count */}
@@ -342,7 +346,7 @@ export default function CandidateInterviewsPage() {
                 ) : summaryError ? (
                   '— Scheduled'
                 ) : (
-                  `${summary?.scheduledCount ?? summary?.upcomingCount ?? summary?.totalInterviews ?? interviews.length} Scheduled`
+                  `${interviews.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED').length} Scheduled`
                 )}
               </span>
             </div>
@@ -369,29 +373,12 @@ export default function CandidateInterviewsPage() {
                   <span>Retry</span>
                 </button>
               </div>
-            ) : interviews.length === 0 ? (
-              /* Empty State */
-              <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-4 my-4 shadow-2xs">
-                <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-[#3B00FF] flex items-center justify-center mx-auto">
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">No interviews scheduled yet</h3>
-                  <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
-                    When a recruiter schedules an interview for one of your applications, it will appear here.
-                  </p>
-                </div>
-                <Link
-                  to="/candidate/applications"
-                  className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold shadow-md shadow-[#3B00FF]/20 cursor-pointer"
-                >
-                  View Applications
-                </Link>
-              </div>
             ) : (
-              /* Interview Cards List */
-              <div className="space-y-4">
-                {interviews.map((interview) => {
+              (() => {
+                const upcoming = interviews.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+                const past = interviews.filter(i => i.isPast || i.status === 'COMPLETED');
+
+                const renderCard = (interview, isPastSession) => {
                   const isOnline = interview.isOnline !== undefined 
                     ? interview.isOnline 
                     : (interview.mode === 'ONLINE' || interview.interviewType === 'ONLINE' || Boolean(interview.meetingLink));
@@ -401,23 +388,29 @@ export default function CandidateInterviewsPage() {
                   return (
                     <div
                       key={interview.id}
-                      className={`rounded-2xl border bg-white p-5 sm:p-6 transition-all duration-200 hover:shadow-md flex flex-col sm:flex-row items-start gap-4 sm:gap-6 font-sans ${
+                      className={`rounded-2xl border p-5 sm:p-6 transition-all duration-200 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 font-sans ${
                         isLive 
-                          ? 'border-emerald-400 ring-2 ring-emerald-400/20 shadow-md shadow-emerald-500/10' 
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-emerald-400 ring-2 ring-emerald-400/20 shadow-md shadow-emerald-500/10 bg-white' 
+                          : isPastSession
+                          ? 'border-slate-200 bg-white/90 shadow-2xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-md'
                       }`}
                     >
-                      {/* Date Badge Box (OCT 24 Tue) */}
+                      {/* Date Badge Box */}
                       <div className={`w-16 sm:w-20 rounded-2xl border p-2.5 sm:p-3 text-center flex flex-col items-center justify-center shrink-0 self-start sm:self-auto ${
-                        isLive ? 'bg-emerald-50/60 border-emerald-200' : 'bg-slate-50 border-slate-200/80'
+                        isLive 
+                          ? 'bg-emerald-50/60 border-emerald-200' 
+                          : isPastSession
+                          ? 'bg-slate-100/70 border-slate-200 text-slate-400'
+                          : 'bg-slate-50 border-slate-200/80'
                       }`}>
                         <span className={`text-[10px] font-black uppercase tracking-wider block ${isLive ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {dateInfo.month || 'OCT'}
                         </span>
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none my-1 block">
+                        <span className={`text-2xl sm:text-3xl font-black leading-none my-1 block ${isPastSession ? 'text-slate-600' : 'text-slate-900'}`}>
                           {dateInfo.day || '24'}
                         </span>
-                        <span className={`text-[11px] font-bold block ${isLive ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+                        <span className={`text-[11px] font-bold block ${isLive ? 'text-emerald-700 font-black' : isPastSession ? 'text-slate-400' : 'text-slate-500'}`}>
                           {dateInfo.weekday || 'Tue'}
                         </span>
                       </div>
@@ -427,12 +420,16 @@ export default function CandidateInterviewsPage() {
                         
                         {/* Top Line: Round Name + Status Badge */}
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug truncate">
+                          <h3 className={`text-lg sm:text-xl font-black leading-snug truncate ${isPastSession ? 'text-slate-700' : 'text-slate-900'}`}>
                             {interview.roundName || 'Technical Interview - Round 1'}
                           </h3>
 
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 border ${interview.statusConfig?.badgeClass || 'bg-indigo-50 text-[#3B00FF]'}`}>
-                            {interview.statusConfig?.label || 'Upcoming'}
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 border ${
+                            isPastSession 
+                              ? 'bg-slate-100 text-slate-600 border-slate-200' 
+                              : (interview.statusConfig?.badgeClass || 'bg-indigo-50 text-[#3B00FF]')
+                          }`}>
+                            {isPastSession ? 'Completed' : (interview.statusConfig?.label || 'Upcoming')}
                           </span>
                         </div>
 
@@ -446,7 +443,7 @@ export default function CandidateInterviewsPage() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-slate-500 pt-0.5">
                           {isOnline ? (
                             <div className="flex items-center gap-1.5 text-slate-700">
-                              <Video className={`h-4 w-4 shrink-0 ${isLive ? 'text-emerald-500' : 'text-[#3B00FF]'}`} />
+                              <Video className={`h-4 w-4 shrink-0 ${isLive ? 'text-emerald-500' : isPastSession ? 'text-slate-400' : 'text-[#3B00FF]'}`} />
                               <span className="font-bold">{interview.provider || 'Google Meet Video Call'}</span>
                             </div>
                           ) : (
@@ -464,44 +461,58 @@ export default function CandidateInterviewsPage() {
 
                         {/* Description Paragraph */}
                         {interview.description && (
-                          <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed line-clamp-3 pt-1">
+                          <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed line-clamp-3 pt-1">
                             {interview.description}
                           </p>
                         )}
 
                         {/* Action Buttons Row */}
-                        <div className="flex items-center gap-3 pt-2">
-                          {isOnline ? (
-                            <button
-                              type="button"
-                              onClick={() => handleJoinMeeting(interview)}
-                              className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer flex items-center gap-2 ${
-                                isLive
-                                  ? 'bg-[#00C853] hover:bg-[#00B048] shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/40 animate-pulse'
-                                  : 'bg-[#3B00FF] hover:bg-[#3000D6]'
-                              }`}
-                            >
-                              <Video className="h-4 w-4" />
-                              <span>{isLive ? 'Join Interview Now' : 'Join Meeting'}</span>
-                            </button>
+                        <div className="flex flex-wrap items-center gap-3 pt-2">
+                          {isPastSession ? (
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 text-xs sm:text-sm font-bold cursor-not-allowed select-none">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                <span>Meeting Ended</span>
+                              </div>
+                              <span className="text-xs font-semibold text-slate-400">
+                                Session completed • Awaiting recruiter feedback
+                              </span>
+                            </div>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleViewMap(interview)}
-                              className="px-5 py-2.5 rounded-xl border border-[#3B00FF] text-[#3B00FF] hover:bg-purple-50 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
-                            >
-                              View Map
-                            </button>
-                          )}
+                            <>
+                              {isOnline ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleJoinMeeting(interview)}
+                                  className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer flex items-center gap-2 ${
+                                    isLive
+                                      ? 'bg-[#00C853] hover:bg-[#00B048] shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/40 animate-pulse'
+                                      : 'bg-[#3B00FF] hover:bg-[#3000D6]'
+                                  }`}
+                                >
+                                  <Video className="h-4 w-4" />
+                                  <span>{isLive ? 'Join Interview Now' : 'Join Meeting'}</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewMap(interview)}
+                                  className="px-5 py-2.5 rounded-xl border border-[#3B00FF] text-[#3B00FF] hover:bg-purple-50 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+                                >
+                                  View Map
+                                </button>
+                              )}
 
-                          {interview.canReschedule && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReschedule(interview)}
-                              className="px-5 py-2.5 rounded-xl border border-emerald-500 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
-                            >
-                              Reschedule
-                            </button>
+                              {interview.canReschedule && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenReschedule(interview)}
+                                  className="px-5 py-2.5 rounded-xl border border-emerald-500 text-emerald-600 hover:bg-emerald-50 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+                                >
+                                  Reschedule
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
 
@@ -509,8 +520,57 @@ export default function CandidateInterviewsPage() {
 
                     </div>
                   );
-                })}
-              </div>
+                };
+
+                return (
+                  <div className="space-y-8">
+                    {/* 1. Upcoming Interviews List */}
+                    {upcoming.length === 0 ? (
+                      <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 text-center space-y-3 shadow-2xs">
+                        <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-[#3B00FF] flex items-center justify-center mx-auto">
+                          <Calendar className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-base sm:text-lg font-black text-slate-900">No upcoming interviews scheduled</h3>
+                          <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+                            You have no pending sessions right now. Recruiter interview invites will appear here.
+                          </p>
+                        </div>
+                        <Link
+                          to="/candidate/applications"
+                          className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold shadow-md shadow-[#3B00FF]/20 cursor-pointer"
+                        >
+                          View Applications
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {upcoming.map(item => renderCard(item, false))}
+                      </div>
+                    )}
+
+                    {/* 2. Past & Completed Interviews List */}
+                    {past.length > 0 && (
+                      <div className="pt-4 space-y-4 border-t border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                              Past Sessions
+                            </h2>
+                            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold">
+                              {past.length} Completed
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {past.map(item => renderCard(item, true))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             )}
 
           </div>
@@ -527,49 +587,61 @@ export default function CandidateInterviewsPage() {
                 <Timer className="h-5 w-5 text-[#3B00FF]" />
               </div>
 
-              {/* Countdown subtitle */}
-              <p className="text-xs font-bold text-slate-600">
-                {nextInterview 
-                  ? (typeof countdownText === 'object' && countdownText !== null 
+              {nextInterview ? (
+                <>
+                  {/* Countdown subtitle */}
+                  <p className="text-xs font-bold text-slate-600">
+                    {typeof countdownText === 'object' && countdownText !== null 
                       ? (countdownText.formattedCountdown || 'Starting soon') 
-                      : (countdownText || 'Starting soon')) 
-                  : 'No upcoming session'}
-              </p>
+                      : (countdownText || 'Starting soon')}
+                  </p>
 
-              {/* Preparation checklist items */}
-              <div className="space-y-2.5 pt-1">
-                {/* Item 1: System Check */}
-                <button
-                  type="button"
-                  onClick={() => handleTogglePrep('systemCheckCompleted')}
-                  className="w-full text-left p-3 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 transition-colors flex items-center justify-between shadow-2xs group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white shrink-0 ${prepChecklist.systemCheckCompleted ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                      {prepChecklist.systemCheckCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : null}
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 group-hover:text-[#3B00FF]">
-                      System Check Complete
-                    </span>
-                  </div>
-                </button>
+                  {/* Preparation checklist items */}
+                  <div className="space-y-2.5 pt-1">
+                    {/* Item 1: System Check */}
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePrep('systemCheckCompleted')}
+                      className="w-full text-left p-3 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 transition-colors flex items-center justify-between shadow-2xs group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white shrink-0 ${prepChecklist.systemCheckCompleted ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                          {prepChecklist.systemCheckCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : null}
+                        </div>
+                        <span className="text-xs font-bold text-slate-800 group-hover:text-[#3B00FF]">
+                          System Check Complete
+                        </span>
+                      </div>
+                    </button>
 
-                {/* Item 2: Review notes prepared */}
-                <button
-                  type="button"
-                  onClick={() => handleTogglePrep('reviewNotesPrepared')}
-                  className="w-full text-left p-3 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 transition-colors flex items-center justify-between shadow-2xs group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white shrink-0 ${prepChecklist.reviewNotesPrepared ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                      {prepChecklist.reviewNotesPrepared ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <FileText className="h-3 w-3 text-slate-400" />}
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 group-hover:text-[#3B00FF]">
-                      Review notes prepared
-                    </span>
+                    {/* Item 2: Review notes prepared */}
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePrep('reviewNotesPrepared')}
+                      className="w-full text-left p-3 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 transition-colors flex items-center justify-between shadow-2xs group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white shrink-0 ${prepChecklist.reviewNotesPrepared ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                          {prepChecklist.reviewNotesPrepared ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <FileText className="h-3 w-3 text-slate-400" />}
+                        </div>
+                        <span className="text-xs font-bold text-slate-800 group-hover:text-[#3B00FF]">
+                          Review notes prepared
+                        </span>
+                      </div>
+                    </button>
                   </div>
-                </button>
-              </div>
+                </>
+              ) : (
+                <div className="space-y-2 pt-1 text-center py-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-indigo-100 text-slate-700 text-xs font-bold shadow-2xs">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>No upcoming session</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-500 leading-relaxed px-1">
+                    When your next interview is scheduled, live countdown and preparation tasks will activate automatically.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* --- PANEL 2: STAY PREPARED --- */}

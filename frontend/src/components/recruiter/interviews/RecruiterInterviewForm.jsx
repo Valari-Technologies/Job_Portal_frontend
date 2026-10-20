@@ -106,9 +106,16 @@ export default function RecruiterInterviewForm({ eligibleApplications = [], pres
         {eligibleApplications.length > 0 ? (
           <select
             value={selectedAppId}
-            onChange={(e) => setSelectedAppId(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedAppId(val);
+              const found = eligibleApplications.find(a => String(a.id) === String(val));
+              if (found && found.candidate?.phone && !phoneNumber) {
+                setPhoneNumber(found.candidate.phone);
+              }
+            }}
             disabled={Boolean(preselectedApplicationId)}
-            className="w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+            className="w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
             <option value="">-- Select Shortlisted Application --</option>
             {eligibleApplications.map((app) => (
@@ -118,8 +125,17 @@ export default function RecruiterInterviewForm({ eligibleApplications = [], pres
             ))}
           </select>
         ) : (
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-500">
-            No shortlisted candidates are available for interview scheduling.
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <p className="text-xs font-medium text-slate-500">
+              No shortlisted candidates are available for interview scheduling.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/recruiter/applications')}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>→ Go to Applications to review & shortlist candidates</span>
+            </button>
           </div>
         )}
         {errors.application && <p className="text-xs font-bold text-red-500 mt-1">{errors.application}</p>}

@@ -259,28 +259,30 @@ export default function CandidateJobDetailsPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleApply}
-              disabled={job.hasApplied || isApplying}
-              className={`px-6 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md ${
-                job.hasApplied
-                  ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-default'
-                  : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/25 min-h-[44px]'
-              }`}
-            >
-              {job.hasApplied ? (
-                <>
+            {job.hasApplied ? (
+              <div className="flex items-center gap-2.5">
+                <div className="px-5 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 select-none shadow-2xs min-h-[44px]">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span>Applied</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 fill-white text-white" />
-                  <span>{isApplying ? 'Submitting...' : 'Apply Now'}</span>
-                </>
-              )}
-            </button>
+                </div>
+                <Link
+                  to="/candidate/applications"
+                  className="px-4 py-2.5 rounded-xl text-xs font-black text-[#3B00FF] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1.5 min-h-[44px]"
+                >
+                  <span>Track Status</span>
+                </Link>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleApply}
+                disabled={isApplying}
+                className="px-6 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/25 min-h-[44px]"
+              >
+                <Zap className="h-4 w-4 fill-white text-white" />
+                <span>{isApplying ? 'Submitting...' : 'Apply Now'}</span>
+              </button>
+            )}
           </div>
 
           {/* Quick Meta Grid */}

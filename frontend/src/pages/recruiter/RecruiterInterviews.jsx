@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterInterviewsHeader from '../../components/recruiter/interviews/RecruiterInterviewsHeader';
 import RecruiterInterviewCalendar from '../../components/recruiter/interviews/RecruiterInterviewCalendar';
@@ -6,23 +6,29 @@ import RecruiterInterviewWeeklySummary from '../../components/recruiter/intervie
 import RecruiterInterviewCard from '../../components/recruiter/interviews/RecruiterInterviewCard';
 import RecruiterInterviewEmptyState from '../../components/recruiter/interviews/RecruiterInterviewEmptyState';
 import RecruiterInterviewDetailsModal from '../../components/recruiter/interviews/RecruiterInterviewDetailsModal';
-import { getRecruiterInterviewsData, updateInterviewStatusService } from '../../services/recruiter/recruiterInterviewsService';
+import { getRecruiterInterviewsData, updateInterviewStatusService, fetchRecruiterInterviewsFromApi } from '../../services/recruiter/recruiterInterviewsService';
 
 export default function RecruiterInterviews() {
   const [data, setData] = useState(() => getRecruiterInterviewsData());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedInterview, setSelectedInterview] = useState(null);
 
+  useEffect(() => {
+    fetchRecruiterInterviewsFromApi().then(freshData => {
+      if (freshData) setData(freshData);
+    });
+  }, []);
+
   const summary = data?.summary || { completed: 0, upcoming: 0, rescheduled: 0 };
   const interviews = data?.interviews || [];
+
+  const upcomingInterviews = interviews.filter(i => !i.isPast && i.status !== 'COMPLETED' && i.status !== 'CANCELLED');
+  const pastInterviews = interviews.filter(i => i.isPast || i.status === 'COMPLETED');
 
   const handleUpdateStatus = async (id, status, result, notes) => {
     try {
       await updateInterviewStatusService(id, status, result, notes);
-      setData(prev => ({
-        ...prev,
-        interviews: prev.interviews.map(inv => inv.id === id ? { ...inv, status, result, notes } : inv)
-      }));
+      setData(getRecruiterInterviewsData());
       setSelectedInterview(null);
     } catch (err) {
       console.error("Failed to update interview", err);
@@ -40,19 +46,57 @@ export default function RecruiterInterviews() {
           
           {/* Left Main Column: Date-Grouped Interviews or Empty State */}
           <div className="lg:col-span-2 space-y-6">
-            {interviews.length > 0 ? (
+            {/* Upcoming Sessions Section */}
+            {upcomingInterviews.length > 0 ? (
               <div className="space-y-4">
-                <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider">Upcoming Scheduled Interviews</h2>
-                {interviews.map((inv) => (
-                  <RecruiterInterviewCard
-                    key={inv.id}
-                    interview={inv}
-                    onClickDetails={(i) => setSelectedInterview(i)}
-                  />
-                ))}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span>Upcoming Scheduled Interviews</span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-black">
+                      {upcomingInterviews.length}
+                    </span>
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {upcomingInterviews.map((inv) => (
+                    <RecruiterInterviewCard
+                      key={inv.id}
+                      interview={inv}
+                      isPastSession={false}
+                      onClickDetails={(i) => setSelectedInterview(i)}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <RecruiterInterviewEmptyState />
+            )}
+
+            {/* Past Sessions Section */}
+            {pastInterviews.length > 0 && (
+              <div className="space-y-4 pt-4 border-t border-slate-150">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <span>Past Sessions</span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold">
+                      {pastInterviews.length} Completed
+                    </span>
+                  </h2>
+                  <span className="text-xs font-semibold text-slate-400">
+                    Awaiting evaluation or concluded
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {pastInterviews.map((inv) => (
+                    <RecruiterInterviewCard
+                      key={inv.id}
+                      interview={inv}
+                      isPastSession={true}
+                      onClickDetails={(i) => setSelectedInterview(i)}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 

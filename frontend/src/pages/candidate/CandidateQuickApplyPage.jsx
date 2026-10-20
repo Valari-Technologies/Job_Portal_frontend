@@ -179,7 +179,34 @@ export default function CandidateQuickApplyPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {job?.hasApplied ? (
+          <div className="p-6 sm:p-8 rounded-3xl bg-white border border-emerald-200 text-center space-y-4 shadow-sm">
+            <div className="h-14 w-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            <div className="space-y-1 max-w-md mx-auto">
+              <h2 className="text-lg font-black text-slate-900">Application Already Submitted</h2>
+              <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+                You have already applied for <span className="font-bold text-slate-800">{job.title}</span> at <span className="font-bold text-slate-800">{job.company}</span>. You can track your interview rounds and application progress under My Applications.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Link
+                to="/candidate/applications"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000E0] text-white text-xs font-black transition-colors shadow-xs"
+              >
+                View My Applications
+              </Link>
+              <Link
+                to={`/candidate/jobs/${job.id}`}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition-colors"
+              >
+                Job Details
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Section 1: Select Resume */}
           <div className="space-y-3">
@@ -341,6 +368,7 @@ export default function CandidateQuickApplyPage() {
           </div>
 
         </form>
+        )}
 
       </div>
 

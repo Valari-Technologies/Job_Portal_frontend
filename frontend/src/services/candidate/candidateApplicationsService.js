@@ -140,13 +140,28 @@ export function normalizeApplicationRecord(raw) {
   const rawInterview = raw.interview || null;
   let interviewObj = null;
   if (rawInterview && typeof rawInterview === 'object') {
+    const rawDate = rawInterview.scheduled_date || rawInterview.scheduled_at;
+    let isPast = false;
+    if (rawDate) {
+      const interviewTime = new Date(rawDate).getTime();
+      const now = Date.now();
+      if (!isNaN(interviewTime) && (now - interviewTime) > 90 * 60 * 1000) {
+        isPast = true;
+      }
+    }
+    const rawStatus = String(rawInterview.status || '').toUpperCase();
+    if (rawStatus === 'COMPLETED') {
+      isPast = true;
+    }
+
     interviewObj = {
       id: String(rawInterview.id || ''),
-      scheduledAt: rawInterview.scheduled_date || rawInterview.scheduled_at_formatted,
-      scheduledAtFormatted: rawInterview.scheduled_at_formatted || formatApplicationDate(rawInterview.scheduled_date),
+      scheduledAt: rawDate || rawInterview.scheduled_at_formatted,
+      scheduledAtFormatted: rawInterview.scheduled_at_formatted || formatApplicationDate(rawDate || rawInterview.scheduled_date),
       mode: rawInterview.interview_type || 'Online',
       meetingUrl: rawInterview.meeting_link || '#',
-      status: rawInterview.status || 'SCHEDULED'
+      status: isPast && rawStatus !== 'CANCELLED' ? 'COMPLETED' : (rawInterview.status || 'SCHEDULED'),
+      isPast
     };
   }
 

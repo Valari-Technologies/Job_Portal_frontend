@@ -107,7 +107,7 @@ export function normalizeResponsibilities(rawResponsibilities, rawRequirements) 
   return list;
 }
 
-export function normalizeJobRecord(raw) {
+export function normalizeJobRecord(raw, appliedJobIds = null) {
   if (!raw || typeof raw !== 'object') return null;
 
   const id = String(raw.id || raw.pk || '');
@@ -134,6 +134,7 @@ export function normalizeJobRecord(raw) {
 
   const skillsList = Array.isArray(raw.skills) ? raw.skills.map(s => typeof s === 'string' ? s : s.name) : [];
   const responsibilitiesList = normalizeResponsibilities(raw.responsibilities, raw.requirements);
+  const hasApplied = Boolean(raw.is_applied || (appliedJobIds && appliedJobIds.has(id)));
 
   return {
     id,
@@ -159,12 +160,74 @@ export function normalizeJobRecord(raw) {
     responsibilities: responsibilitiesList,
     responsibilitiesList,
     isSaved: Boolean(raw.is_saved),
-    hasApplied: Boolean(raw.is_applied),
+    hasApplied,
+    isApplied: hasApplied,
     publishedAt: raw.published_at || raw.created_at || new Date().toISOString()
   };
 }
 
-function getLocalPublishedJobs() {
+export function getAppliedJobIdsFromStorage() {
+  try {
+    const user = getAuthenticatedUser();
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const userId = String(user?.id || '');
+
+    const stored = localStorage.getItem('tnjobz_candidate_applications');
+    if (!stored) return new Set();
+    const apps = JSON.parse(stored);
+    const appliedIds = new Set();
+    if (Array.isArray(apps)) {
+      apps.forEach(a => {
+        const candEmail = (a.candidate?.email || a.email || '').toLowerCase().trim();
+        const candId = String(a.candidate?.id || a.candidate_id || '');
+        const matchesUser = !userEmail || !candEmail || candEmail === userEmail || candId === userId;
+        const jId = a.job_id || a.job?.id || a.jobId;
+        if (matchesUser && jId) {
+          appliedIds.add(String(jId));
+        }
+      });
+    }
+    return appliedIds;
+  } catch {
+    return new Set();
+  }
+}
+
+let cachedAppliedJobIds = null;
+let lastAppliedFetchTime = 0;
+
+export async function getCandidateAppliedJobIds(forceRefresh = false) {
+  const localSet = getAppliedJobIdsFromStorage();
+  const now = Date.now();
+  if (!forceRefresh && cachedAppliedJobIds && (now - lastAppliedFetchTime < 30000)) {
+    localSet.forEach(id => cachedAppliedJobIds.add(id));
+    return cachedAppliedJobIds;
+  }
+
+  try {
+    const response = await authenticatedFetch(`${API_BASE_URL}/accounts/candidate/applications/`);
+    if (response.ok) {
+      const data = await response.json();
+      const rawList = Array.isArray(data) ? data : (data.results || []);
+      const set = new Set(localSet);
+      rawList.forEach(app => {
+        const jId = app.job?.id || app.job_id || app.job || app.jobId;
+        if (jId) set.add(String(jId));
+      });
+      cachedAppliedJobIds = set;
+      lastAppliedFetchTime = now;
+      return set;
+    }
+  } catch (err) {
+    console.warn("Failed to fetch candidate applications for applied status:", err);
+  }
+
+  cachedAppliedJobIds = localSet;
+  lastAppliedFetchTime = now;
+  return localSet;
+}
+
+function getLocalPublishedJobs(appliedJobIds = null) {
   try {
     const rawJobs = [];
     const seenIds = new Set();
@@ -219,12 +282,14 @@ function getLocalPublishedJobs() {
     }
 
     return rawJobs.map(j => {
+      const jId = String(j.id);
       const companyName = j.company_name || j.employer_name || j.employer?.company_name || 'My Company';
       const companyLogo = resolveCompanyLogo(j.company_logo, companyName, j.employer);
       const responsibilitiesList = normalizeResponsibilities(j.responsibilities, j.requirements);
+      const hasApplied = Boolean(appliedJobIds && appliedJobIds.has(jId));
 
       return {
-        id: String(j.id),
+        id: jId,
         title: j.title || 'Position',
         company: companyName,
         companyName,
@@ -246,7 +311,8 @@ function getLocalPublishedJobs() {
         responsibilities: responsibilitiesList,
         responsibilitiesList,
         isSaved: false,
-        hasApplied: false,
+        hasApplied,
+        isApplied: hasApplied,
         publishedAt: j.created_at || j.createdAt || new Date().toISOString()
       };
     });
@@ -260,6 +326,8 @@ function getLocalPublishedJobs() {
  */
 export async function getCandidateJobs(params = {}) {
   await loadCompanyLogos();
+  const appliedJobIds = await getCandidateAppliedJobIds();
+
   const {
     search = '',
     tab = 'for-you',
@@ -290,7 +358,7 @@ export async function getCandidateJobs(params = {}) {
     if (response.ok) {
       const data = await response.json();
       const rawList = Array.isArray(data) ? data : (data.results || []);
-      backendJobs = rawList.map(normalizeJobRecord).filter(Boolean);
+      backendJobs = rawList.map(raw => normalizeJobRecord(raw, appliedJobIds)).filter(Boolean);
       backendCount = data.count || backendJobs.length;
       hasRecommendations = Boolean(data.has_recommendations);
     }
@@ -299,7 +367,7 @@ export async function getCandidateJobs(params = {}) {
   }
 
   // Merge local published jobs without duplicates
-  const localPublished = getLocalPublishedJobs();
+  const localPublished = getLocalPublishedJobs(appliedJobIds);
   const existingIds = new Set(backendJobs.map(j => String(j.id)));
   const existingTitles = new Set(backendJobs.map(j => `${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`));
   
@@ -308,7 +376,14 @@ export async function getCandidateJobs(params = {}) {
     !existingTitles.has(`${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`)
   );
 
-  let jobs = [...backendJobs, ...mergedLocal];
+  let jobs = [...backendJobs, ...mergedLocal].map(j => {
+    const hasApplied = Boolean(j.hasApplied || (appliedJobIds && appliedJobIds.has(String(j.id))));
+    return {
+      ...j,
+      hasApplied,
+      isApplied: hasApplied
+    };
+  });
 
   // Client side extra filter refinements if provided
   if (search) {
@@ -418,18 +493,26 @@ export async function getJobFilterOptions() {
  */
 export async function getCandidateJobDetails(jobId) {
   await loadCompanyLogos();
+  const appliedJobIds = await getCandidateAppliedJobIds();
+  const hasAppliedFromHistory = appliedJobIds && appliedJobIds.has(String(jobId));
+
   try {
     const url = `${API_BASE_URL}/accounts/candidate/jobs/${jobId}/`;
     const response = await authenticatedFetch(url);
     if (response.ok) {
       const data = await response.json();
-      return normalizeJobRecord(data);
+      const normalized = normalizeJobRecord(data, appliedJobIds);
+      if (hasAppliedFromHistory && normalized) {
+        normalized.hasApplied = true;
+        normalized.isApplied = true;
+      }
+      return normalized;
     }
   } catch (err) {
     console.warn("Backend getCandidateJobDetails warning:", err);
   }
 
-  const localPublished = getLocalPublishedJobs();
+  const localPublished = getLocalPublishedJobs(appliedJobIds);
   const found = localPublished.find(j => String(j.id) === String(jobId));
   if (found) {
     if (!found.companyLogo) {
@@ -439,7 +522,11 @@ export async function getCandidateJobDetails(jobId) {
       found.responsibilities = normalizeResponsibilities(null, null);
       found.responsibilitiesList = found.responsibilities;
     }
-    return found;
+    return {
+      ...found,
+      hasApplied: Boolean(found.hasApplied || hasAppliedFromHistory),
+      isApplied: Boolean(found.hasApplied || hasAppliedFromHistory)
+    };
   }
   return null;
 }
@@ -467,12 +554,24 @@ export async function toggleSavedCandidateJob(jobId) {
 
 export async function applyCandidateJob(jobId, payload = {}) {
   const { submitCandidateApplication } = await import('./candidateApplicationsService');
-  return submitCandidateApplication({ jobId, ...payload });
+  const res = await submitCandidateApplication({ jobId, ...payload });
+  if (res && res.success) {
+    if (cachedAppliedJobIds) {
+      cachedAppliedJobIds.add(String(jobId));
+    }
+  }
+  return res;
 }
 
 export async function quickApplyJob(jobId, jobData = {}) {
   const { submitCandidateApplication } = await import('./candidateApplicationsService');
-  return submitCandidateApplication({ jobId, ...jobData });
+  const res = await submitCandidateApplication({ jobId, ...jobData });
+  if (res && res.success) {
+    if (cachedAppliedJobIds) {
+      cachedAppliedJobIds.add(String(jobId));
+    }
+  }
+  return res;
 }
 
 export async function getDepartmentsForIndustry(industryId) {

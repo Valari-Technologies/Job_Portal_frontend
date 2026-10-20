@@ -348,20 +348,38 @@ export default function CandidateApplicationsPage() {
                   {/* Interview Special Callout Card (Matches Image 3 Screen) */}
                   {isInterview && (
                     <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-100 space-y-2">
-                      <div className="flex items-center gap-2 text-[#3B00FF]">
-                        <Video className="h-4 w-4 shrink-0" />
-                        <span className="text-xs font-black">Interview Scheduled</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[#3B00FF]">
+                          <Video className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-black">
+                            {app.interview?.isPast || app.interview?.status === 'COMPLETED' ? 'Interview Completed' : 'Interview Scheduled'}
+                          </span>
+                        </div>
+                        {app.interview?.isPast || app.interview?.status === 'COMPLETED' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-600">Ended</span>
+                        ) : null}
                       </div>
                       <p className="text-[11px] font-bold text-slate-600">
                         {app.interview?.scheduledAtFormatted || 'Scheduled'}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/candidate/interviews')}
-                        className="w-full py-2 rounded-lg bg-[#3B00FF] text-white text-xs font-black hover:bg-[#3000E0] transition-colors cursor-pointer"
-                      >
-                        Join Meeting
-                      </button>
+                      {app.interview?.isPast || app.interview?.status === 'COMPLETED' ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/candidate/interviews')}
+                          className="w-full py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>View Interview Details</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/candidate/interviews')}
+                          className="w-full py-2 rounded-lg bg-[#3B00FF] text-white text-xs font-black hover:bg-[#3000E0] transition-colors cursor-pointer"
+                        >
+                          Join Meeting
+                        </button>
+                      )}
                     </div>
                   )}
 
