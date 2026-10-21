@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowRight } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
 import { getActiveIndustries, getSpecializationsByIndustry } from '../../../../services/candidate/candidateOnboardingService';
+import { INDIA_STATES, getDistrictsForState } from '../../../../data/indiaLocations';
+import CustomDropdown from '../../../shared/CustomDropdown';
 
 export default function JobDetailsForm() {
   const navigate = useNavigate();
@@ -79,6 +81,33 @@ export default function JobDetailsForm() {
     return () => { isMounted = false; };
   }, [formState.industry, formState.industryId, industriesList]);
 
+  const availableDistricts = formState.state ? getDistrictsForState(formState.state) : [];
+
+  const handleStateChange = (selectedState) => {
+    const dists = getDistrictsForState(selectedState);
+    const newDistrict = dists.includes(formState.district) ? formState.district : '';
+    setFormState(prev => ({
+      ...prev,
+      state: selectedState,
+      district: newDistrict,
+      city: !prev.city || prev.city === prev.district ? '' : prev.city
+    }));
+    if (errors.state) {
+      setErrors(prev => ({ ...prev, state: null }));
+    }
+  };
+
+  const handleDistrictChange = (selectedDistrict) => {
+    setFormState(prev => ({
+      ...prev,
+      district: selectedDistrict,
+      city: !prev.city ? selectedDistrict : prev.city
+    }));
+    if (errors.district) {
+      setErrors(prev => ({ ...prev, district: null }));
+    }
+  };
+
   const handleIndustryChange = (val) => {
     const selectedInd = industriesList.find(i => i.name === val || String(i.id) === String(val));
     setFormState(prev => ({
@@ -146,6 +175,10 @@ export default function JobDetailsForm() {
     if (!formState.industry) newErrors.industry = 'Industry is required.';
     if (!formState.category) newErrors.category = 'Job Category is required.';
     if (!formState.workMode) newErrors.workMode = 'Work Mode is required.';
+    if (formState.workMode !== 'Remote') {
+      if (!formState.state) newErrors.state = 'State is required.';
+      if (!formState.district) newErrors.district = 'District is required.';
+    }
     if (!formState.employmentType) newErrors.employmentType = 'Employment Type is required.';
     if (!formState.description.trim()) newErrors.description = 'Job Description is required.';
 
@@ -232,28 +265,30 @@ export default function JobDetailsForm() {
           {/* Industry (Super Admin Parent Categories) */}
           <div className="space-y-1.5" data-error={!!errors.industry}>
             <label htmlFor="industry" className="text-[13px] font-bold text-slate-700">Industry *</label>
-            <select
+            <CustomDropdown
               id="industry"
               disabled={isLoadingIndustries}
               value={formState.industry}
+              placeholder={isLoadingIndustries ? 'Loading industries...' : 'Select Industry'}
               onChange={(e) => handleIndustryChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-            >
-              <option value="">{isLoadingIndustries ? 'Loading industries...' : 'Select Industry'}</option>
-              {industriesList.map((ind) => (
-                <option key={ind.id} value={ind.name}>{ind.name}</option>
-              ))}
-            </select>
+              options={industriesList.map((ind) => ({ value: ind.name, label: ind.name }))}
+              error={!!errors.industry}
+            />
             {errors.industry && <p className="text-xs text-red-500 font-semibold">{errors.industry}</p>}
           </div>
 
           {/* Job Category (Super Admin Subcategories / Specializations) */}
           <div className="space-y-1.5" data-error={!!errors.category}>
             <label htmlFor="category" className="text-[13px] font-bold text-slate-700">Job Category / Specialization *</label>
-            <select
+            <CustomDropdown
               id="category"
               disabled={!formState.industry || isLoadingSubcategories}
               value={formState.category}
+              placeholder={
+                !formState.industry 
+                  ? 'Select Industry first' 
+                  : (isLoadingSubcategories ? 'Loading specializations...' : (subcategoriesList.length === 0 ? 'No specializations under this industry' : 'Select Job Category'))
+              }
               onChange={(e) => {
                 const val = e.target.value;
                 const matched = subcategoriesList.find(c => c.name === val || String(c.id) === String(val));
@@ -263,17 +298,9 @@ export default function JobDetailsForm() {
                   categoryId: matched?.id || null
                 }));
               }}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-            >
-              <option value="">
-                {!formState.industry 
-                  ? 'Select Industry first' 
-                  : (isLoadingSubcategories ? 'Loading specializations...' : (subcategoriesList.length === 0 ? 'No specializations under this industry' : 'Select Job Category'))}
-              </option>
-              {subcategoriesList.map((cat) => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
+              options={subcategoriesList.map((cat) => ({ value: cat.name, label: cat.name }))}
+              error={!!errors.category}
+            />
             {errors.category && <p className="text-xs text-red-500 font-semibold">{errors.category}</p>}
           </div>
         </div>
@@ -289,55 +316,57 @@ export default function JobDetailsForm() {
           {/* Work Mode */}
           <div className="space-y-1.5" data-error={!!errors.workMode}>
             <label htmlFor="workMode" className="text-[13px] font-bold text-slate-700">Work Mode *</label>
-            <select
+            <CustomDropdown
               id="workMode"
               value={formState.workMode}
+              placeholder="Select Work Mode"
               onChange={(e) => setFormState(prev => ({ ...prev, workMode: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
-            >
-              <option value="">Select Work Mode</option>
-              <option value="On-site">On-site</option>
-              <option value="Remote">Remote</option>
-              <option value="Hybrid">Hybrid</option>
-            </select>
+              options={['On-site', 'Remote', 'Hybrid']}
+              error={!!errors.workMode}
+            />
             {errors.workMode && <p className="text-xs text-red-500 font-semibold">{errors.workMode}</p>}
           </div>
 
           {/* State */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" data-error={!!errors.state}>
             <label htmlFor="state" className="text-[13px] font-bold text-slate-700">State *</label>
-            <input 
+            <CustomDropdown 
               id="state"
-              type="text"
-              value={formState.state}
-              onChange={(e) => setFormState(prev => ({ ...prev, state: e.target.value }))}
-              placeholder="e.g. Tamil Nadu"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+              value={formState.state || ''}
+              placeholder="Select State"
+              searchable={true}
+              onChange={(e) => handleStateChange(e.target.value)}
+              options={INDIA_STATES}
+              error={!!errors.state}
             />
+            {errors.state && <p className="text-xs text-red-500 font-semibold">{errors.state}</p>}
           </div>
 
           {/* District */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" data-error={!!errors.district}>
             <label htmlFor="district" className="text-[13px] font-bold text-slate-700">District *</label>
-            <input 
+            <CustomDropdown 
               id="district"
-              type="text"
-              value={formState.district}
-              onChange={(e) => setFormState(prev => ({ ...prev, district: e.target.value }))}
-              placeholder="e.g. Chennai"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
+              value={formState.district || ''}
+              disabled={!formState.state || availableDistricts.length === 0}
+              placeholder={formState.state ? 'Select District' : 'Select State first'}
+              searchable={true}
+              onChange={(e) => handleDistrictChange(e.target.value)}
+              options={availableDistricts}
+              error={!!errors.district}
             />
+            {errors.district && <p className="text-xs text-red-500 font-semibold">{errors.district}</p>}
           </div>
 
           {/* City / Town */}
           <div className="space-y-1.5">
-            <label htmlFor="city" className="text-[13px] font-bold text-slate-700">City / Town *</label>
+            <label htmlFor="city" className="text-[13px] font-bold text-slate-700">City / Town</label>
             <input 
               id="city"
               type="text"
-              value={formState.city}
+              value={formState.city || ''}
               onChange={(e) => setFormState(prev => ({ ...prev, city: e.target.value }))}
-              placeholder="e.g. Chennai City"
+              placeholder={formState.district ? `e.g. ${formState.district} City, North ${formState.district}` : "e.g. Chennai, Tambaram"}
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
             />
           </div>
@@ -354,19 +383,14 @@ export default function JobDetailsForm() {
           {/* Employment Type */}
           <div className="space-y-1.5" data-error={!!errors.employmentType}>
             <label htmlFor="employmentType" className="text-[13px] font-bold text-slate-700">Employment Type *</label>
-            <select
+            <CustomDropdown
               id="employmentType"
               value={formState.employmentType}
+              placeholder="Select Employment Type"
               onChange={(e) => setFormState(prev => ({ ...prev, employmentType: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
-            >
-              <option value="">Select Employment Type</option>
-              <option value="Full-time">Full-time</option>
-              <option value="Part-time">Part-time</option>
-              <option value="Contract">Contract</option>
-              <option value="Internship">Internship</option>
-              <option value="Freelance">Freelance</option>
-            </select>
+              options={['Full-time', 'Part-time', 'Contract', 'Internship', 'Freelance']}
+              error={!!errors.employmentType}
+            />
             {errors.employmentType && <p className="text-xs text-red-500 font-semibold">{errors.employmentType}</p>}
           </div>
 
@@ -417,15 +441,12 @@ export default function JobDetailsForm() {
           {/* Application Type */}
           <div className="space-y-1.5 md:col-span-2">
             <label htmlFor="applicationType" className="text-[13px] font-bold text-slate-700">Application Type *</label>
-            <select
+            <CustomDropdown
               id="applicationType"
               value={formState.applicationType}
               onChange={(e) => setFormState(prev => ({ ...prev, applicationType: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
-            >
-              <option value="Profile/Resume Application">Profile/Resume Application</option>
-              <option value="Simple Apply">Simple Apply</option>
-            </select>
+              options={['Profile/Resume Application', 'Simple Apply']}
+            />
           </div>
         </div>
       </div>
@@ -470,29 +491,27 @@ export default function JobDetailsForm() {
           {/* Salary Type */}
           <div className="space-y-1.5">
             <label htmlFor="salaryType" className="text-[13px] font-bold text-slate-700">Salary Type</label>
-            <select
+            <CustomDropdown
               id="salaryType"
               value={formState.salaryType}
               onChange={(e) => setFormState(prev => ({ ...prev, salaryType: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
-            >
-              <option value="PER_MONTH">Per Month</option>
-              <option value="PER_YEAR">Per Year</option>
-              <option value="PER_HOUR">Per Hour</option>
-            </select>
+              options={[
+                { value: 'PER_MONTH', label: 'Per Month' },
+                { value: 'PER_YEAR', label: 'Per Year' },
+                { value: 'PER_HOUR', label: 'Per Hour' }
+              ]}
+            />
           </div>
 
           {/* Currency */}
           <div className="space-y-1.5">
             <label htmlFor="currency" className="text-[13px] font-bold text-slate-700">Currency</label>
-            <select
+            <CustomDropdown
               id="currency"
               value={formState.currency}
               onChange={(e) => setFormState(prev => ({ ...prev, currency: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[44px]"
-            >
-              <option value="INR">INR (₹)</option>
-            </select>
+              options={[{ value: 'INR', label: 'INR (₹)' }]}
+            />
           </div>
         </div>
 

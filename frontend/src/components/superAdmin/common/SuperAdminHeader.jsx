@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import SuperAdminBreadcrumbs from './SuperAdminBreadcrumbs';
-import { fetchLocations } from '../../../services/superAdmin/locationService';
+import SuperAdminLocationModal from './SuperAdminLocationModal';
+import { normalizeLocationWithCountry } from '../../../data/indiaLocations';
 import { useSignOut } from '../../../context/SignOutContext';
 import { useSuperAdminUser } from '../../../context/SuperAdminUserContext';
 import { 
@@ -18,22 +19,12 @@ export default function SuperAdminHeader({
   const navigate = useNavigate();
   const location = useLocation();
   const { requestSignOut } = useSignOut();
-  const { profile, notifications, unreadCount, markAsRead, markAllAsRead } = useSuperAdminUser();
+  const { profile, updateLocation, notifications, unreadCount, markAsRead, markAllAsRead } = useSuperAdminUser();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [headerStateName, setHeaderStateName] = useState('All Locations');
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const currentLocation = normalizeLocationWithCountry(profile?.location || 'Delhi, India');
 
-  useEffect(() => {
-    let active = true;
-    async function loadStates() {
-      const data = await fetchLocations({ location_type: 'STATE' });
-      if (active && data.length > 0) {
-        setHeaderStateName(data[0].name);
-      }
-    }
-    loadStates();
-    return () => { active = false; };
-  }, []);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -240,15 +231,23 @@ export default function SuperAdminHeader({
           )}
         </div>
 
-        {/* State Selection Badge */}
+        {/* Location Picker Pill */}
         <div className="hidden sm:block">
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700">
-            <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button
+            type="button"
+            onClick={() => setShowLocationModal(true)}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-teal-300 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all cursor-pointer shadow-xs group"
+            title={currentLocation}
+          >
+            <svg className="h-4 w-4 text-teal-600 group-hover:scale-110 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>{headerStateName || 'All Locations'}</span>
-          </div>
+            <span className="max-w-[190px] lg:max-w-[240px] truncate">{currentLocation}</span>
+            <svg className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
 
         {/* Notification Bell */}
@@ -450,6 +449,14 @@ export default function SuperAdminHeader({
           )}
         </div>
       </div>
+
+      {/* Super Admin Location Selector Modal (Flow 3: All-India LGD Catalog) */}
+      <SuperAdminLocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        currentLocation={currentLocation}
+        onSaveLocation={updateLocation}
+      />
     </header>
   );
 }

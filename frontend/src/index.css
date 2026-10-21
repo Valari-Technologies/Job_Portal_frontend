@@ -28,4 +28,91 @@
     --portal-text-secondary: #334155;
     --portal-text-muted: #475569;
   }
+
+  /* ==========================================================================
+     Global Dropdown (Select) Design System
+     Clean, modern, accessible & uniform across all portals
+     ========================================================================== */
+  select:not([multiple]) {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #ffffff;
+    /* Clean, modern slate chevron */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem 1rem;
+    padding-right: 2.75rem !important;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.75rem; /* 12px rounded-xl */
+    color: #0F172A;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  /* Interactive Hover State */
+  select:not([multiple]):hover:not(:disabled) {
+    border-color: #94A3B8;
+    background-color: #FAFBFC;
+    box-shadow: 0 2px 4px 0 rgba(15, 23, 42, 0.05);
+  }
+
+  /* Polished Focus State with Soft Indigo Glow */
+  select:not([multiple]):focus {
+    outline: none !important;
+    border-color: #6366F1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16), 0 1px 2px 0 rgba(15, 23, 42, 0.05) !important;
+    background-color: #FFFFFF;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.25' stroke='%234F46E5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  }
+
+  /* Disabled State */
+  select:disabled {
+    background-color: #F8FAFC !important;
+    border-color: #E2E8F0 !important;
+    color: #94A3B8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.65;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23CBD5E1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  }
+
+  /* Suppress background chevron if parent container already has an absolute custom icon */
+  *:has(> svg.pointer-events-none) > select,
+  *:has(> span.pointer-events-none) > select,
+  *:has(> div.pointer-events-none) > select,
+  select.no-custom-arrow {
+    background-image: none !important;
+    padding-right: 2.25rem !important;
+  }
+
+  /* Modern, spacious option styling */
+  select option {
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #0F172A;
+    background-color: #FFFFFF;
+    line-height: 1.5;
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: #EEF2FF !important;
+    color: #4338CA !important;
+    font-weight: 600;
+  }
+
+  select option[disabled],
+  select option[value=""] {
+    color: #94A3B8;
+    font-weight: 400;
+  }
 }
+

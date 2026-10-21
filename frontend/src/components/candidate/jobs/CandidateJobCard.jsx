@@ -108,9 +108,14 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
 
         {/* Location & Salary Info */}
         <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs font-extrabold text-slate-600">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-slate-400" />
             <span>{job.location}</span>
+            {job.isLocationMatch && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200">
+                In your location
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <Banknote className="h-3.5 w-3.5 text-slate-400" />
@@ -207,9 +212,14 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
 
         {/* Location & Salary */}
         <div className="space-y-1 text-xs">
-          <p className="font-extrabold text-slate-400">
-            {job.location}
-          </p>
+          <div className="flex items-center gap-1.5 font-extrabold text-slate-500">
+            <span>{job.location}</span>
+            {job.isLocationMatch && (
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-black border border-emerald-200">
+                In your location
+              </span>
+            )}
+          </div>
           <p className="font-black text-slate-900 text-sm">
             {formatSalary()}
           </p>

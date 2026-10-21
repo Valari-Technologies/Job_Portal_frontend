@@ -1,4 +1,5 @@
-import { Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function ApplicationsFilters({
   searchQuery,
@@ -23,56 +24,37 @@ export default function ApplicationsFilters({
             placeholder="Search candidate or job..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl py-2.5 pl-9 pr-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full border border-slate-200 rounded-xl py-2.5 pl-9 pr-4 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 min-h-[44px]"
           />
         </div>
 
         {/* Job dropdown selection */}
-        <div className="relative">
-          <select
-            value={jobFilter}
-            onChange={(e) => setJobFilter(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
-          >
-            <option value="all">All jobs</option>
-          </select>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <ChevronDown className="h-4.5 w-4.5" />
-          </span>
-        </div>
+        <CustomDropdown
+          value={jobFilter}
+          onChange={(e) => setJobFilter(e.target.value)}
+          options={[{ value: 'all', label: 'All jobs' }]}
+        />
 
         {/* Status dropdown selection */}
-        <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
-          >
-            <option value="all">All statuses</option>
-            <option value="new">New</option>
-            <option value="shortlisted">Shortlisted</option>
-            <option value="interview">Interview</option>
-            <option value="selected">Selected</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <ChevronDown className="h-4.5 w-4.5" />
-          </span>
-        </div>
+        <CustomDropdown
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'new', label: 'New' },
+            { value: 'shortlisted', label: 'Shortlisted' },
+            { value: 'interview', label: 'Interview' },
+            { value: 'selected', label: 'Selected' },
+            { value: 'rejected', label: 'Rejected' }
+          ]}
+        />
 
         {/* Location dropdown selection */}
-        <div className="relative">
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
-          >
-            <option value="all">All locations</option>
-          </select>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <ChevronDown className="h-4.5 w-4.5" />
-          </span>
-        </div>
+        <CustomDropdown
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          options={[{ value: 'all', label: 'All locations' }]}
+        />
       </div>
     </div>
   );

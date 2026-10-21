@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { useSuperAdminUser } from '../../../context/SuperAdminUserContext';
 import SuperAdminCropModal from '../../../components/superAdmin/profile/SuperAdminCropModal';
+import SuperAdminLocationModal from '../../../components/superAdmin/common/SuperAdminLocationModal';
+import { normalizeLocationWithCountry } from '../../../data/indiaLocations';
 import { 
   User, 
   ShieldCheck, 
@@ -11,13 +13,15 @@ import {
   X, 
   Clock, 
   Calendar, 
-  Lock 
+  Lock,
+  MapPin
 } from 'lucide-react';
 
 export default function SuperAdminProfile() {
-  const { profile, updateProfile, updatePhoto, removePhoto, isLoadingProfile } = useSuperAdminUser();
+  const { profile, updateProfile, updatePhoto, removePhoto, updateLocation, isLoadingProfile } = useSuperAdminUser();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     mobile_number: profile?.mobile_number || ''
@@ -360,6 +364,30 @@ export default function SuperAdminProfile() {
               )}
             </div>
 
+            {/* Base Location (All-India LGD Catalog) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Base Location</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(true)}
+                  className="text-xs font-black text-teal-600 hover:text-teal-700 hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <Edit2 className="h-3 w-3" />
+                  <span>Change Location</span>
+                </button>
+              </div>
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-150 rounded-xl px-3.5 py-2.5">
+                <span className="text-xs font-bold text-slate-800">{normalizeLocationWithCountry(profile?.location || 'Delhi, India')}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                  LGD Verified
+                </span>
+              </div>
+            </div>
+
             {/* Profile Photo Controls */}
             <div className="space-y-2 pt-2 border-t border-slate-100">
               <label className="text-xs font-extrabold text-slate-700 block">
@@ -498,6 +526,14 @@ export default function SuperAdminProfile() {
           }}
         />
       )}
+
+      {/* Location Selector Modal */}
+      <SuperAdminLocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        currentLocation={profile?.location || 'Delhi'}
+        onSaveLocation={updateLocation}
+      />
     </div>
   );
 }

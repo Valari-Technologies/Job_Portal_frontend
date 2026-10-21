@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Upload } from 'lucide-react';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function CandidateModal({ isOpen, onClose, onToast }) {
   const [fullName, setFullName] = useState('');
@@ -146,18 +147,16 @@ export default function CandidateModal({ isOpen, onClose, onToast }) {
               {/* Account Status */}
               <div className="space-y-1">
                 <label htmlFor="account-status" className="block text-xs font-black text-slate-450 uppercase">Account status</label>
-                <div className="relative">
-                  <select 
-                    id="account-status"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
-                </div>
+                <CustomDropdown 
+                  id="account-status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  options={[
+                    { value: 'Active', label: 'Active' },
+                    { value: 'Inactive', label: 'Inactive' },
+                    { value: 'Suspended', label: 'Suspended' }
+                  ]}
+                />
               </div>
             </div>
             
@@ -200,73 +199,70 @@ export default function CandidateModal({ isOpen, onClose, onToast }) {
               {/* Gender */}
               <div className="space-y-1">
                 <label htmlFor="gender" className="block text-xs font-black text-slate-450 uppercase">Gender</label>
-                <div className="relative">
-                  <select 
-                    id="gender"
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+                <CustomDropdown 
+                  id="gender"
+                  value={gender}
+                  placeholder="Select gender"
+                  onChange={(e) => setGender(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select gender' },
+                    { value: 'Male', label: 'Male' },
+                    { value: 'Female', label: 'Female' },
+                    { value: 'Other', label: 'Other' }
+                  ]}
+                />
               </div>
 
               {/* Location */}
               <div className="space-y-1">
                 <label htmlFor="location" className="block text-xs font-black text-slate-450 uppercase">Location</label>
-                <div className="relative">
-                  <select 
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select location</option>
-                  </select>
-                </div>
+                <CustomDropdown 
+                  id="location"
+                  value={location}
+                  placeholder="Select location"
+                  searchable={true}
+                  onChange={(e) => setLocation(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select location' }
+                  ]}
+                />
               </div>
 
               {/* Preferred Job Type */}
               <div className="space-y-1">
                 <label htmlFor="job-type" className="block text-xs font-black text-slate-450 uppercase">Preferred job type</label>
-                <div className="relative">
-                  <select 
-                    id="job-type"
-                    value={jobType}
-                    onChange={(e) => setJobType(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select job type</option>
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Internship">Internship</option>
-                    <option value="Apprenticeship">Apprenticeship</option>
-                  </select>
-                </div>
+                <CustomDropdown 
+                  id="job-type"
+                  value={jobType}
+                  placeholder="Select job type"
+                  onChange={(e) => setJobType(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select job type' },
+                    { value: 'Full-time', label: 'Full-time' },
+                    { value: 'Part-time', label: 'Part-time' },
+                    { value: 'Contract', label: 'Contract' },
+                    { value: 'Internship', label: 'Internship' },
+                    { value: 'Apprenticeship', label: 'Apprenticeship' }
+                  ]}
+                />
               </div>
 
               {/* Preferred Work Mode */}
               <div className="space-y-1">
                 <label htmlFor="work-mode" className="block text-xs font-black text-slate-450 uppercase">Preferred work mode</label>
-                <div className="relative">
-                  <select 
-                    id="work-mode"
-                    value={workMode}
-                    onChange={(e) => setWorkMode(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select work mode</option>
-                    <option value="on-site">On-site</option>
-                    <option value="remote">Remote</option>
-                    <option value="hybrid">Hybrid</option>
-                    <option value="field-based">Field-based</option>
-                  </select>
-                </div>
+                <CustomDropdown 
+                  id="work-mode"
+                  value={workMode}
+                  placeholder="Select work mode"
+                  onChange={(e) => setWorkMode(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select work mode' },
+                    { value: 'on-site', label: 'On-site' },
+                    { value: 'remote', label: 'Remote' },
+                    { value: 'hybrid', label: 'Hybrid' },
+                    { value: 'field-based', label: 'Field-based' }
+                  ]}
+                />
               </div>
 
               {/* Salary Min */}

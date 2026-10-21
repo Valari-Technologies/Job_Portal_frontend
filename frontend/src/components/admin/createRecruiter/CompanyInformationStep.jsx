@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { fetchLocations } from '../../../services/superAdmin/locationService';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function CompanyInformationStep({ formState, setFormState, errors, setErrors, touched, setTouched }) {
   const industries = ["Education", "Technology", "Healthcare", "Finance", "Services", "Retail", "Manufacturing"];
@@ -221,24 +222,13 @@ export default function CompanyInformationStep({ formState, setFormState, errors
         {/* Industry */}
         <div className="space-y-1.5">
           <label className="text-[13px] font-semibold text-slate-700">Industry *</label>
-          <div className="relative">
-            <select
-              value={formState.industry}
-              onChange={(e) => handleChange('industry', e.target.value)}
-              onBlur={() => handleBlur('industry')}
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-[14px] font-medium text-slate-700 bg-white focus:outline-none min-h-[46px] appearance-none pr-8 cursor-pointer ${
-                errors.industry && touched.industry ? 'border-red-300 ring-1 ring-red-300' : 'border-slate-200'
-              }`}
-            >
-              <option value="">Select industry</option>
-              {industries.map((ind) => (
-                <option key={ind} value={ind}>{ind}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-              ▼
-            </div>
-          </div>
+          <CustomDropdown
+            value={formState.industry}
+            placeholder="Select industry"
+            onChange={(e) => handleChange('industry', e.target.value)}
+            options={industries}
+            error={errors.industry && touched.industry}
+          />
           {errors.industry && touched.industry && (
             <div className="flex items-center gap-1 text-[12px] text-red-500 font-medium min-h-[16px]">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -250,24 +240,13 @@ export default function CompanyInformationStep({ formState, setFormState, errors
         {/* Company Type */}
         <div className="space-y-1.5">
           <label className="text-[13px] font-semibold text-slate-700">Company Type *</label>
-          <div className="relative">
-            <select
-              value={formState.companyType}
-              onChange={(e) => handleChange('companyType', e.target.value)}
-              onBlur={() => handleBlur('companyType')}
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-[14px] font-medium text-slate-705 bg-white focus:outline-none min-h-[46px] appearance-none pr-8 cursor-pointer ${
-                errors.companyType && touched.companyType ? 'border-red-300 ring-1 ring-red-300' : 'border-slate-200'
-              }`}
-            >
-              <option value="">Select company type</option>
-              {companyTypes.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-              ▼
-            </div>
-          </div>
+          <CustomDropdown
+            value={formState.companyType}
+            placeholder="Select company type"
+            onChange={(e) => handleChange('companyType', e.target.value)}
+            options={companyTypes}
+            error={errors.companyType && touched.companyType}
+          />
           {errors.companyType && touched.companyType && (
             <div className="flex items-center gap-1 text-[12px] text-red-500 font-medium min-h-[16px]">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -301,20 +280,16 @@ export default function CompanyInformationStep({ formState, setFormState, errors
         <div className="space-y-1.5 md:col-span-2">
           <label className="text-[13px] font-semibold text-slate-700">Company Phone *</label>
           <div className="flex gap-2">
-            <div className="relative">
-              <select
-                value={formState.companyPhoneCountryCode}
-                onChange={(e) => handleChange('companyPhoneCountryCode', e.target.value)}
-                className="rounded-lg border border-slate-200 px-3.5 py-2.5 text-[14px] font-medium text-slate-700 bg-white focus:outline-none min-h-[46px] appearance-none pr-8 cursor-pointer"
-              >
-                <option value="+91">🇮🇳 +91</option>
-                <option value="+1">🇺🇸 +1</option>
-                <option value="+44">🇬🇧 +44</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                ▼
-              </div>
-            </div>
+            <CustomDropdown
+              value={formState.companyPhoneCountryCode}
+              onChange={(e) => handleChange('companyPhoneCountryCode', e.target.value)}
+              options={[
+                { value: '+91', label: '🇮🇳 +91' },
+                { value: '+1', label: '🇺🇸 +1' },
+                { value: '+44', label: '🇬🇧 +44' }
+              ]}
+              className="w-28 shrink-0"
+            />
             <input 
               type="tel"
               value={formState.companyPhone}
@@ -343,85 +318,52 @@ export default function CompanyInformationStep({ formState, setFormState, errors
           {/* State */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-500 block">State</label>
-            <div className="relative">
-              <select
-                value={formState.stateId || ''}
-                onChange={handleStateChange}
-                disabled={loadingLocations}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 bg-white focus:outline-none min-h-[44px] appearance-none pr-7 cursor-pointer disabled:bg-slate-50"
-              >
-                <option value="">{loadingLocations ? "Loading states..." : "Select State"}</option>
-                {states.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 text-[10px]">
-                ▼
-              </div>
-            </div>
+            <CustomDropdown
+              value={formState.stateId || ''}
+              onChange={handleStateChange}
+              disabled={loadingLocations}
+              searchable={true}
+              placeholder={loadingLocations ? "Loading states..." : "Select State"}
+              options={states.map((s) => ({ value: s.id, label: s.name }))}
+            />
           </div>
 
           {/* District */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-500 block">District</label>
-            <div className="relative">
-              <select
-                value={formState.districtId || ''}
-                onChange={handleDistrictChange}
-                disabled={!formState.stateId}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 bg-white focus:outline-none min-h-[44px] appearance-none pr-7 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
-              >
-                <option value="">Select District</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 text-[10px]">
-                ▼
-              </div>
-            </div>
+            <CustomDropdown
+              value={formState.districtId || ''}
+              onChange={handleDistrictChange}
+              disabled={!formState.stateId}
+              searchable={true}
+              placeholder="Select District"
+              options={districts.map((d) => ({ value: d.id, label: d.name }))}
+            />
           </div>
 
           {/* City / Town */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-500 block">City / Town</label>
-            <div className="relative">
-              <select
-                value={formState.cityId || ''}
-                onChange={handleCityChange}
-                disabled={!formState.districtId}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 bg-white focus:outline-none min-h-[44px] appearance-none pr-7 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
-              >
-                <option value="">Select City/Town</option>
-                {cities.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 text-[10px]">
-                ▼
-              </div>
-            </div>
+            <CustomDropdown
+              value={formState.cityId || ''}
+              onChange={handleCityChange}
+              disabled={!formState.districtId}
+              searchable={true}
+              placeholder="Select City/Town"
+              options={cities.map((c) => ({ value: c.id, label: c.name }))}
+            />
           </div>
 
           {/* Locality */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-500 block">Locality</label>
-            <div className="relative">
-              <select
-                value={formState.localityId || ''}
-                onChange={handleLocalityChange}
-                disabled={!formState.cityId}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 bg-white focus:outline-none min-h-[44px] appearance-none pr-7 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
-              >
-                <option value="">Select Locality</option>
-                {localities.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500 text-[10px]">
-                ▼
-              </div>
-            </div>
+            <CustomDropdown
+              value={formState.localityId || ''}
+              onChange={handleLocalityChange}
+              disabled={!formState.cityId}
+              placeholder="Select Locality"
+              options={localities.map((l) => ({ value: l.id, label: l.name }))}
+            />
           </div>
         </div>
 

@@ -14,11 +14,16 @@ import CandidateJobsEmptyState from '../../components/candidate/jobs/CandidateJo
 import { getCandidateJobs, toggleSavedCandidateJob, applyCandidateJob } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
+import { useCandidateUser } from '../../context/CandidateUserContext';
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 
 export default function CandidateJobsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { profile } = useCandidateUser();
+
+  const candidateDistrict = profile?.district || (profile?.location ? profile.location.split(',')[0].trim() : '');
+  const candidateState = profile?.state || '';
 
   // URL state sync
   const currentTab = searchParams.get('tab') || 'for-you';
@@ -68,6 +73,8 @@ export default function CandidateJobsPage() {
       const res = await getCandidateJobs({
         search: searchQuery,
         tab: currentTab,
+        candidateDistrict,
+        candidateState,
         ...filters
       });
       setJobs(res.jobs || []);
@@ -91,6 +98,8 @@ export default function CandidateJobsPage() {
         const res = await getCandidateJobs({
           search: searchQuery,
           tab: currentTab,
+          candidateDistrict,
+          candidateState,
           ...filters
         });
         if (isMounted) {
@@ -271,7 +280,9 @@ export default function CandidateJobsPage() {
             <span>
               {hasRecommendations
                 ? 'Based on your profile match and activity'
-                : 'Explore active job opportunities across Tamil Nadu'}
+                : candidateDistrict
+                  ? `Explore active job opportunities in ${candidateDistrict} and across Tamil Nadu`
+                  : 'Explore active job opportunities across Tamil Nadu'}
             </span>
           </p>
         </div>

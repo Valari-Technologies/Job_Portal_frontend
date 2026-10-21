@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import ProfilePhotoUpload from './ProfilePhotoUpload';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function RecruiterInformationStep({ formState, setFormState, errors, setErrors, touched, setTouched }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -173,20 +174,16 @@ export default function RecruiterInformationStep({ formState, setFormState, erro
       <div className="space-y-1.5">
         <label className="text-[13px] font-semibold text-slate-700">Phone Number *</label>
         <div className="flex gap-2">
-          <div className="relative">
-            <select
-              value={formState.phoneCountryCode}
-              onChange={(e) => handleChange('phoneCountryCode', e.target.value)}
-              className="rounded-lg border border-slate-200 px-3.5 py-2.5 text-[14px] font-medium text-slate-700 bg-white focus:outline-none min-h-[46px] appearance-none pr-8 cursor-pointer"
-            >
-              <option value="+91">🇮🇳 +91</option>
-              <option value="+1">🇺🇸 +1</option>
-              <option value="+44">🇬🇧 +44</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-              ▼
-            </div>
-          </div>
+          <CustomDropdown
+            value={formState.phoneCountryCode}
+            onChange={(e) => handleChange('phoneCountryCode', e.target.value)}
+            options={[
+              { value: '+91', label: '🇮🇳 +91' },
+              { value: '+1', label: '🇺🇸 +1' },
+              { value: '+44', label: '🇬🇧 +44' }
+            ]}
+            className="w-28 shrink-0"
+          />
           <input 
             type="tel"
             value={formState.phone}

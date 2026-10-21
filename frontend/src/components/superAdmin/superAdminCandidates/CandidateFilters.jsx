@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchLocations } from '../../../services/superAdmin/locationService';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function CandidateFilters({ 
   selectedState, 
@@ -31,19 +32,16 @@ export default function CandidateFilters({
           <label htmlFor="state-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             State
           </label>
-          <select
+          <CustomDropdown
             id="state-filter"
             value={selectedState}
+            searchable={true}
             onChange={(e) => setSelectedState(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All States</option>
-            {states.map((st) => (
-              <option key={st.id || st.name} value={st.name}>
-                {st.name}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: 'All', label: 'All States' },
+              ...states.map((st) => ({ value: st.name, label: st.name }))
+            ]}
+          />
         </div>
 
         {/* District Filter */}
@@ -51,14 +49,12 @@ export default function CandidateFilters({
           <label htmlFor="district-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             District
           </label>
-          <select
+          <CustomDropdown
             id="district-filter"
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All Districts</option>
-          </select>
+            options={[{ value: 'All', label: 'All Districts' }]}
+          />
         </div>
 
         {/* Profile Status Filter */}
@@ -66,17 +62,17 @@ export default function CandidateFilters({
           <label htmlFor="profile-status-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Profile status
           </label>
-          <select
+          <CustomDropdown
             id="profile-status-filter"
             value={profileStatus}
             onChange={(e) => setProfileStatus(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All</option>
-            <option value="Complete">Complete</option>
-            <option value="Incomplete">Incomplete</option>
-            <option value="Needs review">Needs review</option>
-          </select>
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'Complete', label: 'Complete' },
+              { value: 'Incomplete', label: 'Incomplete' },
+              { value: 'Needs review', label: 'Needs review' }
+            ]}
+          />
         </div>
 
         {/* Account Status Filter */}
@@ -84,17 +80,17 @@ export default function CandidateFilters({
           <label htmlFor="account-status-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Account status
           </label>
-          <select
+          <CustomDropdown
             id="account-status-filter"
             value={accountStatus}
             onChange={(e) => setAccountStatus(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Suspended">Suspended</option>
-          </select>
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'Active', label: 'Active' },
+              { value: 'Inactive', label: 'Inactive' },
+              { value: 'Suspended', label: 'Suspended' }
+            ]}
+          />
         </div>
       </div>
     </div>

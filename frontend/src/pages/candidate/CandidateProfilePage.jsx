@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ImageCropModal from '../../components/shared/ImageCropModal';
+import CustomDropdown from '../../components/shared/CustomDropdown';
 import { useCandidateUser } from '../../context/CandidateUserContext';
 import {
   getCandidateProfile,
@@ -15,6 +16,7 @@ import {
   updateCandidateLinks
 } from '../../services/candidate/candidateProfileService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
+import { INDIA_STATES, getDistrictsForState, parseLocationString } from '../../data/indiaLocations';
 import {
   ArrowLeft,
   Pencil,
@@ -55,10 +57,11 @@ export default function CandidateProfilePage() {
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
-  // Edit Form States
   const [personalForm, setPersonalForm] = useState({
     fullName: '',
     headline: '',
+    state: '',
+    district: '',
     location: '',
     phone: '',
     summary: ''
@@ -106,10 +109,16 @@ export default function CandidateProfilePage() {
   // Initialize Edit Forms from Profile data
   const initEditForms = useCallback((data) => {
     if (!data) return;
+    const parsed = parseLocationString(data.location || '');
+    const stateVal = data.state || parsed.state || 'Tamil Nadu';
+    const districtVal = data.district || parsed.district || '';
+
     setPersonalForm({
       fullName: data.fullName || '',
       headline: data.headline || '',
-      location: data.location || '',
+      state: stateVal,
+      district: districtVal,
+      location: data.location || (districtVal ? `${districtVal}, ${stateVal}` : stateVal),
       phone: data.phone || '',
       summary: data.summary || ''
     });
@@ -248,11 +257,37 @@ export default function CandidateProfilePage() {
     }
   };
 
+  // State & District change handlers
+  const handleStateChange = (newState) => {
+    const dists = getDistrictsForState(newState);
+    const newDistrict = dists.includes(personalForm.district) ? personalForm.district : '';
+    const newLoc = newDistrict ? `${newDistrict}, ${newState}` : newState;
+    setPersonalForm(prev => ({
+      ...prev,
+      state: newState,
+      district: newDistrict,
+      location: newLoc
+    }));
+  };
+
+  const handleDistrictChange = (newDistrict) => {
+    const newLoc = newDistrict ? `${newDistrict}, ${personalForm.state}` : (personalForm.state || '');
+    setPersonalForm(prev => ({
+      ...prev,
+      district: newDistrict,
+      location: newLoc
+    }));
+  };
+
   // Save Personal Details Form
   const handleSavePersonal = async () => {
     setIsSaving(true);
     try {
-      const res = await updateCandidateProfile(personalForm);
+      const payload = {
+        ...personalForm,
+        location: personalForm.district ? `${personalForm.district}, ${personalForm.state}` : (personalForm.state || '')
+      };
+      const res = await updateCandidateProfile(payload);
       if (res.success) {
         setProfile(res.profile);
         refreshProfile(); // Sync name and info globally across Candidate pages
@@ -956,24 +991,37 @@ export default function CandidateProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">Location</label>
-                      <input
-                        type="text"
-                        value={personalForm.location}
-                        onChange={(e) => setPersonalForm({ ...personalForm, location: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                      <label className="text-xs font-extrabold text-slate-700 block">State</label>
+                      <CustomDropdown
+                        value={personalForm.state || ''}
+                        placeholder="Select State"
+                        searchable={true}
+                        onChange={(e) => handleStateChange(e.target.value)}
+                        options={INDIA_STATES}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">Phone Number</label>
-                      <input
-                        type="text"
-                        value={personalForm.phone}
-                        onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                      <label className="text-xs font-extrabold text-slate-700 block">District</label>
+                      <CustomDropdown
+                        value={personalForm.district || ''}
+                        disabled={!personalForm.state}
+                        placeholder={personalForm.state ? 'Select District' : 'Select State first'}
+                        searchable={true}
+                        onChange={(e) => handleDistrictChange(e.target.value)}
+                        options={getDistrictsForState(personalForm.state) || []}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 block">Phone Number</label>
+                    <input
+                      type="text"
+                      value={personalForm.phone}
+                      onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
+                    />
                   </div>
 
                   <div className="space-y-1">

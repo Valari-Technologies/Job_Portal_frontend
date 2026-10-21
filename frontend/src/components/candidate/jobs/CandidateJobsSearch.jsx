@@ -16,7 +16,7 @@ export default function CandidateJobsSearch({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search jobs, skills, companies..."
-          className="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-14 py-3 text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-[#3B00FF] focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/10 shadow-2xs transition-all"
+          className="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-14 sm:pr-10 py-3 text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-[#3B00FF] focus:outline-none focus:ring-4 focus:ring-[#3B00FF]/10 shadow-2xs transition-all"
         />
 
         {searchQuery && (
@@ -24,17 +24,18 @@ export default function CandidateJobsSearch({
             type="button"
             onClick={() => onSearchChange('')}
             aria-label="Clear search input"
-            className="absolute right-12 p-1 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer"
+            className="absolute right-12 sm:right-3.5 p-1 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         )}
 
+        {/* Mobile-only Filter Drawer Button (Desktop has the full filter bar directly below) */}
         <button
           type="button"
           onClick={onOpenFilterSheet}
           aria-label="Open filter menu"
-          className="absolute right-2 h-9 w-9 rounded-xl bg-[#3B00FF] hover:bg-[#3000E0] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 relative"
+          className="sm:hidden absolute right-2 h-9 w-9 rounded-xl bg-[#3B00FF] hover:bg-[#3000E0] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 relative"
         >
           <SlidersHorizontal className="h-4.5 w-4.5 stroke-[2.5]" />
           {activeFilterCount > 0 && (

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { 
   getSuperAdminProfile, 
   updateSuperAdminProfile, 
+  updateSuperAdminLocation,
   updateSuperAdminProfilePicture, 
   removeSuperAdminProfilePicture, 
   updateSuperAdminSettings 
@@ -127,6 +128,12 @@ export function SuperAdminUserProvider({ children }) {
     setNotifications([]);
   };
 
+  const handleUpdateLocation = async (newLocation, state = '', district = '') => {
+    const updated = await updateSuperAdminLocation(newLocation, state, district);
+    setProfile(updated);
+    return updated;
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const value = {
@@ -140,6 +147,7 @@ export function SuperAdminUserProvider({ children }) {
     error,
     refreshData,
     updateProfile: handleUpdateProfile,
+    updateLocation: handleUpdateLocation,
     updatePhoto: handleUpdatePhoto,
     removePhoto: handleRemovePhoto,
     updateSettings: handleUpdateSettings,

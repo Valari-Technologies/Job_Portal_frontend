@@ -98,8 +98,8 @@ export default function CandidateJobsMobileFilterSheet({
               onChange={(e) => handleChange('industryId', e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-[#3B00FF]"
             >
-              <option value="">All Industries</option>
-              {options.industries.map((ind) => (
+              <option value="">All Industries / Categories</option>
+              {(options.industries || options.categories || []).map((ind) => (
                 <option key={ind.id} value={ind.id}>{ind.name}</option>
               ))}
             </select>
@@ -115,7 +115,7 @@ export default function CandidateJobsMobileFilterSheet({
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-[#3B00FF] disabled:opacity-50"
             >
               <option value="">All Departments</option>
-              {departments.map((dept) => (
+              {(departments || []).map((dept) => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>
@@ -130,7 +130,7 @@ export default function CandidateJobsMobileFilterSheet({
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-[#3B00FF]"
             >
               <option value="">All Locations</option>
-              {options.locations.map((loc) => (
+              {(options.locations || []).map((loc) => (
                 <option key={loc.id} value={loc.name}>{loc.name}</option>
               ))}
             </select>
@@ -145,7 +145,7 @@ export default function CandidateJobsMobileFilterSheet({
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-[#3B00FF]"
             >
               <option value="">Any Experience</option>
-              {options.experienceRanges.map((exp) => (
+              {(options.experienceRanges || []).map((exp) => (
                 <option key={exp.id} value={exp.id}>{exp.label}</option>
               ))}
             </select>
@@ -160,7 +160,7 @@ export default function CandidateJobsMobileFilterSheet({
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-[#3B00FF]"
             >
               <option value="">All Work Modes</option>
-              {options.workModes.map((wm) => (
+              {(options.workModes || []).map((wm) => (
                 <option key={wm.id} value={wm.id}>{wm.label}</option>
               ))}
             </select>

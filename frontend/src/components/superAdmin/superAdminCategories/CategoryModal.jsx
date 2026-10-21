@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createCategory, updateCategory, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function CategoryModal({ isOpen, onClose, categoryToEdit = null, onSuccess, onToast }) {
   const [name, setName] = useState('');
@@ -169,25 +170,22 @@ export default function CategoryModal({ isOpen, onClose, categoryToEdit = null, 
           {/* Parent category */}
           <div className="space-y-1">
             <label htmlFor="category-modal-parent" className="block text-xs font-black text-slate-450 uppercase">Parent category</label>
-            <div className="relative">
-              <select 
-                id="category-modal-parent"
-                value={parentId}
-                onChange={(e) => {
-                  setParentId(e.target.value);
-                  if (errors.parent) setErrors(prev => ({ ...prev, parent: null }));
-                }}
-                disabled={loadingParents}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-              >
-                <option value="">None (Top Level Category)</option>
-                {parentOptions.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomDropdown 
+              id="category-modal-parent"
+              value={parentId}
+              placeholder="None (Top Level Category)"
+              disabled={loadingParents}
+              searchable={true}
+              onChange={(e) => {
+                setParentId(e.target.value);
+                if (errors.parent) setErrors(prev => ({ ...prev, parent: null }));
+              }}
+              options={[
+                { value: '', label: 'None (Top Level Category)' },
+                ...parentOptions.map((cat) => ({ value: cat.id, label: cat.name }))
+              ]}
+              error={!!errors.parent}
+            />
             {errors.parent && (
               <p className="text-xs font-bold text-red-500 mt-1">{errors.parent}</p>
             )}
@@ -234,17 +232,15 @@ export default function CategoryModal({ isOpen, onClose, categoryToEdit = null, 
           {/* Status */}
           <div className="space-y-1">
             <label htmlFor="category-modal-status" className="block text-xs font-black text-slate-450 uppercase">Active status</label>
-            <div className="relative">
-              <select 
-                id="category-modal-status"
-                value={isActive}
-                onChange={(e) => setIsActive(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-              >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
+            <CustomDropdown 
+              id="category-modal-status"
+              value={String(isActive)}
+              onChange={(e) => setIsActive(e.target.value)}
+              options={[
+                { value: 'true', label: 'Active' },
+                { value: 'false', label: 'Inactive' }
+              ]}
+            />
           </div>
 
           {/* Sticky Actions Footer */}

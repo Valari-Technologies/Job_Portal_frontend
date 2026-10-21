@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createSkill, updateSkill, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function SkillModal({ isOpen, onClose, skillToEdit = null, onSuccess, onToast }) {
   const [name, setName] = useState('');
@@ -145,25 +146,25 @@ export default function SkillModal({ isOpen, onClose, skillToEdit = null, onSucc
           {/* Job Category */}
           <div className="space-y-1">
             <label htmlFor="skill-modal-category" className="block text-xs font-black text-slate-450 uppercase">Job category (Optional)</label>
-            <div className="relative">
-              <select 
-                id="skill-modal-category"
-                value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value);
-                  if (errors.category) setErrors(prev => ({ ...prev, category: null }));
-                }}
-                disabled={loadingCategories}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-              >
-                <option value="">None / Select Category</option>
-                {categoryOptions.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.parent_name ? `${cat.name} (Sub-category of ${cat.parent_name})` : cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomDropdown 
+              id="skill-modal-category"
+              value={categoryId}
+              placeholder="None / Select Category"
+              disabled={loadingCategories}
+              searchable={true}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                if (errors.category) setErrors(prev => ({ ...prev, category: null }));
+              }}
+              options={[
+                { value: '', label: 'None / Select Category' },
+                ...categoryOptions.map((cat) => ({
+                  value: cat.id,
+                  label: cat.parent_name ? `${cat.name} (Sub-category of ${cat.parent_name})` : cat.name
+                }))
+              ]}
+              error={!!errors.category}
+            />
             {errors.category && (
               <p className="text-xs font-bold text-red-500 mt-1">{errors.category}</p>
             )}
@@ -172,17 +173,15 @@ export default function SkillModal({ isOpen, onClose, skillToEdit = null, onSucc
           {/* Status */}
           <div className="space-y-1">
             <label htmlFor="skill-modal-status" className="block text-xs font-black text-slate-450 uppercase">Active status</label>
-            <div className="relative">
-              <select 
-                id="skill-modal-status"
-                value={isActive}
-                onChange={(e) => setIsActive(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:ring-4 focus:ring-teal-100 appearance-none cursor-pointer"
-              >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
+            <CustomDropdown 
+              id="skill-modal-status"
+              value={String(isActive)}
+              onChange={(e) => setIsActive(e.target.value)}
+              options={[
+                { value: 'true', label: 'Active' },
+                { value: 'false', label: 'Inactive' }
+              ]}
+            />
           </div>
 
           {/* Sticky Actions Footer */}

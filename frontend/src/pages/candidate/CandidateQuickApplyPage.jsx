@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
+import CustomDropdown from '../../components/shared/CustomDropdown';
 import { getCandidateJobDetails } from '../../services/candidate/candidateJobsService';
 import { getCandidateResumes, submitCandidateApplication } from '../../services/candidate/candidateApplicationsService';
 import { ArrowLeft, MoreVertical, FileText, ExternalLink, ArrowRight, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
@@ -292,21 +293,12 @@ export default function CandidateQuickApplyPage() {
               <label htmlFor="current_ctc" className="text-xs font-black text-slate-700">
                 Current CTC
               </label>
-              <select
+              <CustomDropdown
                 id="current_ctc"
                 value={currentCtc}
                 onChange={(e) => setCurrentCtc(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-bold text-slate-800 focus:border-[#3B00FF] focus:outline-none"
-              >
-                <option value="₹6 LPA">₹6 LPA</option>
-                <option value="₹8 LPA">₹8 LPA</option>
-                <option value="₹10 LPA">₹10 LPA</option>
-                <option value="₹12 LPA">₹12 LPA</option>
-                <option value="₹15+ LPA">₹15+ LPA</option>
-                <option value="$100k">$100k</option>
-                <option value="$120k">$120k</option>
-                <option value="$150k">$150k</option>
-              </select>
+                options={['₹6 LPA', '₹8 LPA', '₹10 LPA', '₹12 LPA', '₹15+ LPA', '$100k', '$120k', '$150k']}
+              />
             </div>
 
             {/* Notice Period */}
@@ -314,18 +306,12 @@ export default function CandidateQuickApplyPage() {
               <label htmlFor="notice_period" className="text-xs font-black text-slate-700">
                 Notice Period
               </label>
-              <select
+              <CustomDropdown
                 id="notice_period"
                 value={noticePeriod}
                 onChange={(e) => setNoticePeriod(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-bold text-slate-800 focus:border-[#3B00FF] focus:outline-none"
-              >
-                <option value="Immediate">Immediate</option>
-                <option value="15 Days">15 Days</option>
-                <option value="30 Days">30 Days</option>
-                <option value="60 Days">60 Days</option>
-                <option value="90 Days">90 Days</option>
-              </select>
+                options={['Immediate', '15 Days', '30 Days', '60 Days', '90 Days']}
+              />
             </div>
 
             {/* Fit Note */}

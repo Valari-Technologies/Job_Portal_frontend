@@ -31,6 +31,9 @@ const DEFAULT_SUPER_ADMIN_PROFILE = {
   
   // Settings & Preferences
   display_name: 'Super Admin',
+  location: 'Delhi, India',
+  state: 'Delhi',
+  district: 'New Delhi',
   preferred_language: 'en-US',
   time_zone: 'Asia/Kolkata',
   date_format: 'DD/MM/YYYY',
@@ -72,7 +75,12 @@ function loadStoredProfile() {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(DEFAULT_SUPER_ADMIN_PROFILE));
       return { ...DEFAULT_SUPER_ADMIN_PROFILE };
     }
-    return { ...DEFAULT_SUPER_ADMIN_PROFILE, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_SUPER_ADMIN_PROFILE,
+      ...parsed,
+      location: parsed.location || 'Delhi'
+    };
   } catch (err) {
     console.error('Error loading Super Admin profile from storage:', err);
     return { ...DEFAULT_SUPER_ADMIN_PROFILE };
@@ -109,8 +117,26 @@ export async function updateSuperAdminProfile(data) {
     full_name: data.full_name !== undefined ? data.full_name.trim() : current.full_name,
     mobile_number: data.mobile_number !== undefined ? data.mobile_number.trim() : current.mobile_number,
     display_name: data.display_name !== undefined ? data.display_name.trim() : current.display_name,
+    location: data.location !== undefined ? data.location.trim() : (current.location || 'Delhi'),
+    state: data.state !== undefined ? data.state.trim() : current.state,
+    district: data.district !== undefined ? data.district.trim() : current.district
   };
 
+  saveProfileToStorage(updated);
+  return updated;
+}
+
+/**
+ * Update Super Admin Location directly
+ */
+export async function updateSuperAdminLocation(location, state = '', district = '') {
+  const current = loadStoredProfile();
+  const updated = {
+    ...current,
+    location: String(location).trim(),
+    state: state ? String(state).trim() : current.state,
+    district: district ? String(district).trim() : current.district
+  };
   saveProfileToStorage(updated);
   return updated;
 }

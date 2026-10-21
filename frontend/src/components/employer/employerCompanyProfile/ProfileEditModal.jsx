@@ -1,4 +1,6 @@
 import { X, Globe, Mail, Phone, User, MapPin } from 'lucide-react';
+import { INDIA_STATES, getDistrictsForState } from '../../../data/indiaLocations';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function ProfileEditModal({
   isEditing,
@@ -32,6 +34,7 @@ export default function ProfileEditModal({
   setFormDesc,
   formErrors,
 }) {
+  const availableDistricts = formState ? getDistrictsForState(formState) : [];
   if (!isEditing) return null;
 
   return (
@@ -166,26 +169,30 @@ export default function ProfileEditModal({
               />
             </div>
 
-            {/* State, District, City, Locality */}
+            {/* State, District (LGD Master Data Cascading Selection) */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-black text-slate-455 uppercase">State</label>
-              <input 
-                type="text" 
+              <label className="block text-xs font-black text-slate-500 uppercase">State / UT (LGD)</label>
+              <CustomDropdown
                 value={formState}
-                onChange={(e) => setFormState(e.target.value)}
-                placeholder="e.g. Tamil Nadu"
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-805 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="Select State / UT"
+                searchable={true}
+                onChange={(e) => {
+                  setFormState(e.target.value);
+                  setFormDistrict('');
+                }}
+                options={INDIA_STATES}
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-black text-slate-455 uppercase">District</label>
-              <input 
-                type="text" 
+              <label className="block text-xs font-black text-slate-500 uppercase">District</label>
+              <CustomDropdown
                 value={formDistrict}
+                disabled={!formState || availableDistricts.length === 0}
+                placeholder={formState ? 'Select District' : 'First Select State'}
+                searchable={true}
                 onChange={(e) => setFormDistrict(e.target.value)}
-                placeholder="e.g. Chennai"
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-805 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                options={availableDistricts}
               />
             </div>
 

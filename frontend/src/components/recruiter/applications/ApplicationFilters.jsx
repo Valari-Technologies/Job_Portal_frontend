@@ -1,4 +1,5 @@
-import { ChevronDown, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function ApplicationFilters({ 
   selectedStatus, 
@@ -8,43 +9,38 @@ export default function ApplicationFilters({
   statuses = [], 
   jobs = [] 
 }) {
+  const statusOptions = [
+    { value: 'ALL', label: 'All Statuses' },
+    ...statuses.filter(st => st.value !== 'ALL').map(st => ({ value: st.value, label: st.label }))
+  ];
+
+  const jobOptions = [
+    { value: 'ALL', label: 'All Roles' },
+    ...jobs.filter(j => (j.id || j.value) !== 'ALL').map(job => ({
+      value: String(job.id || job.value),
+      label: job.title || job.label || String(job.id || job.value)
+    }))
+  ];
+
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Left: Filters */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Status Filter */}
-        <div className="relative min-w-[140px]">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
-          >
-            <option value="ALL">All Statuses</option>
-            {statuses.map((st) => (
-              st.value !== 'ALL' && <option key={st.value} value={st.value}>{st.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        </div>
+        <CustomDropdown
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          options={statusOptions}
+          className="min-w-[150px]"
+        />
 
         {/* Role/Job Filter */}
-        <div className="relative min-w-[140px]">
-          <select
-            value={selectedJobId}
-            onChange={(e) => setSelectedJobId(e.target.value)}
-            className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
-          >
-            <option value="ALL">All Roles</option>
-            {jobs.filter(j => (j.id || j.value) !== 'ALL').map((job) => {
-              const val = String(job.id || job.value);
-              const label = job.title || job.label || val;
-              return (
-                <option key={val} value={val}>{label}</option>
-              );
-            })}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        </div>
+        <CustomDropdown
+          value={selectedJobId}
+          onChange={(e) => setSelectedJobId(e.target.value)}
+          options={jobOptions}
+          className="min-w-[160px]"
+        />
       </div>
 
       {/* Right: Export Button */}

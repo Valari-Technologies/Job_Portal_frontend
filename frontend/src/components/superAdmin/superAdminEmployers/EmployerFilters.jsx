@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchLocations } from '../../../services/superAdmin/locationService';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function EmployerFilters({ 
   selectedState, 
@@ -31,19 +32,16 @@ export default function EmployerFilters({
           <label htmlFor="state-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             State
           </label>
-          <select
+          <CustomDropdown
             id="state-filter"
             value={selectedState}
+            searchable={true}
             onChange={(e) => setSelectedState(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All States</option>
-            {states.map((st) => (
-              <option key={st.id || st.name} value={st.name}>
-                {st.name}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: 'All', label: 'All States' },
+              ...states.map((st) => ({ value: st.name, label: st.name }))
+            ]}
+          />
         </div>
 
         {/* Verification Status */}
@@ -51,18 +49,18 @@ export default function EmployerFilters({
           <label htmlFor="verification-status-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Verification status
           </label>
-          <select
+          <CustomDropdown
             id="verification-status-filter"
             value={verificationStatus}
             onChange={(e) => setVerificationStatus(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'PENDING', label: 'Pending' },
+              { value: 'APPROVED', label: 'Approved' },
+              { value: 'REJECTED', label: 'Rejected' },
+              { value: 'SUSPENDED', label: 'Suspended' }
+            ]}
+          />
         </div>
 
         {/* Trust Level */}
@@ -70,17 +68,17 @@ export default function EmployerFilters({
           <label htmlFor="trust-level-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Trust level
           </label>
-          <select
+          <CustomDropdown
             id="trust-level-filter"
             value={trustLevel}
             onChange={(e) => setTrustLevel(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All</option>
-            <option value="New">New</option>
-            <option value="Building trust">Building trust</option>
-            <option value="Trusted employer">Trusted employer</option>
-          </select>
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'New', label: 'New' },
+              { value: 'Building trust', label: 'Building trust' },
+              { value: 'Trusted employer', label: 'Trusted employer' }
+            ]}
+          />
         </div>
 
         {/* Job Status */}
@@ -88,17 +86,17 @@ export default function EmployerFilters({
           <label htmlFor="job-status-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Job status
           </label>
-          <select
+          <CustomDropdown
             id="job-status-filter"
             value={jobStatus}
             onChange={(e) => setJobStatus(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-teal-500 focus:outline-none transition-colors"
-          >
-            <option value="All">All</option>
-            <option value="ACTIVE">Active jobs</option>
-            <option value="PENDING_REVIEW">Pending review</option>
-            <option value="CLOSED">Closed jobs</option>
-          </select>
+            options={[
+              { value: 'All', label: 'All' },
+              { value: 'ACTIVE', label: 'Active jobs' },
+              { value: 'PENDING_REVIEW', label: 'Pending review' },
+              { value: 'CLOSED', label: 'Closed jobs' }
+            ]}
+          />
         </div>
       </div>
     </div>

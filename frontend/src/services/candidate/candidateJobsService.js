@@ -335,7 +335,9 @@ export async function getCandidateJobs(params = {}) {
     location = '',
     experience = '',
     jobType = '',
-    workMode = ''
+    workMode = '',
+    candidateDistrict = '',
+    candidateState = ''
   } = params;
 
   if (tab === 'saved') {
@@ -418,6 +420,26 @@ export async function getCandidateJobs(params = {}) {
     jobs = jobs.filter(j => j.experienceMin >= 6);
   }
 
+  // Location matching and candidate home district prioritization
+  const targetDist = (candidateDistrict || '').toLowerCase().trim();
+  jobs = jobs.map(j => {
+    const locLower = (j.location || '').toLowerCase();
+    const isLocationMatch = Boolean(targetDist && locLower.includes(targetDist));
+    return {
+      ...j,
+      isLocationMatch
+    };
+  });
+
+  // If candidate hasn't filtered by a specific location, prioritize their home district jobs at the top
+  if (!location && targetDist) {
+    jobs.sort((a, b) => {
+      if (a.isLocationMatch && !b.isLocationMatch) return -1;
+      if (!a.isLocationMatch && b.isLocationMatch) return 1;
+      return 0;
+    });
+  }
+
   return {
     jobs,
     totalCount: jobs.length,
@@ -457,11 +479,44 @@ export async function getJobFilterOptions() {
     ]);
 
     const categories = catRes.ok ? await catRes.json() : [];
-    const locations = locRes.ok ? await locRes.json() : [];
+    const rawLocations = locRes.ok ? await locRes.json() : [];
+    const dbLocs = Array.isArray(rawLocations) ? rawLocations : (rawLocations.results || []);
+
+    // Filter out test/junk entries from DB like XXX, YYY
+    const validDbLocs = dbLocs
+      .filter(l => l && l.name && !['xxx', 'yyy'].includes(l.name.toLowerCase().trim()))
+      .map(l => l.name.trim());
+
+    // Official districts and popular hubs
+    const popularDistricts = [
+      'Madurai',
+      'Chennai',
+      'Coimbatore',
+      'Tiruchirappalli',
+      'Salem',
+      'Tirunelveli',
+      'Erode',
+      'Vellore',
+      'Thanjavur',
+      'Dindigul',
+      'Cuddalore',
+      'Kanchipuram',
+      'Tambaram',
+      'Bengaluru',
+      'Hyderabad',
+      'Mumbai',
+      'Delhi'
+    ];
+
+    const allLocationNames = Array.from(new Set([...validDbLocs, ...popularDistricts]));
+    const formattedLocations = allLocationNames.map((name) => ({
+      id: name,
+      name
+    }));
 
     return {
       categories: Array.isArray(categories) ? categories : (categories.results || []),
-      locations: Array.isArray(locations) ? locations : (locations.results || []),
+      locations: formattedLocations,
       experienceRanges: [
         { id: 'entry', label: '0–2 Years' },
         { id: 'mid', label: '3–5 Years' },

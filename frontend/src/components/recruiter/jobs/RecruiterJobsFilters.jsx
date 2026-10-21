@@ -1,4 +1,5 @@
-import { Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
+import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function RecruiterJobsFilters({ searchQuery, setSearchQuery, selectedStatus, setSelectedStatus }) {
   const statusOptions = [
@@ -28,18 +29,12 @@ export default function RecruiterJobsFilters({ searchQuery, setSearchQuery, sele
       </div>
 
       {/* Status Filter Dropdown */}
-      <div className="relative shrink-0">
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 min-h-[44px] cursor-pointer"
-        >
-          {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-      </div>
+      <CustomDropdown
+        value={selectedStatus}
+        onChange={(e) => setSelectedStatus(e.target.value)}
+        options={statusOptions}
+        className="shrink-0 min-w-[160px]"
+      />
     </div>
   );
 }
