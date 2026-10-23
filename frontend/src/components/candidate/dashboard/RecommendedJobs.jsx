@@ -103,23 +103,11 @@ export default function RecommendedJobs() {
           </Link>
         </div>
       ) : (
-        <>
-          {/* Desktop Grid Layout (2 columns) */}
-          <div className="hidden sm:grid sm:grid-cols-2 gap-5">
-            {jobs.map(job => (
-              <CandidateJobCard key={job.id} job={job} onStatusChange={fetchJobs} />
-            ))}
-          </div>
-
-          {/* Mobile Touch-Friendly Horizontal Carousel with Scroll-Snap */}
-          <div className="sm:hidden flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 scrollbar-none w-full">
-            {jobs.map(job => (
-              <div key={job.id} className="w-[82vw] max-w-[300px] shrink-0 snap-start">
-                <CandidateJobCard job={job} onStatusChange={fetchJobs} />
-              </div>
-            ))}
-          </div>
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 w-full">
+          {jobs.map(job => (
+            <CandidateJobCard key={job.id} job={job} onStatusChange={fetchJobs} />
+          ))}
+        </div>
       )}
 
     </section>

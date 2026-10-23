@@ -5,7 +5,7 @@ import CandidateBottomNavigation from './CandidateBottomNavigation';
 
 export default function CandidateLayout({ children }) {
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] font-sans text-slate-800 antialiased flex flex-col lg:flex-row selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen w-full bg-[#F8FAFC] font-sans text-slate-800 antialiased flex flex-col lg:flex-row selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       
       {/* 1. Desktop Fixed Sidebar */}
       <CandidateSidebar />
@@ -20,7 +20,7 @@ export default function CandidateLayout({ children }) {
         <CandidateMobileHeader />
 
         {/* Main View Container */}
-        <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8 max-w-7xl mx-auto w-full min-w-0">
+        <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>

@@ -924,32 +924,42 @@ export default function CandidateResumePage() {
                     </a>
                   </div>
 
-                  {/* Embedded PDF Document Viewer (Renders EXACT uploaded PDF layout, fonts, text) */}
-                  <div className="w-full h-[700px] bg-slate-50 relative">
-                    <object
-                      data={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0`}
-                      type="application/pdf"
-                      className="w-full h-full border-0"
-                    >
-                      <iframe
-                        src={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0`}
-                        title={currentResume.title || currentResume.fileName}
-                        className="w-full h-full border-0"
+                  {/* Embedded PDF/Image Document Viewer (Renders EXACT uploaded PDF layout, fonts, text) */}
+                  {((currentResume.fileUrl || currentResume.fileDataUrl || '').match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i) || (currentResume.fileName || '').match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
+                    <div className="w-full bg-white relative overflow-hidden flex justify-center">
+                      <img 
+                        src={currentResume.fileUrl || currentResume.fileDataUrl} 
+                        alt={currentResume.title || currentResume.fileName || 'Resume'}
+                        className="w-full h-auto object-contain block"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-[1/1.414] sm:aspect-auto sm:h-[820px] bg-white relative overflow-hidden">
+                      <object
+                        data={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0&view=FitH`}
+                        type="application/pdf"
+                        className="w-full h-full border-0 block"
                       >
-                        <div className="p-8 text-center space-y-3">
-                          <p className="text-xs text-slate-600 font-semibold">Your browser cannot render the PDF preview directly.</p>
-                          <a
-                            href={currentResume.fileUrl || currentResume.fileDataUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-black"
-                          >
-                            Open PDF Document
-                          </a>
-                        </div>
-                      </iframe>
-                    </object>
-                  </div>
+                        <iframe
+                          src={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0&view=FitH`}
+                          title={currentResume.title || currentResume.fileName}
+                          className="w-full h-full border-0 block"
+                        >
+                          <div className="p-8 text-center space-y-3">
+                            <p className="text-xs text-slate-600 font-semibold">Your browser cannot render the PDF preview directly.</p>
+                            <a
+                              href={currentResume.fileUrl || currentResume.fileDataUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-black"
+                            >
+                              Open PDF Document
+                            </a>
+                          </div>
+                        </iframe>
+                      </object>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white shadow-md border border-slate-200/80 p-6 sm:p-10 rounded-2xl space-y-6 text-slate-800 font-sans text-xs leading-relaxed max-w-2xl mx-auto overflow-x-hidden">
