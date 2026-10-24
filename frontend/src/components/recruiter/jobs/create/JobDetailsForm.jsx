@@ -620,7 +620,7 @@ export default function JobDetailsForm() {
             <button
               type="button"
               onClick={handleAddSkill}
-              className="px-3.5 py-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 font-extrabold text-xs hover:bg-indigo-100 transition-colors min-h-[40px]"
+              className="px-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 font-extrabold text-xs hover:bg-indigo-100 transition-colors min-h-[40px]"
             >
               + Add Skill
             </button>

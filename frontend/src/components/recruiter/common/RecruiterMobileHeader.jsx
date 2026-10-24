@@ -31,7 +31,14 @@ export default function RecruiterMobileHeader() {
             <span>{fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0, 2) : <User className="h-4.5 w-4.5 text-slate-900" />}</span>
           )}
         </button>
-        <span className="text-base font-black text-indigo-600 tracking-tight">State Jobz</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-black text-slate-900 tracking-tight truncate leading-tight">
+            {fullName || profile?.companySummary?.name || "Abu"}
+          </span>
+          <span className="text-[10px] font-bold text-indigo-600 tracking-wide">
+            Recruiter
+          </span>
+        </div>
       </div>
 
       {/* Right: Notification Bell */}

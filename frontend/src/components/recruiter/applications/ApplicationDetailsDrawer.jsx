@@ -129,9 +129,9 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
       <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col justify-between overflow-y-auto font-sans">
         
         {/* Header */}
-        <div className="p-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-20">
-          <div>
-            <div className="flex items-center gap-2">
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-start justify-between gap-3 sticky top-0 bg-white z-20">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span className="text-[10px] font-black uppercase text-[#3B00FF] tracking-wider">
                 Recruiter Evaluation Hub
               </span>
@@ -139,22 +139,22 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                 {application.application_type === 'SIMPLE_LOCAL' ? 'Local Hiring' : 'Professional Recruitment'}
               </span>
             </div>
-            <h2 className="text-xl font-black text-slate-900 mt-1">{candidate.full_name || 'Candidate Details'}</h2>
-            <p className="text-xs font-bold text-slate-500">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-1 truncate">{candidate.full_name || 'Candidate Details'}</h2>
+            <p className="text-xs font-bold text-slate-500 truncate">
               Applied for <span className="font-extrabold text-[#3B00FF]">{job.title || application.job_title || 'SDE'}</span> at <span className="text-slate-800 font-extrabold">{job.company_name || application.company_name || 'MSD Tech'}</span>
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0 -mr-1"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 flex-1">
+        <div className="p-3.5 sm:p-6 space-y-5 sm:space-y-6 flex-1 min-w-0 overflow-x-hidden">
 
           {/* Success Message Alert */}
           {messageSuccessAlert && (
@@ -165,8 +165,8 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           )}
 
           {/* Applied Job & Position Card */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 space-y-3 shadow-2xs">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
                 <Briefcase className="h-3.5 w-3.5 text-[#3B00FF]" />
                 Applied Position
@@ -176,29 +176,29 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               <div>
-                <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
-                  {job.title || application.job_title || 'SDE'}
+                <h4 className="text-sm sm:text-base font-black text-slate-900 flex flex-wrap items-center gap-2">
+                  <span>{job.title || application.job_title || 'SDE'}</span>
                   <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-[#3B00FF] text-xs font-bold border border-indigo-100">
                     {job.company_name || application.company_name || 'MSD Tech'}
                   </span>
                 </h4>
-                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs font-semibold text-slate-500">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 text-xs font-semibold text-slate-500">
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    {job.location || 'Tambaram, Chennai, Tamil Nadu'}
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>{job.location || 'Tambaram, Chennai, Tamil Nadu'}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                    {job.work_mode || 'On-site'}
+                    <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>{job.work_mode || 'On-site'}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    Applied: {application.applied_time || 'Oct 9, 2026'}
+                    <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>Applied: {application.applied_time || 'Oct 9, 2026'}</span>
                   </span>
                 </div>
               </div>
 
-              <div className="sm:text-right shrink-0">
+              <div className="sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                 <span className="text-[10px] font-bold text-slate-400 block">Offered Compensation</span>
                 <span className="text-xs font-black text-slate-800">{job.salary || '₹35,000 - ₹50,000/month'}</span>
               </div>
@@ -206,40 +206,40 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           </div>
           
           {/* Candidate Profile Hero Card */}
-          <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 rounded-3xl border border-slate-200 p-5 space-y-4">
-            <div className="flex items-start gap-4">
+          <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5 space-y-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               {candidate.profile_photo ? (
                 <img 
                   src={candidate.profile_photo} 
                   alt={candidate.full_name} 
-                  className="h-16 w-16 rounded-full object-cover border-2 border-white shadow-sm shrink-0" 
+                  className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover border-2 border-white shadow-sm shrink-0" 
                 />
               ) : (
-                <div className="h-16 w-16 rounded-full bg-[#3B00FF] text-white font-black text-xl flex items-center justify-center border-2 border-white shadow-sm shrink-0">
+                <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-[#3B00FF] text-white font-black text-base sm:text-xl flex items-center justify-center border-2 border-white shadow-sm shrink-0">
                   {candidate.initials || candidate.full_name?.charAt(0) || 'C'}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-lg font-black text-slate-900 truncate">{candidate.full_name || 'Candidate Name'}</h3>
-                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">
+                <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                  <h3 className="text-sm sm:text-lg font-black text-slate-900 truncate">{candidate.full_name || 'Candidate Name'}</h3>
+                  <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-black shrink-0">
                     {candidate.profile_completion || 95}% Complete
                   </span>
                 </div>
-                <p className="text-xs font-black text-[#3B00FF] mt-0.5">{candidate.headline || 'Senior Full-Stack Developer'}</p>
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs font-bold text-slate-600">
+                <p className="text-xs font-black text-[#3B00FF] mt-0.5 truncate">{candidate.headline || 'Senior Full-Stack Developer'}</p>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 text-xs font-bold text-slate-600">
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    {candidate.location || 'Chennai, Tamil Nadu'}
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate max-w-[130px] sm:max-w-none">{candidate.location || 'Chennai, Tamil Nadu'}</span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5 text-slate-400" />
-                    {candidate.email || 'candidate@tnjobz.com'}
+                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate max-w-[150px] sm:max-w-none">{candidate.email || 'candidate@tnjobz.com'}</span>
                   </span>
                   {candidate.phone && (
                     <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-slate-400" />
-                      {candidate.phone}
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span>{candidate.phone}</span>
                     </span>
                   )}
                 </div>
@@ -247,14 +247,14 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
             </div>
 
             {/* Direct Contact Bar (PRD Section 7.2 & 25) */}
-            <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
+            <div className="pt-2.5 sm:pt-3 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
               {candidate.phone && (
                 <a
                   href={`tel:${candidate.phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-2xs"
+                  className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-2xs"
                 >
                   <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                  Call Candidate
+                  Call
                 </a>
               )}
               {candidate.phone && (
@@ -262,7 +262,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                   href={`https://wa.me/91${candidate.phone.replace(/[^0-9]/g, '')}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-2xs"
+                  className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-2xs"
                 >
                   <MessageSquare className="h-3.5 w-3.5 text-[#25D366]" />
                   WhatsApp
@@ -271,7 +271,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
               <button
                 type="button"
                 onClick={() => setIsMessageModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-[#3B00FF] hover:bg-indigo-50/50 transition-colors shadow-2xs cursor-pointer"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-[#3B00FF] hover:bg-indigo-50/50 transition-colors shadow-2xs cursor-pointer"
               >
                 <Send className="h-3.5 w-3.5 text-[#3B00FF]" />
                 Send Application Message
@@ -280,8 +280,8 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           </div>
 
           {/* PRD Application Stage Progression (Section 24) */}
-          <div className="space-y-3 bg-white rounded-3xl border border-slate-200 p-5 shadow-2xs">
-            <div className="flex items-center justify-between">
+          <div className="space-y-3 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5 shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-black uppercase tracking-wider text-slate-400">Application Pipeline Stage</span>
               <ApplicationStatusBadge status={currentStatus} />
             </div>
@@ -291,15 +291,15 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
               {steps.map((st, idx) => {
                 const state = getStepStatus(st.key);
                 return (
-                  <div key={st.key} className="flex flex-col items-center text-center space-y-1.5">
+                  <div key={st.key} className="flex flex-col items-center text-center space-y-1">
                     <div 
-                      className={`h-2.5 w-full rounded-full transition-colors ${
+                      className={`h-2 sm:h-2.5 w-full rounded-full transition-colors ${
                         state === 'completed' ? 'bg-[#3B00FF]' : 
                         state === 'current' ? 'bg-[#3B00FF] ring-2 ring-[#3B00FF]/30' : 
                         'bg-slate-200'
                       }`} 
                     />
-                    <span className={`text-[10px] font-black leading-tight ${
+                    <span className={`text-[8.5px] sm:text-[10px] font-black leading-tight break-words hyphens-auto ${
                       state === 'current' ? 'text-[#3B00FF]' : 
                       state === 'completed' ? 'text-slate-800' : 
                       'text-slate-400'
@@ -313,109 +313,109 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           </div>
 
           {/* Hiring Decision & Action (தேர்வு நடவடிக்கை) */}
-          <div className="space-y-3 bg-slate-50 rounded-3xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between">
+          <div className="space-y-3 bg-slate-50 rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
               <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-[#3B00FF]" />
-                Hiring Decision & Action (தேர்வு நடவடிக்கை)
+                <Sparkles className="h-4 w-4 text-[#3B00FF] shrink-0" />
+                <span>Hiring Decision & Action</span>
               </h4>
               <span className="text-[10px] font-bold text-slate-400">Update stage & notify candidate</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5 pt-1">
               {/* 1. Mark as Under Review */}
               <button
                 type="button"
                 onClick={() => onUpdateStatus(application.id, 'UNDER_REVIEW')}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center sm:flex-col sm:items-start justify-between sm:justify-start gap-2 ${
                   (normalizedStatus === 'UNDER_REVIEW') 
                     ? 'bg-amber-100 border-amber-300 text-amber-950 font-black shadow-xs' 
                     : 'bg-white border-slate-200 text-slate-800 hover:border-amber-300 hover:bg-amber-50/50'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Eye className="h-4 w-4 text-amber-600" />
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-amber-600 shrink-0" />
                   <span className="text-xs font-black">Under Review</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500">Examine profile & resume</p>
+                <p className="text-[10px] font-bold text-slate-500 text-right sm:text-left">Examine profile & resume</p>
               </button>
 
               {/* 2. Shortlist */}
               <button
                 type="button"
                 onClick={() => onUpdateStatus(application.id, 'SHORTLISTED')}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center sm:flex-col sm:items-start justify-between sm:justify-start gap-2 ${
                   (normalizedStatus === 'SHORTLISTED') 
                     ? 'bg-indigo-100 border-indigo-300 text-[#3B00FF] font-black shadow-xs' 
                     : 'bg-white border-slate-200 text-slate-800 hover:border-indigo-300 hover:bg-indigo-50/50'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Star className="h-4 w-4 text-[#3B00FF]" />
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-[#3B00FF] shrink-0" />
                   <span className="text-xs font-black">Shortlist</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500">Move to qualified pool</p>
+                <p className="text-[10px] font-bold text-slate-500 text-right sm:text-left">Move to qualified pool</p>
               </button>
 
               {/* 3. Schedule Interview */}
               <button
                 type="button"
                 onClick={() => setIsScheduleModalOpen(true)}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center sm:flex-col sm:items-start justify-between sm:justify-start gap-2 ${
                   (normalizedStatus === 'INTERVIEW') 
                     ? 'bg-purple-100 border-purple-300 text-[#3B00FF] font-black shadow-xs' 
                     : 'bg-white border-slate-200 text-slate-800 hover:border-purple-300 hover:bg-purple-50/50'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-[#3B00FF]" />
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#3B00FF] shrink-0" />
                   <span className="text-xs font-black">Schedule Interview</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500">Set date, time & round</p>
+                <p className="text-[10px] font-bold text-slate-500 text-right sm:text-left">Set date, time & round</p>
               </button>
 
               {/* 4. Select / Offer */}
               <button
                 type="button"
                 onClick={() => setIsSelectConfirmOpen(true)}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center sm:flex-col sm:items-start justify-between sm:justify-start gap-2 ${
                   (normalizedStatus === 'SELECTED') 
                     ? 'bg-emerald-100 border-emerald-300 text-emerald-950 font-black shadow-xs' 
                     : 'bg-white border-slate-200 text-slate-800 hover:border-emerald-300 hover:bg-emerald-50/50'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-emerald-600 shrink-0" />
                   <span className="text-xs font-black">Select Candidate</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500">Extend job offer / hire</p>
+                <p className="text-[10px] font-bold text-slate-500 text-right sm:text-left">Extend job offer / hire</p>
               </button>
 
               {/* 5. Reject */}
               <button
                 type="button"
                 onClick={() => onUpdateStatus(application.id, 'REJECTED')}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center sm:flex-col sm:items-start justify-between sm:justify-start gap-2 ${
                   (normalizedStatus === 'REJECTED') 
                     ? 'bg-red-100 border-red-300 text-red-950 font-black shadow-xs' 
                     : 'bg-white border-slate-200 text-slate-800 hover:border-red-300 hover:bg-red-50/50'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-600 shrink-0" />
                   <span className="text-xs font-black">Reject</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500">Close application</p>
+                <p className="text-[10px] font-bold text-slate-500 text-right sm:text-left">Close application</p>
               </button>
             </div>
           </div>
 
           {/* Resume Card with Interactive Preview (PRD Section 7.1 & 23) */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Candidate Resume</h4>
               {application.resume_url && (
-                <span className="text-[11px] font-black text-emerald-600 flex items-center gap-1">
+                <span className="text-[11px] font-black text-emerald-600 flex items-center gap-1 shrink-0">
                   <CheckCircle2 className="h-3 w-3" />
                   Verified Attachment
                 </span>
@@ -423,24 +423,24 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
             </div>
 
             {application.resume_url ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between gap-4 shadow-2xs hover:border-[#3B00FF]/40 transition-colors">
+              <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-[#3B00FF]/40 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-10 w-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
                     <FileText className="h-5 w-5 text-red-600" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h5 className="text-xs font-black text-slate-900 truncate">
                       {application.resume_filename || 'DHANAIS RESUME (1)'}
                     </h5>
-                    <p className="text-[10px] font-bold text-slate-500">PDF Document • Primary Candidate Resume</p>
+                    <p className="text-[10px] font-bold text-slate-500 truncate">PDF Document • Primary Candidate Resume</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   <button
                     type="button"
                     onClick={() => setIsPreviewResumeOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 text-[#3B00FF] text-xs font-black hover:bg-indigo-100 transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 text-[#3B00FF] text-xs font-black hover:bg-indigo-100 transition-colors cursor-pointer"
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Preview Resume
@@ -450,7 +450,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                     target="_blank"
                     rel="noreferrer"
                     download
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
+                    className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Download
@@ -536,9 +536,9 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
 
           {/* Internal Recruiter Notes */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Internal Recruiter Notes</h4>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full w-fit">
                 🔒 Confidential • Only HR can see
               </span>
             </div>
@@ -555,7 +555,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Save Internal Note
               </button>
@@ -638,8 +638,8 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
 
       {/* ================= MODAL 2: SCHEDULE INTERVIEW MODAL ================= */}
       {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-5 animate-scaleUp">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto animate-scaleUp">
             <div className="flex items-start justify-between border-b border-slate-150 pb-3">
               <div>
                 <span className="text-[10px] font-black uppercase text-[#3B00FF] tracking-wider">Interview Setup</span>
@@ -768,8 +768,8 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
 
       {/* ================= MODAL 3: APPLICATION MESSAGE MODAL (PRD Section 25) ================= */}
       {isMessageModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-4 animate-scaleUp">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-scaleUp">
             <div className="flex items-start justify-between border-b border-slate-150 pb-3">
               <div>
                 <span className="text-[10px] font-black uppercase text-[#3B00FF] tracking-wider">PRD Section 25</span>

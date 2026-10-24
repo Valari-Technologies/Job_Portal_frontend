@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Camera, Trash2, Edit3, Check, ShieldCheck, Building2, Mail, Phone, Lock, Calendar, Briefcase, Sparkles, AlertCircle } from 'lucide-react';
+import { User, Camera, Trash2, Edit3, Check, ShieldCheck, Building2, Mail, Phone, Lock, Calendar, Briefcase, Sparkles, AlertCircle, CreditCard } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import { useRecruiterUser } from '../../context/RecruiterUserContext';
 import ImageCropModal from '../../components/recruiter/profile/ImageCropModal';
@@ -475,6 +475,28 @@ function RecruiterProfileContent() {
                   className="inline-flex items-center gap-1 text-xs font-extrabold text-indigo-600 hover:text-indigo-800 pt-1"
                 >
                   <span>Manage Company Profile</span>
+                  <span>→</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Payments & Billing Shortcut */}
+            <div className="pt-2">
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-150 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-indigo-900 uppercase tracking-wider">
+                    Payments & Billing
+                  </h4>
+                  <CreditCard className="h-4 w-4 text-indigo-600" />
+                </div>
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  Manage your posting plans, job credits, wallet balance, transactions and invoices.
+                </p>
+                <Link
+                  to="/recruiter/payments"
+                  className="inline-flex items-center gap-1 text-xs font-extrabold text-indigo-600 hover:text-indigo-800 pt-1"
+                >
+                  <span>Manage Payments & Billing</span>
                   <span>→</span>
                 </Link>
               </div>

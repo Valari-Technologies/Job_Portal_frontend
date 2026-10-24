@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterMetricCard from '../../components/recruiter/dashboard/RecruiterMetricCard';
-import RecruiterMobileHeroIllustration from '../../components/recruiter/dashboard/RecruiterMobileHeroIllustration';
 import { getRecruiterDashboardData, fetchRecruiterDashboardFromApi } from '../../services/recruiter/recruiterDashboardService';
 import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
 import { updateApplicationStatusService } from '../../services/recruiter/recruiterApplicationsService';
@@ -79,56 +78,51 @@ export default function RecruiterDashboard() {
           <p className="text-sm font-semibold text-slate-600 mt-1">Here's what's happening with your hiring pipeline today.</p>
         </div>
 
-        {/* Mobile View Button & Illustration */}
-        <div className="lg:hidden space-y-3">
-          <Link
-            to="/recruiter/company-profile"
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-extrabold text-xs shadow-xs hover:bg-indigo-700 transition-colors min-h-[44px]"
-          >
-            View Profile
-          </Link>
-          <RecruiterMobileHeroIllustration />
-        </div>
-
-        {/* Desktop Welcome & Wallet Banner */}
-        <div className="hidden lg:flex items-center justify-between bg-white rounded-2xl border border-slate-150 p-6 shadow-xs">
+        {/* Welcome, Company Badge & Wallet Balance Banner (Responsive for both Mobile & Desktop) */}
+        <div className="bg-white rounded-2xl border border-slate-150 p-4 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-3">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                Welcome back! <span className="text-xl">👋</span>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                Welcome back! <span className="text-lg sm:text-xl">👋</span>
               </h2>
-              <p className="text-sm font-medium text-slate-600 mt-1">
+              <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1">
                 Here's an overview of your hiring activities and performance.
               </p>
             </div>
             
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-150 rounded-xl px-3.5 py-2.5 w-fit">
-              <div className="h-8 w-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600">
+            <Link
+              to="/recruiter/company-profile"
+              className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-150 rounded-xl px-3.5 py-2.5 w-fit transition-colors group cursor-pointer"
+            >
+              <div className="h-8 w-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
                 <Building2 className="h-4 w-4" />
               </div>
-              <div>
-                <p className="text-xs font-black text-indigo-950">{companyName}</p>
-                <p className="text-xs font-semibold text-slate-500">Recruiter</p>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-indigo-950 truncate group-hover:text-indigo-600 transition-colors">{companyName}</p>
+                <p className="text-[11px] font-semibold text-slate-500">Recruiter</p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Wallet Balance Card */}
-          <div className="h-28 w-72 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-500 p-5 text-white flex items-center justify-between shadow-lg shadow-indigo-600/15">
+          <Link
+            to="/recruiter/payments"
+            className="w-full lg:w-72 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-500 p-4 sm:p-5 text-white flex items-center justify-between shadow-lg shadow-indigo-600/15 cursor-pointer hover:opacity-95 transition-all group active:scale-98"
+          >
             <div className="space-y-1">
-              <span className="text-xs font-bold text-white/90 uppercase tracking-wider block">Wallet Balance</span>
-              <span className="text-2xl font-black tracking-tight text-white block">
+              <span className="text-[11px] sm:text-xs font-bold text-white/90 uppercase tracking-wider block">Wallet Balance</span>
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-white block">
                 {walletBalanceFormatted}
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white border border-white/30">
-              <Wallet className="h-6 w-6" />
+            <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white border border-white/30 shrink-0 group-hover:scale-105 transition-transform">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-          </div>
+          </Link>
         </div>
 
-        {/* Desktop Metric Cards (6 columns) */}
-        <div className="hidden lg:grid grid-cols-6 gap-4">
+        {/* Metric Cards (Unified Responsive: 2 cols on mobile, 3 cols on tablet, 6 cols on desktop) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           <RecruiterMetricCard 
             title="ACTIVE JOBS" 
             value={metrics.active_jobs} 
@@ -173,55 +167,6 @@ export default function RecruiterDashboard() {
             iconBgClass="bg-purple-50"
             colorClass="text-purple-600"
             valueColorClass="text-indigo-600"
-          />
-        </div>
-
-        {/* Mobile Metric Cards (2 columns) */}
-        <div className="lg:hidden grid grid-cols-2 gap-3">
-          <RecruiterMetricCard 
-            title="ACTIVE JOBS" 
-            value={metrics.active_jobs} 
-            icon={Briefcase} 
-            iconBgClass="bg-indigo-50"
-            colorClass="text-indigo-600"
-          />
-          <RecruiterMetricCard 
-            title="APPLICATIONS" 
-            value={metrics.total_applications} 
-            icon={FileText} 
-            iconBgClass="bg-red-50"
-            colorClass="text-red-500"
-            valueColorClass="text-red-600"
-          />
-          <RecruiterMetricCard 
-            title="SHORTLISTED" 
-            value={metrics.shortlisted} 
-            icon={UserCheck} 
-            iconBgClass="bg-emerald-50"
-            colorClass="text-emerald-600"
-            valueColorClass="text-emerald-600"
-          />
-          <RecruiterMetricCard 
-            title="PENDING" 
-            value={metrics.pending} 
-            icon={CheckCircle} 
-            iconBgClass="bg-blue-50"
-            colorClass="text-blue-500"
-          />
-          <RecruiterMetricCard 
-            title="INTERVIEWS" 
-            value={metrics.interviews} 
-            icon={Calendar} 
-            iconBgClass="bg-emerald-50"
-            colorClass="text-emerald-600"
-            valueColorClass="text-emerald-600"
-          />
-          <RecruiterMetricCard 
-            title="HIRED" 
-            value={metrics.hired} 
-            icon={CheckCircle} 
-            iconBgClass="bg-blue-50"
-            colorClass="text-blue-500"
           />
         </div>
 

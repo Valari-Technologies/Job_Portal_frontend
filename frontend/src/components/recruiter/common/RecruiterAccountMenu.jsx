@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Building2, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { User, Building2, Settings, LogOut, ChevronRight, CreditCard } from 'lucide-react';
 import { useRecruiterUser } from '../../../context/RecruiterUserContext';
 import { useSignOut } from '../../../context/SignOutContext';
 
@@ -112,6 +112,19 @@ export default function RecruiterAccountMenu({ onClose, isMobile = false }) {
           <div className="flex items-center gap-2.5">
             <Building2 className="h-4 w-4 text-indigo-600" />
             <span>Company Profile</span>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+        </Link>
+
+        <Link
+          to="/recruiter/payments"
+          role="menuitem"
+          onClick={handleLinkClick}
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <CreditCard className="h-4 w-4 text-indigo-600" />
+            <span>Payments</span>
           </div>
           <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
         </Link>
