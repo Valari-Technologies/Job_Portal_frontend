@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignOutConfirmationModal from '../components/shared/auth/SignOutConfirmationModal';
-import { clearAllAuthTokens } from '../services/auth/adminAuthService';
+import { clearAllAuthTokens, clearRoleAuthTokens } from '../services/auth/adminAuthService';
 
 const SignOutContext = createContext(null);
 
@@ -32,16 +32,24 @@ export function SignOutProvider({ children }) {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
-      clearAllAuthTokens();
+
+      if (portalType === 'candidate') {
+        clearRoleAuthTokens('CANDIDATE');
+        navigate('/login', { replace: true, state: { role: 'candidate' } });
+      } else if (portalType === 'recruiter') {
+        clearRoleAuthTokens('HR');
+        navigate('/login', { replace: true, state: { role: 'hr' } });
+      } else if (portalType === 'admin' || portalType === 'superAdmin') {
+        clearRoleAuthTokens('SUPER_ADMIN');
+        clearRoleAuthTokens('ADMIN');
+        navigate('/admin', { replace: true });
+      } else {
+        clearAllAuthTokens();
+        navigate('/login', { replace: true });
+      }
 
       setIsSigningOut(false);
       setIsOpen(false);
-
-      if (portalType === 'admin' || portalType === 'superAdmin') {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate('/login', { replace: true });
-      }
     } catch (err) {
       console.error("Logout failed:", err);
       setError("Unable to sign out. Please try again.");

@@ -4,7 +4,14 @@ import { Calendar, Eye, MapPin, Briefcase, DollarSign, Building2, X } from 'luci
 export default function RecruiterJobCard({ job }) {
   const [showModal, setShowModal] = useState(false);
 
-  const getStatusStyle = (status) => {
+  const getStatusStyle = (status, deadline) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isDeadlinePassed = Boolean(deadline && String(deadline).split('T')[0] < todayStr);
+
+    if (status === 'EXPIRED' || status === 'Expired' || isDeadlinePassed) {
+      return { badge: 'bg-amber-50 text-amber-800 border-amber-200', label: 'Expired' };
+    }
+
     switch (status) {
       case 'Active':
       case 'Published':
@@ -21,7 +28,7 @@ export default function RecruiterJobCard({ job }) {
     }
   };
 
-  const statusInfo = getStatusStyle(job.status);
+  const statusInfo = getStatusStyle(job.status, job.deadline || job.application_deadline);
 
   return (
     <>

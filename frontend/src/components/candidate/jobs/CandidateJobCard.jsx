@@ -22,7 +22,7 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
 
   const handleApplyClick = async (e) => {
     e.stopPropagation();
-    if (isApplied || isApplying) return;
+    if (isApplied || job.isExpired || isApplying) return;
     setIsApplying(true);
     try {
       await onQuickApply(job);
@@ -154,10 +154,14 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
           <button
             type="button"
             onClick={handleApplyClick}
-            disabled={isApplied || isApplying}
+            disabled={isApplied || job.isExpired || job.status === 'PENDING_REVIEW' || isApplying}
             className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shadow-xs ${
               isApplied
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none'
+                : job.status === 'PENDING_REVIEW'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200 cursor-not-allowed select-none'
+                : job.isExpired
+                ? 'bg-slate-100 text-slate-500 border border-slate-300 cursor-not-allowed select-none'
                 : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/20'
             }`}
           >
@@ -166,6 +170,10 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 <span>Applied</span>
               </>
+            ) : job.status === 'PENDING_REVIEW' ? (
+              <span>Under Review</span>
+            ) : job.isExpired ? (
+              <span>Deadline Passed</span>
             ) : (
               <>
                 <Zap className="h-3.5 w-3.5 fill-white text-white" />
@@ -241,14 +249,18 @@ export default function CandidateJobCard({ job, onToggleSave, onQuickApply }) {
           <button
             type="button"
             onClick={handleApplyClick}
-            disabled={isApplied || isApplying}
+            disabled={isApplied || job.isExpired || job.status === 'PENDING_REVIEW' || isApplying}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all shadow-xs ${
               isApplied
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none'
+                : job.status === 'PENDING_REVIEW'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200 cursor-not-allowed select-none'
+                : job.isExpired
+                ? 'bg-slate-100 text-slate-500 border border-slate-300 cursor-not-allowed select-none'
                 : 'bg-[#3B00FF] hover:bg-[#3000E0] text-white cursor-pointer active:scale-98 shadow-[#3B00FF]/20'
             }`}
           >
-            {isApplied ? 'Applied' : isApplying ? 'Applying...' : 'Quick Apply'}
+            {isApplied ? 'Applied' : job.status === 'PENDING_REVIEW' ? 'Under Review' : job.isExpired ? 'Deadline Passed' : isApplying ? 'Applying...' : 'Quick Apply'}
           </button>
         </div>
       </div>

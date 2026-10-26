@@ -133,7 +133,6 @@ export async function loginAdmin({ email, password, expectedRole }) {
     if (expectedRole) {
       const exp = expectedRole.toUpperCase().trim();
       if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
-        clearAllAuthTokens();
         return {
           success: false,
           message: (user.role === 'HR' || user.role === 'RECRUITER')
@@ -142,7 +141,6 @@ export async function loginAdmin({ email, password, expectedRole }) {
         };
       }
       if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
-        clearAllAuthTokens();
         return {
           success: false,
           message: user.role === 'CANDIDATE'
@@ -151,7 +149,6 @@ export async function loginAdmin({ email, password, expectedRole }) {
         };
       }
       if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
-        clearAllAuthTokens();
         return {
           success: false,
           message: "Access denied. Candidate and HR users must log in at /login.",
@@ -236,7 +233,6 @@ export async function loginWithGoogle({ token, expectedRole }) {
     if (expectedRole) {
       const exp = expectedRole.toUpperCase().trim();
       if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
-        clearAllAuthTokens();
         return {
           success: false,
           message: (user.role === 'HR' || user.role === 'RECRUITER')
@@ -245,7 +241,6 @@ export async function loginWithGoogle({ token, expectedRole }) {
         };
       }
       if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
-        clearAllAuthTokens();
         return {
           success: false,
           message: user.role === 'CANDIDATE'
@@ -312,6 +307,46 @@ export function setAuthenticatedUser(user, role = null) {
   setAuthItem('auth_user', userStr);
 }
 
+export function clearRoleAuthTokens(role) {
+  const normalized = (role || '').toUpperCase().trim();
+  let keysToRemove = [];
+
+  if (normalized === 'SUPER_ADMIN') {
+    keysToRemove = [
+      'super_admin_access_token',
+      'super_admin_refresh_token',
+      'super_admin_auth_user',
+      'super_admin_auth_role',
+    ];
+  } else if (normalized === 'ADMIN') {
+    keysToRemove = [
+      'admin_access_token',
+      'admin_refresh_token',
+      'admin_auth_user',
+      'admin_auth_role',
+    ];
+  } else if (normalized === 'HR' || normalized === 'RECRUITER') {
+    keysToRemove = [
+      'public_access_token',
+      'public_refresh_token',
+      'public_auth_user',
+      'public_auth_role',
+    ];
+  } else if (normalized === 'CANDIDATE') {
+    keysToRemove = [
+      'candidate_access_token',
+      'candidate_refresh_token',
+      'candidate_auth_user',
+      'candidate_auth_role',
+    ];
+  } else {
+    clearAllAuthTokens();
+    return;
+  }
+
+  keysToRemove.forEach((key) => removeAuthItem(key));
+}
+
 export function clearAllAuthTokens() {
   const keysToRemove = [
     'super_admin_access_token',
@@ -340,11 +375,12 @@ export function clearAllAuthTokens() {
 }
 
 export function logoutAdmin() {
-  clearAllAuthTokens();
+  clearRoleAuthTokens('SUPER_ADMIN');
+  clearRoleAuthTokens('ADMIN');
 }
 
-export function logoutPublic() {
-  clearAllAuthTokens();
+export function logoutPublic(role = 'HR') {
+  clearRoleAuthTokens(role);
 }
 
 export function getAuthenticatedUser() {

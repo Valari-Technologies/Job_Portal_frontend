@@ -117,8 +117,12 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
   const companyInitials = companyName ? companyName.charAt(0).toUpperCase() : 'E';
 
   const locationName = raw.location_name || (raw.locations && raw.locations.length > 0 ? raw.locations[0].full_path : 'Location Not Specified');
-  const workMode = raw.work_mode_name || 'On-site';
-  const applicationType = raw.application_type || 'PROFILE_RESUME';
+  const rawAppType = String(raw.application_type || raw.applicationType || '').toUpperCase();
+  const applicationType = (rawAppType.includes('SIMPLE') || rawAppType.includes('LOCAL')) ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME';
+
+  const workMode = raw.work_mode_name || raw.workMode || (raw.work_mode === 1 ? 'Remote' : raw.work_mode === 2 ? 'Hybrid' : 'On-site');
+  const categoryName = raw.category_name || (typeof raw.category === 'object' ? raw.category?.name : raw.category) || '';
+  const departmentName = raw.department_name || raw.department || '';
 
   const salaryMin = raw.salary_min ? Number(raw.salary_min) : null;
   const salaryMax = raw.salary_max ? Number(raw.salary_max) : null;
@@ -136,6 +140,13 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
   const responsibilitiesList = normalizeResponsibilities(raw.responsibilities, raw.requirements);
   const hasApplied = Boolean(raw.is_applied || (appliedJobIds && appliedJobIds.has(id)));
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const deadlineRaw = raw.application_deadline || raw.deadline || null;
+  const deadlineDateStr = deadlineRaw ? String(deadlineRaw).split('T')[0] : null;
+  const isDeadlinePassed = Boolean(deadlineDateStr && deadlineDateStr < todayStr);
+  const statusStr = String(raw.status || raw.status_label || '').toUpperCase();
+  const isExpired = Boolean(raw.is_expired || isDeadlinePassed || statusStr === 'EXPIRED');
+
   return {
     id,
     title,
@@ -146,6 +157,9 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
     location: locationName,
     locationName,
     locations: raw.locations || [],
+    category: categoryName,
+    categoryName,
+    department: departmentName,
     workMode,
     applicationType,
     salary: salaryDisplay,
@@ -155,6 +169,11 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
     experienceMin: raw.experience_min || 0,
     experienceMax: raw.experience_max || 0,
     educationRequirement: raw.education_requirement || '',
+    deadline: deadlineDateStr,
+    applicationDeadline: deadlineDateStr,
+    isDeadlinePassed,
+    isExpired,
+    status: isExpired ? 'EXPIRED' : (raw.status || 'PUBLISHED'),
     skills: skillsList,
     description: raw.description || '',
     responsibilities: responsibilitiesList,
@@ -233,9 +252,19 @@ function getLocalPublishedJobs(appliedJobIds = null) {
     const seenIds = new Set();
     const seenTitles = new Set();
 
+    const todayStr = new Date().toISOString().split('T')[0];
+
     const addIfPublished = (j) => {
       if (!j || !j.id) return;
       const st = (j.status || j.status_label || '').toUpperCase();
+      const deadline = j.deadline || j.application_deadline;
+      const deadlineDateStr = deadline ? String(deadline).split('T')[0] : null;
+      const isDeadlinePassed = Boolean(deadlineDateStr && deadlineDateStr < todayStr);
+
+      // Exclude expired jobs from candidate job listings
+      if (st === 'EXPIRED' || isDeadlinePassed) {
+        return;
+      }
       if (st !== 'PUBLISHED') return;
 
       const comp = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
@@ -299,7 +328,7 @@ function getLocalPublishedJobs(appliedJobIds = null) {
         locationName: j.location || 'Tambaram, Chennai, Tamil Nadu',
         locations: [],
         workMode: j.workMode || 'On-site',
-        applicationType: j.employmentType === 'Simple Local' ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME',
+        applicationType: (String(j.applicationType || j.application_type || '').toUpperCase().includes('SIMPLE') || j.employmentType === 'Simple Local') ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME',
         salary: j.minSalary && j.maxSalary ? `₹${Number(j.minSalary).toLocaleString('en-IN')} - ₹${Number(j.maxSalary).toLocaleString('en-IN')}/${j.salary_period || 'month'}` : '₹35,000 - ₹50,000/month',
         salaryMin: j.minSalary ? Number(j.minSalary) : 35000,
         salaryMax: j.maxSalary ? Number(j.maxSalary) : 50000,
@@ -360,7 +389,7 @@ export async function getCandidateJobs(params = {}) {
     if (response.ok) {
       const data = await response.json();
       const rawList = Array.isArray(data) ? data : (data.results || []);
-      backendJobs = rawList.map(raw => normalizeJobRecord(raw, appliedJobIds)).filter(Boolean);
+      backendJobs = rawList.map(raw => normalizeJobRecord(raw, appliedJobIds)).filter(j => j && !j.isExpired);
       backendCount = data.count || backendJobs.length;
       hasRecommendations = Boolean(data.has_recommendations);
     }
@@ -374,6 +403,7 @@ export async function getCandidateJobs(params = {}) {
   const existingTitles = new Set(backendJobs.map(j => `${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`));
   
   const mergedLocal = localPublished.filter(j => 
+    !j.isExpired &&
     !existingIds.has(String(j.id)) &&
     !existingTitles.has(`${(j.title || '').trim().toLowerCase()}__${(j.companyName || j.company || '').trim().toLowerCase()}`)
   );
@@ -403,11 +433,11 @@ export async function getCandidateJobs(params = {}) {
   }
   if (location) {
     const l = location.toLowerCase();
-    jobs = jobs.filter(j => j.location.toLowerCase().includes(l));
+    jobs = jobs.filter(j => (j.location || '').toLowerCase().includes(l));
   }
   if (workMode) {
     const w = workMode.toLowerCase();
-    jobs = jobs.filter(j => j.workMode.toLowerCase().includes(w));
+    jobs = jobs.filter(j => (j.workMode || '').toLowerCase().includes(w));
   }
   if (jobType) {
     jobs = jobs.filter(j => (j.applicationType || '').toLowerCase().includes(jobType.toLowerCase()));
@@ -567,21 +597,33 @@ export async function getCandidateJobDetails(jobId) {
     console.warn("Backend getCandidateJobDetails warning:", err);
   }
 
-  const localPublished = getLocalPublishedJobs(appliedJobIds);
-  const found = localPublished.find(j => String(j.id) === String(jobId));
-  if (found) {
-    if (!found.companyLogo) {
-      found.companyLogo = resolveCompanyLogo(null, found.companyName, found.employer);
+  // Fallback: look for the job in local storage
+  let rawFound = null;
+  const storageKeys = ['tnjobz_candidate_jobs', 'tnjobz_recruiter_jobs'];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('tnjobz_recruiter_jobs_')) storageKeys.push(k);
+  }
+  for (const k of storageKeys) {
+    try {
+      const list = JSON.parse(localStorage.getItem(k) || '[]');
+      if (Array.isArray(list)) {
+        const item = list.find(j => String(j?.id) === String(jobId));
+        if (item) {
+          rawFound = item;
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  if (rawFound) {
+    const normalized = normalizeJobRecord(rawFound, appliedJobIds);
+    if (normalized) {
+      normalized.hasApplied = Boolean(normalized.hasApplied || hasAppliedFromHistory);
+      normalized.isApplied = Boolean(normalized.hasApplied || hasAppliedFromHistory);
+      return normalized;
     }
-    if (!found.responsibilities || (Array.isArray(found.responsibilities) && found.responsibilities.length === 0)) {
-      found.responsibilities = normalizeResponsibilities(null, null);
-      found.responsibilitiesList = found.responsibilities;
-    }
-    return {
-      ...found,
-      hasApplied: Boolean(found.hasApplied || hasAppliedFromHistory),
-      isApplied: Boolean(found.hasApplied || hasAppliedFromHistory)
-    };
   }
   return null;
 }

@@ -146,7 +146,6 @@ export default function Login() {
               window.location.href = isCompleted ? '/candidate/dashboard' : '/candidate/onboarding/industry';
               return;
             } else {
-              clearAllAuthTokens();
               triggerAuthError(
                 (role === 'HR' || role === 'RECRUITER')
                   ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
@@ -159,7 +158,6 @@ export default function Login() {
               window.location.href = '/recruiter/dashboard';
               return;
             } else {
-              clearAllAuthTokens();
               triggerAuthError(
                 role === 'CANDIDATE'
                   ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
@@ -168,15 +166,12 @@ export default function Login() {
               return;
             }
           } else {
-            clearAllAuthTokens();
             triggerAuthError('Unauthorized account role.');
           }
         } else {
-          clearAllAuthTokens();
           triggerAuthError(response.message || 'Invalid email or password.');
         }
       } catch {
-        clearAllAuthTokens();
         triggerAuthError('An unexpected authentication error occurred.');
       } finally {
         setIsSubmitting(false);
@@ -208,7 +203,6 @@ export default function Login() {
             window.location.href = isCompleted ? '/candidate/dashboard' : '/candidate/onboarding/industry';
             return;
           } else {
-            clearAllAuthTokens();
             triggerAuthError(
               (role === 'HR' || role === 'RECRUITER')
                 ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
@@ -221,7 +215,6 @@ export default function Login() {
             window.location.href = '/recruiter/dashboard';
             return;
           } else {
-            clearAllAuthTokens();
             triggerAuthError(
               role === 'CANDIDATE'
                 ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
@@ -231,11 +224,9 @@ export default function Login() {
           }
         }
       } else {
-        clearAllAuthTokens();
         triggerAuthError(response.message || 'Google login failed.');
       }
     } catch {
-      clearAllAuthTokens();
       triggerAuthError('An unexpected Google authentication error occurred.');
     } finally {
       setIsSubmitting(false);

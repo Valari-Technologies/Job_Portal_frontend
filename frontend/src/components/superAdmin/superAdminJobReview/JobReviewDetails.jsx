@@ -41,7 +41,14 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, deadline) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isDeadlinePassed = Boolean(deadline && String(deadline).split('T')[0] < todayStr);
+
+    if (status === 'EXPIRED' || isDeadlinePassed) {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">Expired</span>;
+    }
+
     switch (status) {
       case 'PUBLISHED':
         return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Published</span>;
@@ -86,7 +93,7 @@ export default function JobReviewDetails({ job, onBack, onDecision }) {
           ← Back to Job Review Queue
         </button>
         <div className="flex items-center space-x-3">
-          {getStatusBadge(job.status)}
+          {getStatusBadge(job.status, job.application_deadline || job.deadline)}
         </div>
       </div>
 

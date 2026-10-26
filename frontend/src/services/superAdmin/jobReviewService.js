@@ -7,6 +7,16 @@ function getAllLocalRecruiterJobs() {
   const allJobs = [];
   const seenIds = new Set();
   const seenKeys = new Set();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const checkAndExpire = (j) => {
+    if (!j) return;
+    const dl = j.application_deadline || j.deadline;
+    if (dl && String(dl).split('T')[0] < todayStr) {
+      j.status = 'EXPIRED';
+      j.status_label = 'Expired';
+    }
+  };
 
   try {
     const globalStr = localStorage.getItem(STORAGE_RECRUITER_JOBS_KEY);
@@ -14,6 +24,7 @@ function getAllLocalRecruiterJobs() {
       const list = JSON.parse(globalStr);
       if (Array.isArray(list)) {
         list.forEach(j => {
+          checkAndExpire(j);
           const comp = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
           const title = (j.title || '').toLowerCase().trim();
           const combo = `${title}__${comp}`;
@@ -35,6 +46,7 @@ function getAllLocalRecruiterJobs() {
             const userJobs = JSON.parse(userJobsStr);
             if (Array.isArray(userJobs)) {
               userJobs.forEach(j => {
+                checkAndExpire(j);
                 const comp = (j.company_name || j.employer_name || j.employer?.company_name || '').toLowerCase().trim();
                 const title = (j.title || '').toLowerCase().trim();
                 const combo = `${title}__${comp}`;

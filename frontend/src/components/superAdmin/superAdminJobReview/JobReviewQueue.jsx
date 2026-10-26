@@ -23,7 +23,14 @@ export function JobReviewQueue({
     if (onSearchChange) onSearchChange(localSearch);
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, deadline) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isDeadlinePassed = Boolean(deadline && String(deadline).split('T')[0] < todayStr);
+
+    if (status === 'EXPIRED' || isDeadlinePassed) {
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">Expired</span>;
+    }
+
     switch (status) {
       case 'PUBLISHED':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>;
@@ -202,7 +209,7 @@ export function JobReviewQueue({
                       <div className="flex items-center space-x-3">
                         <span className="text-xs font-black text-slate-400">#{j.id}</span>
                         <h4 className="text-base font-black text-slate-900">{j.title}</h4>
-                        {getStatusBadge(j.status)}
+                        {getStatusBadge(j.status, j.application_deadline || j.deadline)}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">

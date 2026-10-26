@@ -469,45 +469,56 @@ export async function submitCandidateApplication(payload) {
   let activeResumeFilename = payload.resumeFileName || null;
   let activeResumeUrl = payload.resumeUrl || null;
 
-  try {
-    const resumes = await getCandidateResumes();
-    if (resumes && resumes.length > 0) {
-      const defaultRes = resumes.find(r => r.isPrimary || r.is_default) || resumes[0];
-      if (defaultRes) {
-        if (!activeResumeId && defaultRes.id && !isNaN(Number(defaultRes.id))) {
-          activeResumeId = Number(defaultRes.id);
+  const rawAppType = String(payload.applicationType || '').toUpperCase();
+  const isSimpleLocal = rawAppType.includes('SIMPLE') || rawAppType.includes('LOCAL');
+  const normalizedAppType = isSimpleLocal ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME';
+
+  if (!isSimpleLocal) {
+    try {
+      const resumes = await getCandidateResumes();
+      if (resumes && resumes.length > 0) {
+        const defaultRes = resumes.find(r => r.isPrimary || r.is_default) || resumes[0];
+        if (defaultRes) {
+          if (!activeResumeId && defaultRes.id && !isNaN(Number(defaultRes.id))) {
+            activeResumeId = Number(defaultRes.id);
+          }
+          if (!activeResumeFilename) {
+            activeResumeFilename = defaultRes.fileName || defaultRes.file_name || null;
+          }
+          if (!activeResumeUrl) {
+            activeResumeUrl = defaultRes.fileUrl || defaultRes.file_path || null;
+          }
         }
-        if (!activeResumeFilename) {
-          activeResumeFilename = defaultRes.fileName || defaultRes.file_name || null;
-        }
-        if (!activeResumeUrl) {
-          activeResumeUrl = defaultRes.fileUrl || defaultRes.file_path || null;
-        }
+      } else {
+        // Candidate has zero resumes
+        return {
+          success: false,
+          requireResume: true,
+          message: 'A resume is required to apply for this job. Please upload your resume first.'
+        };
       }
-    } else {
-      // Candidate has zero resumes
+    } catch (err) {
+      console.warn("Resume resolution warning:", err);
+    }
+
+    if (!activeResumeId && !activeResumeFilename) {
       return {
         success: false,
         requireResume: true,
         message: 'A resume is required to apply for this job. Please upload your resume first.'
       };
     }
-  } catch (err) {
-    console.warn("Resume resolution warning:", err);
-  }
-
-  if (!activeResumeId && !activeResumeFilename) {
-    return {
-      success: false,
-      requireResume: true,
-      message: 'A resume is required to apply for this job. Please upload your resume first.'
-    };
+  } else {
+    // Simple Local jobs do not require a resume
+    activeResumeId = null;
+    activeResumeFilename = null;
+    activeResumeUrl = null;
   }
 
   const bodyData = {
     job_id: parsedJobId,
     resume_id: activeResumeId,
-    application_type: payload.applicationType || 'PROFILE_RESUME',
+    application_type: normalizedAppType,
     phone_number: payload.phone || null,
     candidate_note: payload.candidateNote || ''
   };
@@ -526,17 +537,8 @@ export async function submitCandidateApplication(payload) {
     console.warn("Candidate profile resolution warning:", err);
   }
 
-  // Enforce minimum 70% profile completion rule
+  // Profile completion is optional (PRD Section 7, 9, 23 & 24) - candidates can apply regardless of profile completion
   const completionPercentage = fullProfile?.completionPercentage || 0;
-  if (completionPercentage < 70) {
-    return {
-      success: false,
-      requireProfileCompletion: true,
-      currentCompletion: completionPercentage,
-      requiredCompletion: 70,
-      message: `Your profile completion is currently ${completionPercentage}%. A minimum profile completion of 70% is required to apply for jobs. Please complete your profile first.`
-    };
-  }
 
   const candidateProfile = {
     id: fullProfile?.id || candidateUser?.id || 'cand_1',

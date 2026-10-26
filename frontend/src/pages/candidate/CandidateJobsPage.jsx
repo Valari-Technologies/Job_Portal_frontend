@@ -169,28 +169,21 @@ export default function CandidateJobsPage() {
   };
 
   const handleInitiateQuickApply = async (job) => {
-    try {
-      const { getCandidateProfile } = await import('../../services/candidate/candidateProfileService');
-      const profile = await getCandidateProfile();
-      if ((profile?.completionPercentage || 0) < 70) {
-        setProfileCompletionRequiredData({ job, currentCompletion: profile?.completionPercentage || 0 });
-        return;
+    // Per PRD Section 7, 9, 23 & 24: Profile completion is NOT required to apply for jobs.
+    // Professional jobs require a resume; Simple Local jobs do not require a resume.
+    const isSimpleLocal = job?.applicationType === 'SIMPLE_LOCAL';
+    if (!isSimpleLocal) {
+      try {
+        const resumes = await getCandidateResumes();
+        if (!resumes || resumes.length === 0) {
+          setResumeRequiredJob(job);
+          return;
+        }
+      } catch (err) {
+        console.warn('Error checking candidate resumes:', err);
       }
-    } catch (err) {
-      console.warn('Profile completion check warning:', err);
     }
-
-    try {
-      const resumes = await getCandidateResumes();
-      if (!resumes || resumes.length === 0) {
-        setResumeRequiredJob(job);
-        return;
-      }
-      setSelectedJobForApply(job);
-    } catch (err) {
-      console.warn('Error checking candidate resumes:', err);
-      setSelectedJobForApply(job);
-    }
+    return await handleQuickApplyConfirm(job);
   };
 
   const handleQuickApplyConfirm = async (jobOrId) => {
@@ -203,14 +196,10 @@ export default function CandidateJobsPage() {
       companyName: jobObj?.company || jobObj?.companyName,
       location: jobObj?.location,
       workMode: jobObj?.workMode,
-      salary: jobObj?.salary
+      salary: jobObj?.salary,
+      applicationType: jobObj?.applicationType || 'PROFILE_RESUME'
     };
     const res = await applyCandidateJob(jobId, payload);
-    if (res && res.requireProfileCompletion) {
-      setSelectedJobForApply(null);
-      setProfileCompletionRequiredData({ job: jobObj, currentCompletion: res.currentCompletion || 0 });
-      return res;
-    }
     if (res && res.requireResume) {
       setSelectedJobForApply(null);
       setResumeRequiredJob(jobObj);

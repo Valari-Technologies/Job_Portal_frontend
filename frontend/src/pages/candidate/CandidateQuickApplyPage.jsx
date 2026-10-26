@@ -66,6 +66,11 @@ export default function CandidateQuickApplyPage() {
     e.preventDefault();
     if (!job || isSubmitting) return;
 
+    if (job.isExpired) {
+      setErrorMsg('The application deadline for this job has passed. New applications are no longer being accepted.');
+      return;
+    }
+
     const isSimpleLocal = job.applicationType === 'SIMPLE_LOCAL';
     if (!isSimpleLocal && (!selectedResumeId || resumes.length === 0)) {
       setShowResumeRequiredModal(true);
@@ -89,12 +94,6 @@ export default function CandidateQuickApplyPage() {
       };
 
       const res = await submitCandidateApplication(payload);
-
-      if (res && res.requireProfileCompletion) {
-        setProfileCompletion(res.currentCompletion || 40);
-        setShowProfileCompletionModal(true);
-        return;
-      }
 
       if (res && res.requireResume) {
         setShowResumeRequiredModal(true);

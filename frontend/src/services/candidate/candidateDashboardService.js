@@ -33,7 +33,13 @@ export async function getCandidateDashboardProfile() {
 
 export async function getRecommendedJobs() {
   const dashData = await getCandidateDashboardData();
-  return dashData.recommendedJobs || [];
+  const rawJobs = dashData.recommendedJobs || [];
+  const { normalizeJobRecord, getCandidateAppliedJobIds } = await import('./candidateJobsService');
+  const appliedJobIds = await getCandidateAppliedJobIds();
+
+  return rawJobs
+    .map(raw => normalizeJobRecord(raw, appliedJobIds))
+    .filter(j => j && !j.isExpired && !j.hasApplied && !j.isApplied && (!appliedJobIds || !appliedJobIds.has(String(j.id))));
 }
 
 export async function getRecentApplications() {

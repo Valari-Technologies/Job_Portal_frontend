@@ -68,29 +68,21 @@ export default function CandidateJobDetailsPage() {
   };
 
   const handleApply = async () => {
-    if (!job || job.hasApplied || isApplying) return;
+    if (!job || job.hasApplied || job.isExpired || isApplying) return;
 
-    try {
-      const { getCandidateProfile } = await import('../../services/candidate/candidateProfileService');
-      const profile = await getCandidateProfile();
-      const comp = profile?.completionPercentage || 0;
-      if (comp < 70) {
-        setCurrentProfileCompletion(comp);
-        setShowProfileCompletionModal(true);
-        return;
+    // Per PRD Section 7, 9, 23 & 24: Profile completion is NOT required to apply for jobs.
+    // Professional jobs require a resume; Simple Local jobs do not require a resume.
+    const isSimpleLocal = job.applicationType === 'SIMPLE_LOCAL';
+    if (!isSimpleLocal) {
+      try {
+        const resumes = await getCandidateResumes();
+        if (!resumes || resumes.length === 0) {
+          setShowResumeRequiredModal(true);
+          return;
+        }
+      } catch (err) {
+        console.warn('Resume check warning:', err);
       }
-    } catch (err) {
-      console.warn('Profile completion check warning:', err);
-    }
-
-    try {
-      const resumes = await getCandidateResumes();
-      if (!resumes || resumes.length === 0) {
-        setShowResumeRequiredModal(true);
-        return;
-      }
-    } catch (err) {
-      console.warn('Resume check warning:', err);
     }
 
     setIsApplying(true);
@@ -101,13 +93,9 @@ export default function CandidateJobDetailsPage() {
         companyName: job.company || job.companyName,
         location: job.location,
         workMode: job.workMode,
-        salary: job.salary
+        salary: job.salary,
+        applicationType: job.applicationType || 'PROFILE_RESUME'
       });
-      if (res && res.requireProfileCompletion) {
-        setCurrentProfileCompletion(res.currentCompletion || 40);
-        setShowProfileCompletionModal(true);
-        return;
-      }
       if (res && res.requireResume) {
         setShowResumeRequiredModal(true);
         return;
@@ -239,6 +227,28 @@ export default function CandidateJobDetailsPage() {
 
         {/* Header Job Info Card */}
         <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+          {job.status === 'PENDING_REVIEW' ? (
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold">
+              <Clock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-black text-blue-900 text-sm">Under Moderation Review</p>
+                <p className="mt-0.5 text-blue-800">
+                  This job posting is currently being reviewed by our moderation team. Applications will open immediately once approved.
+                </p>
+              </div>
+            </div>
+          ) : job.isExpired ? (
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-black text-amber-900 text-sm">Applications Closed for this Position</p>
+                <p className="mt-0.5 text-amber-800">
+                  The application deadline for this job was {job.applicationDeadline || job.deadline || 'reached'}. New applications are no longer being accepted.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="h-16 w-16 rounded-full bg-white border-2 border-black flex items-center justify-center text-slate-900 font-black text-2xl shrink-0 overflow-hidden shadow-xs">
@@ -250,9 +260,20 @@ export default function CandidateJobDetailsPage() {
               </div>
 
               <div className="space-y-1">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  {job.title}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    {job.title}
+                  </h1>
+                  {job.status === 'PENDING_REVIEW' ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                      Pending Review
+                    </span>
+                  ) : job.isExpired ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
+                      Expired
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs sm:text-sm font-extrabold text-[#3B00FF]">
                   {job.company}
                 </p>
@@ -271,6 +292,20 @@ export default function CandidateJobDetailsPage() {
                 >
                   <span>Track Status</span>
                 </Link>
+              </div>
+            ) : job.status === 'PENDING_REVIEW' ? (
+              <div className="flex items-center gap-2.5">
+                <div className="px-5 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 select-none shadow-2xs min-h-[44px] cursor-not-allowed">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  <span>Under Review</span>
+                </div>
+              </div>
+            ) : job.isExpired ? (
+              <div className="flex items-center gap-2.5">
+                <div className="px-5 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 bg-slate-100 text-slate-500 border border-slate-300 select-none shadow-2xs min-h-[44px] cursor-not-allowed">
+                  <Clock className="h-4 w-4 text-slate-400" />
+                  <span>Deadline Passed</span>
+                </div>
               </div>
             ) : (
               <button

@@ -200,6 +200,9 @@ export async function createJobDraftService(jobPayload) {
     }
     const responsibilitiesText = responsibilitiesArr.map(r => `• ${r}`).join('\n');
 
+    const rawAppType = String(jobPayload?.applicationType || '').toUpperCase();
+    const appTypeToSend = (rawAppType.includes('SIMPLE') || rawAppType.includes('LOCAL')) ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME';
+
     const newJob = {
       id: `job_${Date.now()}`,
       title: jobPayload?.title?.trim() || 'Software Development Engineer',
@@ -221,6 +224,8 @@ export async function createJobDraftService(jobPayload) {
       workMode: jobPayload?.workMode || 'On-site',
       location: locationStr,
       employmentType: jobPayload?.employmentType || 'Full-time',
+      applicationType: appTypeToSend,
+      application_type: appTypeToSend,
       minExperience: minExp,
       maxExperience: maxExp,
       experience_min: minExp,
@@ -266,7 +271,8 @@ export async function createJobDraftService(jobPayload) {
           minExperience: newJob.minExperience,
           maxExperience: newJob.maxExperience,
           numberOfOpenings: jobPayload?.numberOfOpenings || '1',
-          applicationType: jobPayload?.applicationType || 'PROFILE_RESUME',
+          applicationType: appTypeToSend,
+          application_type: appTypeToSend,
           minSalary: newJob.minSalary,
           maxSalary: newJob.maxSalary,
           salary_period: newJob.salary_period,

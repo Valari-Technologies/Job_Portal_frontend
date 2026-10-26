@@ -126,7 +126,6 @@ export default function AdminPortalLoginForm() {
         } else if (role === 'ADMIN') {
           window.location.href = '/admin/dashboard';
         } else {
-          clearAllAuthTokens();
           triggerAuthError('Access denied. Candidate and HR users must log in at /login.');
         }
       } else {
@@ -168,15 +167,12 @@ export default function AdminPortalLoginForm() {
         } else if (role === 'ADMIN') {
           window.location.href = '/admin/dashboard';
         } else {
-          clearAllAuthTokens();
           triggerAuthError('Access denied. Admin portal is restricted to authorized Super Admins and Admins. Candidate and HR users please login at /login.');
         }
       } else {
-        clearAllAuthTokens();
         triggerAuthError(response.message || 'Google login failed.');
       }
     } catch {
-      clearAllAuthTokens();
       triggerAuthError('An unexpected Google authentication error occurred.');
     } finally {
       setIsSubmitting(false);

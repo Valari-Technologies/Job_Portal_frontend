@@ -26,20 +26,6 @@ export default function AdminRouteGuard({ children }) {
       return <Navigate to="/super-admin/overview" replace />;
     }
 
-    // If HR/Recruiter is logged in, redirect to Recruiter dashboard
-    const hrToken = getAuthItem('public_access_token');
-    const hrRole = getAuthItem('public_auth_role');
-    if (hrToken && (hrRole === 'HR' || hrRole === 'RECRUITER')) {
-      return <Navigate to="/recruiter/dashboard" replace />;
-    }
-
-    // If Candidate is logged in, redirect to Candidate dashboard
-    const candToken = getAuthItem('candidate_access_token');
-    const candRole = getAuthItem('candidate_auth_role');
-    if (candToken && candRole === 'CANDIDATE') {
-      return <Navigate to="/candidate/dashboard" replace />;
-    }
-
     return <Navigate to="/admin" replace />;
   }
 

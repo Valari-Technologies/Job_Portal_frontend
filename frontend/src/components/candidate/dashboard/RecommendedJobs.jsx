@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getRecommendedJobs } from '../../../services/candidate/candidateDashboardService';
 import CandidateJobCard from './CandidateJobCard';
 import { Link } from 'react-router-dom';
-import { AlertCircle, RotateCcw } from 'lucide-react';
+import { AlertCircle, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 export default function RecommendedJobs() {
   const [jobs, setJobs] = useState([]);
@@ -90,16 +90,17 @@ export default function RecommendedJobs() {
           </button>
         </div>
       ) : jobs.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-3">
-          <h3 className="text-sm font-black text-slate-900">No recommendations yet</h3>
-          <p className="text-xs font-semibold text-slate-500">
-            Complete your profile and job preferences to receive better recommendations.
+        <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3">
+          <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
+          <h3 className="text-base font-black text-slate-900">You're All Caught Up!</h3>
+          <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+            You've applied to all current matching jobs. Explore all active listings or check back soon for new opportunities.
           </p>
           <Link
-            to="/candidate/profile"
-            className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold shadow-xs"
+            to="/candidate/jobs"
+            className="inline-block px-5 py-2.5 rounded-xl bg-[#3B00FF] text-white text-xs font-extrabold shadow-xs hover:bg-[#3000E0] transition-colors"
           >
-            Complete Profile
+            Explore All Jobs
           </Link>
         </div>
       ) : (
