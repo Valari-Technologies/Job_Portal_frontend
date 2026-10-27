@@ -76,35 +76,36 @@ export default function CandidateJobsDesktopFilters({
       {/* Filter Dropdown Pills Row */}
       <div className="flex flex-wrap items-center gap-3">
         
-        {/* 1. Industry */}
+        {/* 1. Industry (Top-level Super Admin category) */}
         <CustomDropdown
           value={filters.industryId || ''}
-          placeholder="Industry / Category"
+          placeholder="Industry"
           rounded="full"
           size="sm"
           buttonClassName={filters.industryId ? '!bg-indigo-50 !border-[#3B00FF] !text-[#3B00FF] font-black' : 'font-bold'}
           onChange={(e) => {
             onFilterChange('industryId', e.target.value);
-            onFilterChange('departmentId', '');
           }}
           options={[
             { value: '', label: 'All Industries' },
-            ...(options?.industries || options?.categories || []).map((ind) => ({ value: ind.id, label: ind.name }))
+            ...(options?.industries || options?.categories || []).map((ind) => ({ value: String(ind.id), label: ind.name }))
           ]}
         />
 
-        {/* 2. Department / Specialization */}
+        {/* 2. Department (Child Super Admin category) */}
         <CustomDropdown
           value={filters.departmentId || ''}
           placeholder="Department"
-          disabled={!filters.industryId}
           rounded="full"
           size="sm"
+          disabled={!filters.industryId}
           buttonClassName={filters.departmentId ? '!bg-indigo-50 !border-[#3B00FF] !text-[#3B00FF] font-black' : 'font-bold'}
-          onChange={(e) => onFilterChange('departmentId', e.target.value)}
+          onChange={(e) => {
+            onFilterChange('departmentId', e.target.value);
+          }}
           options={[
             { value: '', label: 'All Departments' },
-            ...(departments || []).map((dept) => ({ value: dept.id, label: dept.name }))
+            ...(departments || []).map((dept) => ({ value: String(dept.id), label: dept.name }))
           ]}
         />
 

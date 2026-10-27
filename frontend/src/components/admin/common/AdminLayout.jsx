@@ -36,7 +36,7 @@ export default function AdminLayout({ searchPlaceholder = "Search anything..." }
 
   return (
     <SidebarCollapseProvider>
-      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-805 antialiased">
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800 antialiased">
         {/* Desktop Sidebar (Fixed) */}
         <AdminSidebar activeTab={activeTab} onLogoutClick={handleLogoutInitiate} />
 
@@ -54,10 +54,12 @@ export default function AdminLayout({ searchPlaceholder = "Search anything..." }
         {/* Main Content Pane */}
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           {/* Mobile top bar layout header */}
-          <AdminMobileHeader onToggleMenu={() => setSidebarOpen(!sidebarOpen)} />
+          <div className="shrink-0 lg:hidden">
+            <AdminMobileHeader onToggleMenu={() => setSidebarOpen(!sidebarOpen)} />
+          </div>
           
           {/* Desktop Header */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block shrink-0">
             <AdminHeader onMobileMenuToggle={() => setSidebarOpen(!sidebarOpen)} searchPlaceholder={searchPlaceholder} />
           </div>
 

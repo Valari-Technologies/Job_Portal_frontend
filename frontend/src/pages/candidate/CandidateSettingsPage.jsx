@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
+import QuietHoursClockCard from '../../components/candidate/settings/QuietHoursClockCard';
 import { useCandidateUser } from '../../context/CandidateUserContext';
 import {
   getCandidateSettings,
   updateCandidateGeneralSettings,
+  saveStoredPreferences,
   changeCandidatePassword,
   toggle2FASetting,
   revokeOtherSessions,
@@ -170,42 +172,74 @@ export default function CandidateSettingsPage() {
 
   const handleSettingsToggle = (category, key) => {
     setSettings(prev => {
+      const updatedCategory = {
+        ...(prev?.[category] || {}),
+        [key]: !prev?.[category]?.[key]
+      };
       const updated = {
         ...prev,
-        [category]: {
-          ...prev[category],
-          [key]: !prev[category][key]
-        }
+        [category]: updatedCategory
       };
-      setIsDirty(true);
+      saveStoredPreferences(updated);
+      updateCandidateGeneralSettings({
+        settingsPayload: { [category]: updatedCategory }
+      }).catch(err => console.warn('Auto-save toggle failed:', err));
       return updated;
     });
   };
 
   const handleQuietHoursChange = (field, val) => {
     setSettings(prev => {
+      const updatedQuiet = {
+        ...(prev?.quietHours || {}),
+        [field]: val
+      };
       const updated = {
         ...prev,
-        quietHours: {
-          ...prev.quietHours,
-          [field]: val
-        }
+        quietHours: updatedQuiet
       };
-      setIsDirty(true);
+      saveStoredPreferences(updated);
+      updateCandidateGeneralSettings({
+        settingsPayload: { quietHours: updatedQuiet }
+      }).catch(err => console.warn('Auto-save quiet hours failed:', err));
+      return updated;
+    });
+  };
+
+  const handleQuietHoursPreset = (fromTime, toTime) => {
+    setSettings(prev => {
+      const updatedQuiet = {
+        ...(prev?.quietHours || {}),
+        enabled: true,
+        fromTime,
+        toTime
+      };
+      const updated = {
+        ...prev,
+        quietHours: updatedQuiet
+      };
+      saveStoredPreferences(updated);
+      updateCandidateGeneralSettings({
+        settingsPayload: { quietHours: updatedQuiet }
+      }).catch(err => console.warn('Auto-save preset failed:', err));
       return updated;
     });
   };
 
   const handlePrivacyVisibilityChange = (val) => {
     setSettings(prev => {
+      const updatedPrivacy = {
+        ...(prev?.privacy || {}),
+        profileVisibility: val
+      };
       const updated = {
         ...prev,
-        privacy: {
-          ...prev.privacy,
-          profileVisibility: val
-        }
+        privacy: updatedPrivacy
       };
-      setIsDirty(true);
+      saveStoredPreferences(updated);
+      updateCandidateGeneralSettings({
+        settingsPayload: { privacy: updatedPrivacy }
+      }).catch(err => console.warn('Auto-save privacy failed:', err));
       return updated;
     });
   };
@@ -833,51 +867,13 @@ export default function CandidateSettingsPage() {
                   </div>
                 </div>
 
-                {/* Quiet Hours Card */}
-                <div className="lg:col-span-5 bg-white border border-slate-200 p-6 sm:p-7 rounded-3xl space-y-4 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">Quiet Hours</h3>
-                      <p className="text-xs font-semibold text-slate-500">Pause non-critical notifications.</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSettingsToggle('quietHours', 'enabled')}
-                      className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                        settings?.quietHours?.enabled ? 'bg-[#3B00FF]' : 'bg-slate-300'
-                      }`}
-                    >
-                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        settings?.quietHours?.enabled ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">From</label>
-                      <input
-                        type="text"
-                        placeholder="10:00 PM"
-                        value={settings?.quietHours?.fromTime || '10:00 PM'}
-                        onChange={(e) => handleQuietHoursChange('fromTime', e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">To</label>
-                      <input
-                        type="text"
-                        placeholder="08:00 AM"
-                        value={settings?.quietHours?.toTime || '08:00 AM'}
-                        onChange={(e) => handleQuietHoursChange('toTime', e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#3B00FF]"
-                      />
-                    </div>
-                  </div>
-                </div>
+                {/* Quiet Hours Card (Clock Design) */}
+                <QuietHoursClockCard
+                  quietHours={settings?.quietHours}
+                  onToggle={() => handleSettingsToggle('quietHours', 'enabled')}
+                  onChangeTime={handleQuietHoursChange}
+                  onSetPreset={handleQuietHoursPreset}
+                />
 
               </div>
             </div>
@@ -973,67 +969,8 @@ export default function CandidateSettingsPage() {
                   </div>
                 </div>
 
-                {/* Right Stack: Data Sharing & Danger Zone */}
-                <div className="lg:col-span-6 space-y-6">
-                  
-                  {/* Data Sharing Card */}
-                  <div className="bg-white border border-slate-200 p-6 sm:p-7 rounded-3xl space-y-4 shadow-2xs">
-                    <div className="flex items-center gap-2">
-                      <Share2 className="h-5 w-5 text-[#3B00FF]" />
-                      <h3 className="text-base font-black text-slate-900">Data Sharing</h3>
-                    </div>
-
-                    <div className="space-y-3">
-                      {/* Toggle 1: Share Application History */}
-                      <div className="flex items-center justify-between py-1">
-                        <div>
-                          <h4 className="text-xs font-black text-slate-900">Share Application History</h4>
-                          <p className="text-[11px] font-semibold text-slate-500">Help employers understand your interests.</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSettingsToggle('privacy', 'shareApplicationHistory')}
-                          className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                            settings?.privacy?.shareApplicationHistory ? 'bg-[#3B00FF]' : 'bg-slate-300'
-                          }`}
-                        >
-                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                            settings?.privacy?.shareApplicationHistory ? 'translate-x-5' : 'translate-x-0'
-                          }`} />
-                        </button>
-                      </div>
-
-                      {/* Toggle 2: AI Resume Training */}
-                      <div className="flex items-center justify-between py-1 border-t border-slate-150 pt-3">
-                        <div>
-                          <h4 className="text-xs font-black text-slate-900">AI Resume Training</h4>
-                          <p className="text-[11px] font-semibold text-slate-500">Allow anonymous data to improve our AI.</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSettingsToggle('privacy', 'aiResumeTraining')}
-                          className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                            settings?.privacy?.aiResumeTraining ? 'bg-[#3B00FF]' : 'bg-slate-300'
-                          }`}
-                        >
-                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                            settings?.privacy?.aiResumeTraining ? 'translate-x-5' : 'translate-x-0'
-                          }`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleRequestDataArchive}
-                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>{settings?.dataArchive?.status === 'PROCESSING' ? 'Archive Request Processing...' : 'Request Data Archive'}</span>
-                    </button>
-                  </div>
-
-                  {/* Danger Zone Card */}
+                {/* Right Stack: Danger Zone Card */}
+                <div className="lg:col-span-6">
                   <div className="bg-rose-50/60 border border-rose-200 p-6 sm:p-7 rounded-3xl space-y-3 shadow-2xs">
                     <h3 className="text-base font-black text-rose-600">Danger Zone</h3>
                     <p className="text-xs font-semibold text-slate-600">
@@ -1047,7 +984,6 @@ export default function CandidateSettingsPage() {
                       Delete Account
                     </button>
                   </div>
-
                 </div>
 
               </div>
@@ -1060,85 +996,107 @@ export default function CandidateSettingsPage() {
               </h2>
 
               {/* Active Resume Card */}
-              <div className="bg-white border border-slate-200 p-6 sm:p-7 rounded-3xl space-y-5 shadow-2xs relative">
-                
-                {/* Top Badge & Document Icon */}
-                <div className="flex items-start justify-between">
-                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
-                    • Active Profile
-                  </span>
-
-                  <div className="h-12 w-10 rounded-lg bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-600 relative">
-                    <FileText className="h-5 w-5" />
-                    <span className="text-[8px] font-black uppercase bg-blue-600 text-white px-1 rounded-xs absolute -bottom-1">PDF</span>
-                  </div>
-                </div>
-
-                {/* Resume Title & Last Updated */}
-                <div className="space-y-0.5">
-                  <h3 className="text-lg font-black text-slate-900">
-                    {settings?.resume?.activeResumeTitle || 'Senior Product Designer - Tech'}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-400">
-                    Last updated: {settings?.resume?.lastUpdated || '2 days ago'}
-                  </p>
-                </div>
-
-                {/* Metrics Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {settings?.resume?.hasResume ? (
+                <div className="bg-white border border-slate-200 p-6 sm:p-7 rounded-3xl space-y-5 shadow-2xs relative">
                   
-                  {/* ATS Score Box */}
-                  <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
-                      <Sparkles className="h-3.5 w-3.5 text-[#3B00FF]" />
-                      <span>ATS Score</span>
+                  {/* Top Badge & Document Icon */}
+                  <div className="flex items-start justify-between">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
+                      • Active Profile
+                    </span>
+
+                    <div className="h-12 w-10 rounded-lg bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-600 relative">
+                      <FileText className="h-5 w-5" />
+                      <span className="text-[8px] font-black uppercase bg-blue-600 text-white px-1 rounded-xs absolute -bottom-1">PDF</span>
                     </div>
-                    <p className="text-2xl font-black text-[#3B00FF]">
-                      {settings?.resume?.atsScore || 85} <span className="text-xs font-bold text-slate-400">/100</span>
+                  </div>
+
+                  {/* Resume Title & Last Updated */}
+                  <div className="space-y-0.5">
+                    <h3 className="text-lg font-black text-slate-900">
+                      {settings?.resume?.activeResumeTitle}
+                    </h3>
+                    <p className="text-xs font-bold text-slate-400">
+                      Last updated: {settings?.resume?.lastUpdated}
                     </p>
-                    <div className="h-1.5 rounded-full bg-indigo-200 overflow-hidden">
-                      <div className="h-full bg-[#3B00FF] rounded-full" style={{ width: `${settings?.resume?.atsScore || 85}%` }} />
-                    </div>
                   </div>
 
-                  {/* Keyword Match Box */}
-                  <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
-                      <History className="h-3.5 w-3.5 text-[#3B00FF]" />
-                      <span>Keyword Match</span>
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    {/* ATS Score Box */}
+                    <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
+                        <Sparkles className="h-3.5 w-3.5 text-[#3B00FF]" />
+                        <span>ATS Score</span>
+                      </div>
+                      <p className="text-2xl font-black text-[#3B00FF]">
+                        {settings?.resume?.atsScore || 85} <span className="text-xs font-bold text-slate-400">/100</span>
+                      </p>
+                      <div className="h-1.5 rounded-full bg-indigo-200 overflow-hidden">
+                        <div className="h-full bg-[#3B00FF] rounded-full" style={{ width: `${settings?.resume?.atsScore || 85}%` }} />
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {(settings?.resume?.keywordMatches || ['Figma', 'UX Research', 'Design Systems']).map((kw, i) => (
-                        <span key={i} className="px-2.5 py-0.5 rounded-md bg-white border border-indigo-150 text-[10px] font-bold text-slate-700">
-                          {kw}
-                        </span>
-                      ))}
+
+                    {/* Keyword Match Box */}
+                    <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
+                        <History className="h-3.5 w-3.5 text-[#3B00FF]" />
+                        <span>Profile Keywords</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {(settings?.resume?.keywordMatches || []).map((kw, i) => (
+                          <span key={i} className="px-2.5 py-0.5 rounded-md bg-white border border-indigo-150 text-[10px] font-bold text-slate-700">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/candidate/resume')}
+                      className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>AI Optimize</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate('/candidate/resume')}
+                      className="px-5 py-2.5 rounded-xl border border-[#3B00FF] text-[#3B00FF] hover:bg-purple-50 text-xs font-black flex items-center justify-center cursor-pointer"
+                    >
+                      Upload New
+                    </button>
                   </div>
 
                 </div>
-
-                {/* Actions Row */}
-                <div className="flex items-center gap-3 pt-2">
+              ) : (
+                <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-4 shadow-2xs text-center">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-[#3B00FF] flex items-center justify-center mx-auto">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-slate-900">No Resume Uploaded Yet</h3>
+                    <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+                      Upload your resume to activate 1-click Quick Apply and automatic ATS match scoring.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => navigate('/candidate/resume')}
-                    className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    className="px-5 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs mx-auto"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>AI Optimize</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate('/candidate/resume')}
-                    className="px-5 py-2.5 rounded-xl border border-[#3B00FF] text-[#3B00FF] hover:bg-purple-50 text-xs font-black flex items-center justify-center cursor-pointer"
-                  >
-                    Upload New
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Upload Resume</span>
                   </button>
                 </div>
-
-              </div>
+              )}
             </div>
 
           </div>

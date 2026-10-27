@@ -10,7 +10,7 @@ export default function CandidateHeader() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
-    <header className="hidden lg:flex h-16 w-full items-center justify-end px-8 bg-white border-b border-slate-200 sticky top-0 z-20 font-sans">
+    <header className="hidden lg:flex h-16 w-full items-center justify-end px-8 bg-white border-b border-slate-200 shrink-0 sticky top-0 z-20 font-sans">
       <div className="flex items-center gap-4 relative">
         
         {/* Notification Bell Action */}

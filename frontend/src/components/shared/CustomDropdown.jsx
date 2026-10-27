@@ -245,10 +245,9 @@ export default function CustomDropdown({
       {/* Floating Popover Menu */}
       {isOpen && !disabled && (
         <div
-          className={`absolute left-0 right-0 z-[100] bg-white rounded-xl border border-slate-200/80 shadow-2xl shadow-slate-300/60 overflow-hidden py-1 animate-in fade-in-50 zoom-in-95 duration-150 ${
+          className={`absolute left-0 z-[100] min-w-full w-max max-w-[320px] bg-white rounded-xl border border-slate-200/80 shadow-2xl shadow-slate-300/60 overflow-hidden py-1 animate-in fade-in-50 zoom-in-95 duration-150 ${
             openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
           } ${menuClassName}`}
-          style={{ minWidth: '100%' }}
         >
           {/* Optional Search Filter Header for long option lists */}
           {isSearchable && (
@@ -295,7 +294,7 @@ export default function CustomDropdown({
                             : 'text-slate-700 font-medium hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="whitespace-nowrap">{opt.label}</span>
                     {isSelected && !isPlaceholderOption && (
                       <Check className="h-4 w-4 text-indigo-600 shrink-0" />
                     )}

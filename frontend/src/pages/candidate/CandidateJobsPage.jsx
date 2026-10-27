@@ -15,7 +15,7 @@ import { getCandidateJobs, toggleSavedCandidateJob, applyCandidateJob } from '..
 import { getCandidateResumes } from '../../services/candidate/candidateApplicationsService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
 import { useCandidateUser } from '../../context/CandidateUserContext';
-import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
+import { AlertCircle, RotateCcw, Sparkles, Briefcase, Bookmark } from 'lucide-react';
 
 export default function CandidateJobsPage() {
   const navigate = useNavigate();
@@ -141,9 +141,15 @@ export default function CandidateJobsPage() {
   };
 
   const handleFilterChange = (key, val) => {
-    const updated = { ...filters, [key]: val };
-    setFilters(updated);
-    updateUrlParams(currentTab, searchQuery, updated);
+    setFilters((prev) => {
+      const updated = {
+        ...prev,
+        [key]: val,
+        ...(key === 'industryId' ? { departmentId: '' } : {})
+      };
+      updateUrlParams(currentTab, searchQuery, updated);
+      return updated;
+    });
   };
 
   const handleResetFilters = () => {
@@ -162,7 +168,11 @@ export default function CandidateJobsPage() {
   const handleToggleSave = async (jobId) => {
     try {
       const res = await toggleSavedCandidateJob(jobId);
-      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: res.isSaved } : j));
+      if (currentTab === 'saved' && !res.isSaved) {
+        setJobs(prev => prev.filter(j => String(j.id) !== String(jobId)));
+      } else {
+        setJobs(prev => prev.map(j => String(j.id) === String(jobId) ? { ...j, isSaved: res.isSaved } : j));
+      }
     } catch (err) {
       console.error('Failed to toggle save job:', err);
     }
@@ -259,19 +269,54 @@ export default function CandidateJobsPage() {
           />
         </div>
 
+        {/* Desktop Discovery Tabs (Visible on sm: and up) */}
+        <div className="hidden sm:flex items-center space-x-8 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => handleTabChange('for-you')}
+            className={`pb-3 text-sm font-black transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
+              currentTab !== 'saved'
+                ? 'border-[#3B00FF] text-[#3B00FF]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Briefcase className="h-4 w-4" />
+            <span>All Jobs</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange('saved')}
+            className={`pb-3 text-sm font-black transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
+              currentTab === 'saved'
+                ? 'border-[#3B00FF] text-[#3B00FF]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Bookmark className="h-4 w-4" />
+            <span>Saved Jobs</span>
+          </button>
+        </div>
+
         {/* Desktop Header & Subtitle (Visible on sm: and up matching Desktop Reference Image 1) */}
         <div className="hidden sm:block space-y-1">
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {hasRecommendations ? 'Recommended for You' : 'Available Jobs'}
+            {currentTab === 'saved'
+              ? 'Saved Jobs'
+              : hasRecommendations
+                ? 'Recommended for You'
+                : 'Available Jobs'}
           </h2>
           <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-[#3B00FF]" />
             <span>
-              {hasRecommendations
-                ? 'Based on your profile match and activity'
-                : candidateDistrict
-                  ? `Explore active job opportunities in ${candidateDistrict} and across Tamil Nadu`
-                  : 'Explore active job opportunities across Tamil Nadu'}
+              {currentTab === 'saved'
+                ? 'Jobs you have saved to review or apply later'
+                : hasRecommendations
+                  ? 'Based on your profile match and activity'
+                  : candidateDistrict
+                    ? `Explore active job opportunities in ${candidateDistrict} and across Tamil Nadu`
+                    : 'Explore active job opportunities across Tamil Nadu'}
             </span>
           </p>
         </div>

@@ -7,22 +7,22 @@ import RecruiterMobileNavigation from './RecruiterMobileNavigation';
 export default function RecruiterLayout({ children, activeTab }) {
   return (
     <SidebarCollapseProvider>
-      <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row text-slate-800 font-sans">
-        {/* Desktop Sidebar (Left) */}
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800 antialiased">
+        {/* Desktop Sidebar (Left - Fixed) */}
         <RecruiterSidebar activeTab={activeTab} />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Desktop Header */}
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          {/* Desktop Header (Pinned Top) */}
           <RecruiterHeader />
 
           {/* Mobile Header */}
           <RecruiterMobileHeader />
 
-          {/* Page Content */}
-          <div className="flex-1 pb-20 lg:pb-8">
+          {/* Scrollable View Area (Only content scrolls) */}
+          <main className="flex-1 overflow-y-auto pb-20 lg:pb-8">
             {children}
-          </div>
+          </main>
 
           {/* Mobile Bottom Navigation */}
           <RecruiterMobileNavigation activeTab={activeTab} />

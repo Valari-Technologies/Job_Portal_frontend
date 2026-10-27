@@ -16,6 +16,7 @@ import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthServi
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
 let companyLogosCache = {};
+let cachedAllCategories = [];
 
 export async function loadCompanyLogos() {
   try {
@@ -122,7 +123,10 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
 
   const workMode = raw.work_mode_name || raw.workMode || (raw.work_mode === 1 ? 'Remote' : raw.work_mode === 2 ? 'Hybrid' : 'On-site');
   const categoryName = raw.category_name || (typeof raw.category === 'object' ? raw.category?.name : raw.category) || '';
-  const departmentName = raw.department_name || raw.department || '';
+  const industryId = raw.industry_id || raw.industryId || (raw.category?.parent ? raw.category.parent.id : (raw.category?.id || null));
+  const industryName = raw.industry_name || raw.industryName || (raw.category?.parent ? raw.category.parent.name : categoryName);
+  const departmentId = raw.department_id || raw.departmentId || (raw.category?.parent ? raw.category.id : null);
+  const departmentName = raw.department_name || raw.departmentName || raw.department || (raw.category?.parent ? categoryName : '');
 
   const salaryMin = raw.salary_min ? Number(raw.salary_min) : null;
   const salaryMax = raw.salary_max ? Number(raw.salary_max) : null;
@@ -159,6 +163,10 @@ export function normalizeJobRecord(raw, appliedJobIds = null) {
     locations: raw.locations || [],
     category: categoryName,
     categoryName,
+    industryId,
+    industryName,
+    departmentId,
+    departmentName,
     department: departmentName,
     workMode,
     applicationType,
@@ -361,6 +369,8 @@ export async function getCandidateJobs(params = {}) {
     search = '',
     tab = 'for-you',
     category = '',
+    industryId = '',
+    departmentId = '',
     location = '',
     experience = '',
     jobType = '',
@@ -375,7 +385,9 @@ export async function getCandidateJobs(params = {}) {
 
   const query = new URLSearchParams();
   if (search) query.append('search', search);
-  if (category) query.append('category', category);
+  if (industryId) query.append('industry', industryId);
+  if (departmentId) query.append('department', departmentId);
+  else if (category) query.append('category', category);
   if (location) query.append('location', location);
   if (workMode) query.append('work_mode', workMode);
 
@@ -422,32 +434,57 @@ export async function getCandidateJobs(params = {}) {
     const s = search.toLowerCase();
     jobs = jobs.filter(j => 
       j.title.toLowerCase().includes(s) || 
-      j.companyName.toLowerCase().includes(s) || 
-      j.description.toLowerCase().includes(s) ||
-      j.skills.some(sk => String(sk).toLowerCase().includes(s))
+      (j.companyName || j.company || '').toLowerCase().includes(s) || 
+      (j.description || '').toLowerCase().includes(s) ||
+      (j.skills || []).some(sk => String(sk).toLowerCase().includes(s))
     );
   }
-  if (category) {
-    const c = category.toLowerCase();
-    jobs = jobs.filter(j => String(j.category || '').toLowerCase().includes(c));
+  if (industryId) {
+    const ind = String(industryId).toLowerCase().trim();
+    jobs = jobs.filter(j => {
+      const jIndName = String(j.industryName || '').toLowerCase().trim();
+      const jIndId = String(j.industryId || '').trim();
+      const jCatName = String(j.categoryName || j.category || '').toLowerCase().trim();
+      const jCatId = String(j.category || '').trim();
+      return jIndName.includes(ind) || jIndId === ind || jCatName.includes(ind) || jCatId === ind;
+    });
+  }
+  if (departmentId) {
+    const dept = String(departmentId).toLowerCase().trim();
+    jobs = jobs.filter(j => {
+      const jDeptName = String(j.departmentName || '').toLowerCase().trim();
+      const jDeptId = String(j.departmentId || '').trim();
+      const jCatName = String(j.categoryName || j.category || '').toLowerCase().trim();
+      const jCatId = String(j.category || '').trim();
+      return jDeptName.includes(dept) || jDeptId === dept || jCatName.includes(dept) || jCatId === dept;
+    });
+  }
+  if (!industryId && !departmentId && category) {
+    const c = String(category).toLowerCase().trim();
+    jobs = jobs.filter(j => {
+      const catName = String(j.categoryName || j.category || '').toLowerCase().trim();
+      const catId = String(j.category || '').trim();
+      return catName.includes(c) || catId === c;
+    });
   }
   if (location) {
-    const l = location.toLowerCase();
-    jobs = jobs.filter(j => (j.location || '').toLowerCase().includes(l));
+    const l = location.toLowerCase().trim();
+    jobs = jobs.filter(j => (j.location || j.locationName || '').toLowerCase().includes(l));
   }
   if (workMode) {
-    const w = workMode.toLowerCase();
+    const w = workMode.toLowerCase().trim();
     jobs = jobs.filter(j => (j.workMode || '').toLowerCase().includes(w));
   }
   if (jobType) {
-    jobs = jobs.filter(j => (j.applicationType || '').toLowerCase().includes(jobType.toLowerCase()));
+    const jt = jobType.toLowerCase().trim();
+    jobs = jobs.filter(j => (j.applicationType || '').toLowerCase().includes(jt));
   }
   if (experience === 'entry') {
-    jobs = jobs.filter(j => j.experienceMin <= 2);
+    jobs = jobs.filter(j => (j.experienceMin || 0) <= 2);
   } else if (experience === 'mid') {
-    jobs = jobs.filter(j => j.experienceMin >= 3 && j.experienceMin <= 5);
+    jobs = jobs.filter(j => (j.experienceMin || 0) >= 3 && (j.experienceMin || 0) <= 5);
   } else if (experience === 'senior') {
-    jobs = jobs.filter(j => j.experienceMin >= 6);
+    jobs = jobs.filter(j => (j.experienceMin || 0) >= 6);
   }
 
   // Location matching and candidate home district prioritization
@@ -481,6 +518,8 @@ export async function getCandidateJobs(params = {}) {
  * Fetch Saved Jobs for authenticated candidate
  */
 export async function getCandidateSavedJobs() {
+  await loadCompanyLogos();
+  const appliedJobIds = await getCandidateAppliedJobIds();
   const url = `${API_BASE_URL}/accounts/candidate/saved-jobs/`;
   const response = await authenticatedFetch(url);
 
@@ -490,7 +529,10 @@ export async function getCandidateSavedJobs() {
 
   const data = await response.json();
   const rawList = Array.isArray(data) ? data : (data.results || []);
-  const jobs = rawList.map(sj => normalizeJobRecord(sj.job)).filter(Boolean).map(j => ({ ...j, isSaved: true }));
+  const jobs = rawList
+    .map(sj => normalizeJobRecord(sj.job, appliedJobIds))
+    .filter(Boolean)
+    .map(j => ({ ...j, isSaved: true }));
 
   return {
     jobs,
@@ -509,6 +551,13 @@ export async function getJobFilterOptions() {
     ]);
 
     const categories = catRes.ok ? await catRes.json() : [];
+    const allCats = Array.isArray(categories) ? categories : (categories.results || []);
+    cachedAllCategories = allCats;
+    // Industries created by Super Admin (top-level categories where parent is null/empty)
+    const industries = allCats.filter(c => !c.parent && c.is_active !== false);
+    // Departments created by Super Admin (child categories where parent is set)
+    const departments = allCats.filter(c => Boolean(c.parent) && c.is_active !== false);
+
     const rawLocations = locRes.ok ? await locRes.json() : [];
     const dbLocs = Array.isArray(rawLocations) ? rawLocations : (rawLocations.results || []);
 
@@ -545,7 +594,10 @@ export async function getJobFilterOptions() {
     }));
 
     return {
-      categories: Array.isArray(categories) ? categories : (categories.results || []),
+      industries,
+      categories: industries,
+      departments,
+      allCategories: allCats,
       locations: formattedLocations,
       experienceRanges: [
         { id: 'entry', label: '0–2 Years' },
@@ -564,7 +616,10 @@ export async function getJobFilterOptions() {
     };
   } catch {
     return {
+      industries: [],
       categories: [],
+      departments: [],
+      allCategories: [],
       locations: [],
       experienceRanges: [],
       jobTypes: [],
@@ -672,5 +727,24 @@ export async function quickApplyJob(jobId, jobData = {}) {
 }
 
 export async function getDepartmentsForIndustry(industryId) {
+  if (!industryId) return [];
+  try {
+    const response = await fetch(`${API_BASE_URL}/accounts/job-categories/?parent_id=${industryId}`);
+    if (response.ok) {
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : (data.results || []);
+      const activeList = list.filter(c => c.is_active !== false);
+      if (activeList.length > 0) return activeList;
+    }
+  } catch (err) {
+    console.warn("Failed to fetch departments for industry:", err);
+  }
+
+  if (cachedAllCategories.length > 0) {
+    return cachedAllCategories.filter(c => 
+      (String(c.parent) === String(industryId) || c.parent_name === industryId) && c.is_active !== false
+    );
+  }
+
   return [];
 }
