@@ -41,6 +41,15 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
   const job = application.job || {};
   const currentStatus = application.status || 'APPLIED';
 
+  // Robust resume URL and filename resolution
+  const rawResumeUrl = application.resume_url || application.resume?.file_url || application.resume?.file_path || application.candidate?.resume_url;
+  const resumeUrl = rawResumeUrl ? (
+    String(rawResumeUrl).startsWith('http://') || String(rawResumeUrl).startsWith('https://') 
+      ? rawResumeUrl 
+      : `http://127.0.0.1:8000${String(rawResumeUrl).startsWith('/') ? '' : '/media/'}${rawResumeUrl}`
+  ) : null;
+  const resumeFilename = application.resume_filename || application.resume?.file_name || (resumeUrl ? 'Candidate_Resume.pdf' : null);
+
   const handleAddNote = (e) => {
     e.preventDefault();
     if (!internalNote.trim()) return;
@@ -414,7 +423,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Candidate Resume</h4>
-              {application.resume_url && (
+              {resumeUrl && (
                 <span className="text-[11px] font-black text-emerald-600 flex items-center gap-1 shrink-0">
                   <CheckCircle2 className="h-3 w-3" />
                   Verified Attachment
@@ -422,7 +431,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
               )}
             </div>
 
-            {application.resume_url ? (
+            {resumeUrl ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-[#3B00FF]/40 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-10 w-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
@@ -430,7 +439,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                   </div>
                   <div className="min-w-0 flex-1">
                     <h5 className="text-xs font-black text-slate-900 truncate">
-                      {application.resume_filename || 'DHANAIS RESUME (1)'}
+                      {resumeFilename || 'DHANAIS RESUME'}
                     </h5>
                     <p className="text-[10px] font-bold text-slate-500 truncate">PDF Document • Primary Candidate Resume</p>
                   </div>
@@ -446,7 +455,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                     Preview Resume
                   </button>
                   <a
-                    href={application.resume_url}
+                    href={resumeUrl}
                     target="_blank"
                     rel="noreferrer"
                     download
@@ -460,7 +469,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
             ) : (
               <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 text-center">
                 <p className="text-xs font-bold text-slate-500">
-                  No resume attached for this application (Simple Local Phone-based hiring flow).
+                  No resume attached for this application.
                 </p>
               </div>
             )}
@@ -601,13 +610,13 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                   <FileText className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">{application.resume_filename || 'Candidate Resume'}</h3>
+                  <h3 className="text-sm font-black text-slate-900">{resumeFilename || 'Candidate Resume'}</h3>
                   <span className="text-[10px] font-bold text-slate-500">{candidate.full_name} • Candidate Verified Document</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href={application.resume_url}
+                  href={resumeUrl}
                   target="_blank"
                   rel="noreferrer"
                   download
@@ -627,7 +636,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
             </div>
             <div className="flex-1 bg-slate-100 relative">
               <iframe
-                src={`${application.resume_url}#toolbar=0`}
+                src={`${resumeUrl}#toolbar=0`}
                 title="Resume Preview"
                 className="w-full h-full border-none"
               />

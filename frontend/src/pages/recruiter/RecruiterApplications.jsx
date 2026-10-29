@@ -19,7 +19,14 @@ export default function RecruiterApplications() {
 
   useEffect(() => {
     fetchRecruiterApplicationsFromApi().then(freshData => {
-      if (freshData) setData(freshData);
+      if (freshData) {
+        setData(freshData);
+        setSelectedApplication(prev => {
+          if (!prev) return null;
+          const updated = freshData.applications?.find(a => String(a.id) === String(prev.id));
+          return updated || prev;
+        });
+      }
     });
   }, []);
 

@@ -473,46 +473,42 @@ export async function submitCandidateApplication(payload) {
   const isSimpleLocal = rawAppType.includes('SIMPLE') || rawAppType.includes('LOCAL');
   const normalizedAppType = isSimpleLocal ? 'SIMPLE_LOCAL' : 'PROFILE_RESUME';
 
-  if (!isSimpleLocal) {
-    try {
-      const resumes = await getCandidateResumes();
-      if (resumes && resumes.length > 0) {
-        const defaultRes = resumes.find(r => r.isPrimary || r.is_default) || resumes[0];
-        if (defaultRes) {
-          if (!activeResumeId && defaultRes.id && !isNaN(Number(defaultRes.id))) {
-            activeResumeId = Number(defaultRes.id);
-          }
-          if (!activeResumeFilename) {
-            activeResumeFilename = defaultRes.fileName || defaultRes.file_name || null;
-          }
-          if (!activeResumeUrl) {
-            activeResumeUrl = defaultRes.fileUrl || defaultRes.file_path || null;
-          }
+  // Always resolve candidate's resume if available
+  try {
+    const resumes = await getCandidateResumes();
+    if (resumes && resumes.length > 0) {
+      const defaultRes = (activeResumeId ? resumes.find(r => Number(r.id) === Number(activeResumeId)) : null) ||
+                         resumes.find(r => r.isPrimary || r.is_default) || 
+                         resumes[0];
+      if (defaultRes) {
+        if (!activeResumeId && defaultRes.id && !isNaN(Number(defaultRes.id))) {
+          activeResumeId = Number(defaultRes.id);
         }
-      } else {
-        // Candidate has zero resumes
-        return {
-          success: false,
-          requireResume: true,
-          message: 'A resume is required to apply for this job. Please upload your resume first.'
-        };
+        if (!activeResumeFilename) {
+          activeResumeFilename = defaultRes.fileName || defaultRes.file_name || null;
+        }
+        if (!activeResumeUrl) {
+          activeResumeUrl = defaultRes.fileUrl || defaultRes.file_path || null;
+        }
       }
-    } catch (err) {
-      console.warn("Resume resolution warning:", err);
-    }
-
-    if (!activeResumeId && !activeResumeFilename) {
+    } else if (!isSimpleLocal) {
+      // Professional jobs require a resume
       return {
         success: false,
         requireResume: true,
         message: 'A resume is required to apply for this job. Please upload your resume first.'
       };
     }
-  } else {
-    // Simple Local jobs do not require a resume
-    activeResumeId = null;
-    activeResumeFilename = null;
-    activeResumeUrl = null;
+  } catch (err) {
+    console.warn("Resume resolution warning:", err);
+  }
+
+  if (!isSimpleLocal && !activeResumeId && !activeResumeFilename) {
+    return {
+      success: false,
+      requireResume: true,
+      message: 'A resume is required to apply for this job. Please upload your resume first.'
+    };
   }
 
   const bodyData = {

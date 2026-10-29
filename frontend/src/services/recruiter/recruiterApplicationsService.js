@@ -2,6 +2,17 @@ import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthServi
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
+export function normalizeResumeUrl(url) {
+  if (!url) return null;
+  const str = String(url).trim();
+  if (!str) return null;
+  if (str.startsWith('http://') || str.startsWith('https://')) return str;
+  if (str.startsWith('/media/')) return `${API_BASE_URL}${str}`;
+  if (str.startsWith('media/')) return `${API_BASE_URL}/${str}`;
+  if (str.startsWith('resumes/')) return `${API_BASE_URL}/media/${str}`;
+  return `${API_BASE_URL}/media/${str.replace(/^\//, '')}`;
+}
+
 function formatAppTime(dateStr) {
   if (!dateStr) return 'Recently';
   try {
@@ -117,6 +128,51 @@ export function getRecruiterApplicationsData() {
     const fullName = cand.full_name || app.candidate_name || 'Candidate';
     const initials = fullName.charAt(0).toUpperCase();
 
+    // 1. Resolve resume URL from all possible properties
+    let resolvedResumeUrl = normalizeResumeUrl(
+      app.resume_url || 
+      app.resume?.file_url || 
+      app.resume?.file_path || 
+      app.resume?.url || 
+      cand.resume_url || 
+      null
+    );
+
+    // 2. Resolve resume filename
+    let resolvedResumeFilename = 
+      app.resume_filename || 
+      app.resume?.file_name || 
+      app.resume?.fileName || 
+      cand.resume_filename || 
+      null;
+
+    let resolvedResumeId = app.resume_id || app.resume?.id || null;
+
+    // 3. Fallback: cross-reference with candidate applications in local storage
+    if (!resolvedResumeUrl) {
+      try {
+        const candAppsStr = localStorage.getItem('tnjobz_candidate_applications');
+        if (candAppsStr) {
+          const candApps = JSON.parse(candAppsStr);
+          const matched = candApps.find(ca => 
+            String(ca.id) === String(app.id) || 
+            (String(ca.job_id) === String(app.job_id || app.job?.id) && 
+             (ca.candidate?.email === cand.email || (cand.id && String(ca.candidate?.id) === String(cand.id))))
+          );
+          if (matched) {
+            resolvedResumeUrl = normalizeResumeUrl(matched.resume_url || matched.resume?.file_url || matched.resume?.file_path);
+            if (matched.resume_filename) resolvedResumeFilename = matched.resume_filename;
+            if (matched.resume_id) resolvedResumeId = matched.resume_id;
+          }
+        }
+      } catch {}
+    }
+
+    // 4. Default filename only if a resume URL actually exists
+    if (resolvedResumeUrl && !resolvedResumeFilename) {
+      resolvedResumeFilename = 'Candidate_Resume.pdf';
+    }
+
     return {
       id: String(app.id),
       job_id: String(app.job_id || ''),
@@ -125,9 +181,9 @@ export function getRecruiterApplicationsData() {
       applied_time: formatAppTime(app.applied_at),
       candidate_note: app.candidate_note || app.remarks || '',
       application_type: app.application_type || 'PROFILE_RESUME',
-      resume_id: app.resume_id || 8,
-      resume_filename: app.resume_filename || 'Candidate_Resume',
-      resume_url: app.resume_url || null,
+      resume_id: resolvedResumeId,
+      resume_filename: resolvedResumeFilename,
+      resume_url: resolvedResumeUrl,
       recruiter_notes: app.recruiter_notes || [],
       messages: app.messages || [],
       interviews: app.interviews || [],
