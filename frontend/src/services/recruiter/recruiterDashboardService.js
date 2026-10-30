@@ -2,7 +2,7 @@ import { authenticatedFetch } from '../auth/adminAuthService';
 import { getRecruiterJobsData, fetchRecruiterJobsFromApi, getAuthenticatedRecruiterInfo } from './recruiterJobsService';
 import { getRecruiterApplicationsData, fetchRecruiterApplicationsFromApi } from './recruiterApplicationsService';
 import { getRecruiterInterviewsData, fetchRecruiterInterviewsFromApi } from './recruiterInterviewsService';
-import { getRecruiterCommerceSummary } from './recruiterCommerceService';
+import { getRecruiterCommerceSummary, fetchCommerceSummaryService } from './recruiterCommerceService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 const DASHBOARD_CACHE_KEY = 'statejobz_recruiter_dashboard';
@@ -42,7 +42,7 @@ export function getRecruiterDashboardData() {
     return s === 'SELECTED' || s === 'HIRED';
   }).length;
 
-  const jobCredits = commerce?.credits?.balance ?? 10;
+  const jobCredits = commerce?.credits?.available ?? commerce?.credits?.balance ?? 10;
   const walletBalance = commerce?.wallet?.formatted_balance || '₹0.00';
 
   // Recent applications (top 5 sorted by date)
@@ -103,11 +103,12 @@ export function getRecruiterDashboardData() {
 
 export async function fetchRecruiterDashboardFromApi() {
   try {
-    // 1. Fetch live backend jobs, applications, and interviews in parallel
+    // 1. Fetch live backend jobs, applications, interviews, and commerce in parallel
     await Promise.allSettled([
       fetchRecruiterJobsFromApi(),
       fetchRecruiterApplicationsFromApi(),
-      fetchRecruiterInterviewsFromApi()
+      fetchRecruiterInterviewsFromApi(),
+      fetchCommerceSummaryService()
     ]);
 
     // 2. Fetch aggregated dashboard API

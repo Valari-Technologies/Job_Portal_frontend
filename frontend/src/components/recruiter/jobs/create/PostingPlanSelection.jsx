@@ -4,13 +4,36 @@ import { Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
 import { getPostingPlans } from '../../../../services/recruiter/recruiterPricingService';
 
-export default function PostingPlanSelection() {
+export default function PostingPlanSelection({ source }) {
   const navigate = useNavigate();
+  const isPaymentsMode = source === 'payments';
   const { selectedPlan, setSelectedPlan } = useContext(JobWizardContext);
   const [plans] = useState(() => getPostingPlans());
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedPlan) return;
+
+    if (isPaymentsMode) {
+      setIsSubscribing(true);
+      setErrorMessage('');
+      try {
+        const { subscribePlanService } = await import('../../../../services/recruiter/recruiterCommerceService');
+        const res = await subscribePlanService({ planId: selectedPlan.id });
+        if (res.success) {
+          navigate('/recruiter/payments');
+        } else {
+          setErrorMessage(res.message || 'Failed to activate plan.');
+        }
+      } catch (err) {
+        setErrorMessage('Could not activate plan. Please try again.');
+      } finally {
+        setIsSubscribing(false);
+      }
+      return;
+    }
+
     navigate('/recruiter/jobs/create/payment');
   };
 
@@ -18,11 +41,21 @@ export default function PostingPlanSelection() {
     <div className="space-y-8 bg-white rounded-2xl border border-slate-150 p-6 sm:p-8 shadow-xs">
       {/* Header */}
       <div>
-        <h2 className="text-xl md:text-2xl font-black text-indigo-950 tracking-tight">Select Posting Plan</h2>
+        <h2 className="text-xl md:text-2xl font-black text-indigo-950 tracking-tight">
+          {isPaymentsMode ? 'Select Posting Plan & Credits' : 'Select Posting Plan'}
+        </h2>
         <p className="text-xs md:text-sm font-bold text-slate-450 mt-1">
-          Choose the visibility that matches your hiring urgency.
+          {isPaymentsMode
+            ? 'Choose a plan to replenish job posting credits and upgrade candidate outreach features.'
+            : 'Choose the visibility that matches your hiring urgency.'}
         </p>
       </div>
+
+      {errorMessage && (
+        <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Plan Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative pt-4">
@@ -53,7 +86,7 @@ export default function PostingPlanSelection() {
                     <span className={`text-3xl font-black ${plan.is_free ? 'text-emerald-600' : 'text-slate-900'}`}>
                       {plan.formatted_price}
                     </span>
-                    {!plan.is_free && <span className="text-xs font-bold text-slate-450">/post</span>}
+                    {!plan.is_free && <span className="text-xs font-bold text-slate-450">/month</span>}
                   </div>
                 </div>
 
@@ -82,7 +115,7 @@ export default function PostingPlanSelection() {
                     e.stopPropagation();
                     setSelectedPlan(plan);
                   }}
-                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors ${
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                       : 'bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50'
@@ -101,8 +134,8 @@ export default function PostingPlanSelection() {
       <div className="flex items-center justify-between pt-6 border-t border-slate-100">
         <button
           type="button"
-          onClick={() => navigate('/recruiter/jobs/create')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+          onClick={() => navigate(isPaymentsMode ? '/recruiter/payments' : '/recruiter/jobs/create')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back</span>
@@ -110,12 +143,24 @@ export default function PostingPlanSelection() {
 
         <button
           type="button"
-          disabled={!selectedPlan}
+          disabled={!selectedPlan || isSubscribing}
           onClick={handleNext}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px] cursor-pointer"
         >
-          <span>Next: Review & Payment</span>
-          <ArrowRight className="h-4 w-4" />
+          {isSubscribing ? (
+            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <ArrowRight className="h-4 w-4" />
+          )}
+          <span>
+            {isSubscribing
+              ? 'Processing...'
+              : isPaymentsMode
+              ? selectedPlan?.is_free
+                ? 'Activate Plan (Free)'
+                : `Subscribe & Activate (${selectedPlan?.formatted_price})`
+              : 'Next: Review & Payment'}
+          </span>
         </button>
       </div>
 

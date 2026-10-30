@@ -50,6 +50,23 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
   ) : null;
   const resumeFilename = application.resume_filename || application.resume?.file_name || (resumeUrl ? 'Candidate_Resume.pdf' : null);
 
+  // WhatsApp click-to-chat with job-related prefilled message
+  const candidateName = candidate.full_name || 'Candidate';
+  const jobTitle = job.title || 'the applied position';
+  const companyName = job.company_name || job.company || 'our company';
+  const cleanPhone = (candidate.phone || '').replace(/[^0-9]/g, '');
+  const phoneWithoutZero = cleanPhone.replace(/^0+/, '');
+  const formattedPhone = phoneWithoutZero.startsWith('91') && phoneWithoutZero.length > 10
+    ? phoneWithoutZero
+    : `91${phoneWithoutZero}`;
+
+  const isSimpleLocal = application.application_type === 'SIMPLE_LOCAL';
+  const defaultWhatsappMessage = isSimpleLocal
+    ? `Hello ${candidateName}, this is regarding your application for the ${jobTitle} position at ${companyName} on TN Jobz. We reviewed your application and would like to connect with you regarding this opportunity. Please let us know when you are available for a brief conversation. Thank you!`
+    : `Hello ${candidateName}, this is regarding your application for the ${jobTitle} position at ${companyName} on TN Jobz. We reviewed your profile and would like to connect with you regarding the next steps. Please let us know when you are available for a brief conversation. Thank you!`;
+
+  const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(defaultWhatsappMessage)}`;
+
   const handleAddNote = (e) => {
     e.preventDefault();
     if (!internalNote.trim()) return;
@@ -232,25 +249,31 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
                 <div className="flex items-center justify-between gap-1.5 flex-wrap">
                   <h3 className="text-sm sm:text-lg font-black text-slate-900 truncate">{candidate.full_name || 'Candidate Name'}</h3>
                   <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-black shrink-0">
-                    {candidate.profile_completion || 95}% Complete
+                    {candidate.profile_completion ?? 0}% Complete
                   </span>
                 </div>
-                <p className="text-xs font-black text-[#3B00FF] mt-0.5 truncate">{candidate.headline || 'Senior Full-Stack Developer'}</p>
+                {candidate.headline ? (
+                  <p className="text-xs font-black text-[#3B00FF] mt-0.5 truncate">{candidate.headline}</p>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 text-xs font-bold text-slate-600">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate max-w-[130px] sm:max-w-none">{candidate.location || 'Chennai, Tamil Nadu'}</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate max-w-[150px] sm:max-w-none">{candidate.email || 'candidate@tnjobz.com'}</span>
-                  </span>
-                  {candidate.phone && (
+                  {candidate.location ? (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate max-w-[130px] sm:max-w-none">{candidate.location}</span>
+                    </span>
+                  ) : null}
+                  {candidate.email ? (
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate max-w-[150px] sm:max-w-none">{candidate.email}</span>
+                    </span>
+                  ) : null}
+                  {candidate.phone ? (
                     <span className="flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                       <span>{candidate.phone}</span>
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -268,7 +291,7 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
               )}
               {candidate.phone && (
                 <a
-                  href={`https://wa.me/91${candidate.phone.replace(/[^0-9]/g, '')}`}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-2xs"

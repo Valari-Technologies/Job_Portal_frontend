@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import ApplicationStatusBadge from '../../components/recruiter/applications/ApplicationStatusBadge';

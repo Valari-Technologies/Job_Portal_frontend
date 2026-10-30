@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterPaymentsHeader from '../../components/recruiter/payments/RecruiterPaymentsHeader';
 import CommerceSummaryCards from '../../components/recruiter/payments/CommerceSummaryCards';
 import PaymentMethodCard from '../../components/recruiter/payments/PaymentMethodCard';
 import BillingInfoCard from '../../components/recruiter/payments/BillingInfoCard';
 import TransactionHistoryTable from '../../components/recruiter/payments/TransactionHistoryTable';
-import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
+import { getRecruiterCommerceSummary, fetchCommerceSummaryService } from '../../services/recruiter/recruiterCommerceService';
 
 export default function RecruiterPayments() {
-  const [commerceSummary] = useState(() => getRecruiterCommerceSummary());
+  const [commerceSummary, setCommerceSummary] = useState(() => getRecruiterCommerceSummary());
+
+  useEffect(() => {
+    fetchCommerceSummaryService().then(liveData => {
+      if (liveData) {
+        setCommerceSummary(liveData);
+      }
+    });
+  }, []);
 
   return (
     <RecruiterLayout activeTab="payments">

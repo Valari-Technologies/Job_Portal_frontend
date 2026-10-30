@@ -630,7 +630,11 @@ export async function submitCandidateApplication(payload) {
       apps.unshift(newApp);
     }
 
-    localStorage.setItem('tnjobz_candidate_applications', JSON.stringify(apps));
+    try {
+      localStorage.setItem('tnjobz_candidate_applications', JSON.stringify(apps));
+    } catch (storageErr) {
+      console.warn("Storage quota warning when caching candidate application:", storageErr);
+    }
 
     return {
       success: true,

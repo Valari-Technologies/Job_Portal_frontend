@@ -9,11 +9,14 @@ export function getPostingPlans() {
       name: 'Basic',
       price: 0,
       formatted_price: 'Free',
-      duration_days: 7,
+      duration_days: 30,
+      credits: 10,
       is_free: true,
       features: [
-        '7 days listing',
-        'Standard search visibility'
+        '10 Job Posting Credits included',
+        '7 days active listing per job',
+        'Standard search visibility',
+        'Candidate Profile & Resume access'
       ]
     },
     {
@@ -22,10 +25,14 @@ export function getPostingPlans() {
       price: 49,
       formatted_price: '₹ 49',
       duration_days: 30,
+      credits: 50,
       recommended: true,
+      is_free: false,
       features: [
-        '30 days listing',
+        '50 Job Posting Credits included',
+        '30 days active listing per job',
         'Featured listing tag',
+        'Priority candidate search placement',
         'Social network sharing'
       ]
     },
@@ -35,10 +42,13 @@ export function getPostingPlans() {
       price: 69,
       formatted_price: '₹ 69',
       duration_days: 60,
+      credits: 150,
+      is_free: false,
       features: [
-        '60 days listing',
+        '150 Job Posting Credits included',
+        '60 days active listing per job',
         'Top of search placement',
-        'Email blast to matching candidates',
+        'Direct email blast to matching candidates',
         'Dedicated account support'
       ]
     }

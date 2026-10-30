@@ -1,4 +1,4 @@
-import { useNavigate } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import PostingPlanSelection from '../../components/recruiter/jobs/create/PostingPlanSelection';
@@ -25,7 +25,7 @@ export default function RecruiterPaymentPlans() {
             </div>
           </div>
 
-          <PostingPlanSelection />
+          <PostingPlanSelection source="payments" />
         </main>
       </RecruiterLayout>
     </JobWizardProvider>

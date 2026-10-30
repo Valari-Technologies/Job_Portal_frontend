@@ -1,4 +1,4 @@
-import { useNavigate } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Briefcase } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 

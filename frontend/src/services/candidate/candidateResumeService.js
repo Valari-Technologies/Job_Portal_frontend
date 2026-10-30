@@ -192,9 +192,16 @@ function getStoredAnalyses() {
 
 function saveStoredAnalyses(analysesMap) {
   try {
-    localStorage.setItem(STORAGE_ANALYSES_KEY, JSON.stringify(analysesMap));
+    if (!analysesMap || typeof analysesMap !== 'object') return;
+    // Prune to only the 2 most recent analyses to prevent localStorage quota exhaustion
+    const entries = Object.entries(analysesMap);
+    const prunedMap = Object.fromEntries(entries.slice(-2));
+    localStorage.setItem(STORAGE_ANALYSES_KEY, JSON.stringify(prunedMap));
   } catch (err) {
-    console.error('Error saving stored analyses:', err);
+    try {
+      localStorage.removeItem(STORAGE_ANALYSES_KEY);
+    } catch {}
+    console.warn('Storage quota limit reached for resume analyses, cleared analysis cache');
   }
 }
 

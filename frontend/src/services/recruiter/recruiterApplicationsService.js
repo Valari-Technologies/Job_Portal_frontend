@@ -88,42 +88,10 @@ const DEFAULT_DSS_APP = {
   }
 };
 
-export function getRecruiterApplicationsData() {
+export function formatApplicationsResponse(rawApps = [], backendMetrics = null, backendFilters = null) {
   const auth = getCurrentRecruiterAuth();
-  const myCompany = (auth?.companyName || '').toLowerCase().trim();
-  const myEmail = (auth?.email || '').toLowerCase().trim();
-  const storageKey = getRecruiterAppsStorageKey();
 
-  let rawApps = [];
-  try {
-    const stored = localStorage.getItem(storageKey);
-    if (stored !== null) {
-      rawApps = JSON.parse(stored);
-    } else {
-      // ONLY seeded MSD Tech gets the historical DSS application
-      if (myEmail === 'msd@gmail.com' || myCompany === 'msd tech') {
-        rawApps = [DEFAULT_DSS_APP];
-        localStorage.setItem(storageKey, JSON.stringify(rawApps));
-      } else {
-        // Kannan or any other recruiter who hasn't received applications starts with 0
-        rawApps = [];
-        localStorage.setItem(storageKey, JSON.stringify(rawApps));
-      }
-    }
-  } catch {
-    rawApps = [];
-  }
-
-  // Multi-tenant check: if app specifies company and recruiter has company, verify match
-  if (myCompany) {
-    rawApps = rawApps.filter(app => {
-      const appComp = (app.job?.company_name || app.company_name || '').toLowerCase().trim();
-      if (!appComp) return true;
-      return appComp === myCompany || appComp.includes(myCompany) || myCompany.includes(appComp);
-    });
-  }
-
-  const applications = rawApps.map(app => {
+  const applications = (rawApps || []).map(app => {
     const cand = app.candidate || {};
     const fullName = cand.full_name || app.candidate_name || 'Candidate';
     const initials = fullName.charAt(0).toUpperCase();
@@ -173,9 +141,11 @@ export function getRecruiterApplicationsData() {
       resolvedResumeFilename = 'Candidate_Resume.pdf';
     }
 
+    const fallbackHeadline = cand.headline || app.job?.title || app.job_title || 'Software Developer';
+
     return {
       id: String(app.id),
-      job_id: String(app.job_id || ''),
+      job_id: String(app.job_id || app.job?.id || ''),
       status: app.status || 'APPLIED',
       applied_at: app.applied_at || new Date().toISOString(),
       applied_time: formatAppTime(app.applied_at),
@@ -198,16 +168,16 @@ export function getRecruiterApplicationsData() {
       candidate: {
         id: cand.id || 'cand_1',
         full_name: fullName,
-        headline: cand.headline || 'Software Developer',
+        headline: cand.headline || '',
         email: cand.email || '',
         phone: cand.phone || '',
-        location: cand.location || 'Chennai, Tamil Nadu',
+        location: cand.location || '',
         profile_photo: cand.profile_photo || null,
-        profile_completion: cand.profile_completion || 90,
+        profile_completion: cand.profile_completion !== undefined && cand.profile_completion !== null ? cand.profile_completion : 0,
         initials,
-        skills: cand.skills || ['Python', 'JavaScript', 'React.js'],
-        experiences: cand.experiences || [],
-        education: cand.education || []
+        skills: Array.isArray(cand.skills) ? cand.skills : [],
+        experiences: Array.isArray(cand.experiences) ? cand.experiences : [],
+        education: Array.isArray(cand.education) ? cand.education : []
       }
     };
   });
@@ -232,11 +202,13 @@ export function getRecruiterApplicationsData() {
     }))
   ];
 
+  const totalActive = applications.filter(a => a.status !== 'REJECTED' && a.status !== 'WITHDRAWN').length;
+
   return {
     metrics: {
-      total_active: applications.length,
-      conversion_rate: applications.length > 0 ? '100%' : '0%',
-      avg_time_to_hire: applications.length > 0 ? '5d' : '0d'
+      total_active: backendMetrics?.total_active !== undefined ? backendMetrics.total_active : totalActive,
+      conversion_rate: (backendMetrics?.conversion_rate !== undefined ? `${backendMetrics.conversion_rate}%` : (applications.length > 0 ? '100%' : '0%')),
+      avg_time_to_hire: backendMetrics?.average_time_to_hire_days ? `${backendMetrics.average_time_to_hire_days}d` : (applications.length > 0 ? '5d' : '0d')
     },
     applications,
     filters: {
@@ -260,6 +232,34 @@ export function getRecruiterApplicationsData() {
   };
 }
 
+export function getRecruiterApplicationsData() {
+  const auth = getCurrentRecruiterAuth();
+  const myCompany = (auth?.companyName || '').toLowerCase().trim();
+  const myEmail = (auth?.email || '').toLowerCase().trim();
+  const storageKey = getRecruiterAppsStorageKey();
+
+  let rawApps = [];
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored !== null) {
+      rawApps = JSON.parse(stored);
+    } else {
+      // ONLY seeded MSD Tech gets the historical DSS application
+      if (myEmail === 'msd@gmail.com' || myCompany === 'msd tech') {
+        rawApps = [DEFAULT_DSS_APP];
+        try { localStorage.setItem(storageKey, JSON.stringify(rawApps)); } catch {}
+      } else {
+        rawApps = [];
+        try { localStorage.setItem(storageKey, JSON.stringify(rawApps)); } catch {}
+      }
+    }
+  } catch {
+    rawApps = [];
+  }
+
+  return formatApplicationsResponse(rawApps);
+}
+
 /**
  * Async fetch applications from Django backend API and sync with recruiter-scoped storage
  */
@@ -271,8 +271,12 @@ export async function fetchRecruiterApplicationsFromApi() {
       const data = await response.json();
       const storageKey = getRecruiterAppsStorageKey();
       const apps = Array.isArray(data.applications) ? data.applications : (Array.isArray(data) ? data : []);
-      localStorage.setItem(storageKey, JSON.stringify(apps));
-      return getRecruiterApplicationsData();
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(apps));
+      } catch (storageErr) {
+        console.warn("Storage quota warning when saving recruiter applications:", storageErr);
+      }
+      return formatApplicationsResponse(apps, data.metrics, data.filters);
     }
   } catch (err) {
     console.warn("Backend recruiter applications fetch warning:", err);
@@ -373,10 +377,9 @@ export async function scheduleRecruiterInterviewService(applicationId, payload) 
   } catch (err) {
     console.warn("Local interview schedule error:", err);
   }
-
   // 2. Sync to candidate storage
   try {
-    const auth = getAuthenticatedRecruiterInfo();
+    const auth = getCurrentRecruiterAuth();
     const candAppsStr = localStorage.getItem('tnjobz_candidate_applications');
     if (candAppsStr) {
       let candApps = JSON.parse(candAppsStr);

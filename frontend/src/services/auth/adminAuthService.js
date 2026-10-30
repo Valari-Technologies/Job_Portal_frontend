@@ -3,9 +3,25 @@ const API_BASE_URL = 'http://127.0.0.1:8000';
 export function setAuthItem(key, value) {
   try {
     sessionStorage.setItem(key, value);
+  } catch {}
+
+  try {
     localStorage.setItem(key, value);
   } catch (e) {
-    console.error("Failed to write auth storage item", e);
+    console.warn("Storage quota exceeded in setAuthItem, evicting temporary caches...", e);
+    try {
+      // Clear non-essential large keys to restore quota
+      localStorage.removeItem('statejobz_candidate_resume_analyses');
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('tnjobz_candidate_avatar_') || k.includes('resume_analyses') || k.includes('_heavy_'))) {
+          localStorage.removeItem(k);
+        }
+      }
+      localStorage.setItem(key, value);
+    } catch (retryErr) {
+      console.error("Failed to write auth storage item even after cache eviction", retryErr);
+    }
   }
 }
 
