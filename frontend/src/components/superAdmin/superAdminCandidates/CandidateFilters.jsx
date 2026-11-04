@@ -13,6 +13,7 @@ export default function CandidateFilters({
   setAccountStatus 
 }) {
   const [states, setStates] = useState([]);
+  const [districts, setDistricts] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -23,6 +24,19 @@ export default function CandidateFilters({
     loadStates();
     return () => { active = false; };
   }, []);
+
+  // Districts are restricted to the selected state
+  useEffect(() => {
+    const state = states.find((st) => st.name === selectedState);
+    if (!state) {
+      return undefined;
+    }
+    let active = true;
+    fetchLocations({ parent_id: state.id }).then((data) => {
+      if (active) setDistricts(data.map((d) => ({ ...d, parentName: state.name })));
+    });
+    return () => { active = false; };
+  }, [selectedState, states]);
 
   return (
     <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs font-sans">
@@ -36,7 +50,10 @@ export default function CandidateFilters({
             id="state-filter"
             value={selectedState}
             searchable={true}
-            onChange={(e) => setSelectedState(e.target.value)}
+            onChange={(e) => {
+              setSelectedState(e.target.value);
+              setSelectedDistrict('All');
+            }}
             options={[
               { value: 'All', label: 'All States' },
               ...states.map((st) => ({ value: st.name, label: st.name }))
@@ -53,7 +70,10 @@ export default function CandidateFilters({
             id="district-filter"
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            options={[{ value: 'All', label: 'All Districts' }]}
+            options={[
+              { value: 'All', label: 'All Districts' },
+              ...districts.filter((d) => d.parentName === selectedState).map((d) => ({ value: d.name, label: d.name }))
+            ]}
           />
         </div>
 

@@ -317,3 +317,18 @@ export async function deleteSkill(id) {
     return { success: false, message: 'Network error. Please check server connection.' };
   }
 }
+
+export async function fetchActivePublicSkills(search = '') {
+  try {
+    const query = new URLSearchParams();
+    if (search) query.append('search', search);
+    const url = `${API_BASE_URL}/accounts/skills/${query.toString() ? `?${query.toString()}` : ''}`;
+    const response = await fetch(url);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.results || []);
+  } catch (err) {
+    console.error('Failed to fetch public skills:', err);
+    return [];
+  }
+}

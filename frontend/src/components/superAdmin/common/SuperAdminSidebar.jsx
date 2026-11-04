@@ -3,6 +3,7 @@ import { useSidebarCollapse } from '../../shared/navigation/SidebarCollapseConte
 import SidebarCollapseToggle from '../../shared/navigation/SidebarCollapseToggle';
 import SidebarTooltip from '../../shared/navigation/SidebarTooltip';
 import { useSignOut } from '../../../context/SignOutContext';
+import logoJobz from '../../../assets/logo-jobz.png';
 
 export default function SuperAdminSidebar({ activeItem, onItemClick }) {
   const { isCollapsed, toggleCollapse } = useSidebarCollapse();
@@ -87,21 +88,15 @@ export default function SuperAdminSidebar({ activeItem, onItemClick }) {
               aria-expanded="false"
               aria-controls="portal-sidebar"
               onClick={toggleCollapse}
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 shrink-0 border-none hover:opacity-90 transition-opacity"
+              className="flex h-8 items-center justify-center shrink-0 border-none bg-transparent hover:opacity-90 transition-opacity"
               style={{ cursor: 'ew-resize' }}
             >
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
+              <img src={logoJobz} alt="TN Jobz Logo" className="h-8 w-auto object-contain shrink-0" />
             </button>
           </SidebarTooltip>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 shrink-0">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </div>
+            <img src={logoJobz} alt="TN Jobz Logo" className="h-8 w-auto object-contain shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="font-black text-slate-800 text-sm tracking-wide truncate">TN Jobz</span>
               <span className="text-[9px] font-bold text-slate-400 tracking-widest -mt-1 truncate">SUPER ADMIN</span>

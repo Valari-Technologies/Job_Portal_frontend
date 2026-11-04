@@ -85,7 +85,7 @@ export default function CandidateTable({
               const initial = displayName.charAt(0).toUpperCase();
               const photo = c.profile_photo || c.profile_picture;
               const locationStr = formatLocation(c);
-              const completion = Number(c.profile_completion || 20);
+              const completion = Number(c.profile_completion ?? 0);
               const appCount = c.applications ?? c.applications_count ?? 0;
               const statusStr = (c.status || 'ACTIVE').toUpperCase();
 
@@ -164,6 +164,16 @@ export default function CandidateTable({
                       className="text-xs font-extrabold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer"
                     >
                       View profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onTriggerAction) onTriggerAction('DELETE', c);
+                      }}
+                      className="ml-4 text-xs font-extrabold text-red-600 hover:text-red-800 hover:underline cursor-pointer"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

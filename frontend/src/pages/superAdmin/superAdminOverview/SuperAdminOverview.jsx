@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSuperAdminUser } from '../../../context/SuperAdminUserContext';
 import OverviewMetricCard from '../../../components/superAdmin/superAdminOverview/OverviewMetricCard';
 import OverviewChart from '../../../components/superAdmin/superAdminOverview/OverviewChart';
 import { 
@@ -17,7 +18,15 @@ import {
   getRecentActivity
 } from './superAdminOverviewService';
 
+// Dashboard data is re-fetched silently at this interval so the cards never go stale
+const AUTO_REFRESH_MS = 30000;
+
 export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetailsRecord, onToast }) {
+  const { profile, isLoadingProfile } = useSuperAdminUser();
+  const locationState = profile?.state || '';
+  const locationDistrict = profile?.district || '';
+  const hasLoadedRef = useRef(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [range, setRange] = useState('7days');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,47 +68,53 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
     }
   }, [globalDetailsRecord, setGlobalDetailsRecord]);
 
-  // Fetch all initial data
-  useEffect(() => {
-    let active = true;
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [m, t, q, j, d, a] = await Promise.all([
-          getOverviewMetrics(range),
-          getApplicationsRegistrationTrend(range),
-          getActionQueues(),
-          getJobActivity(),
-          getHiringDistricts(),
-          getRecentActivity()
-        ]);
-        if (active) {
-          setMetrics(m);
-          setTrends(t);
-          setQueues(q);
-          setJobActivity(j);
-          setDistricts(d);
-          setActivities(a);
-          setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-          setError(null);
-        }
-      } catch (err) {
-        console.error(err);
-        if (active) {
-          setError('Failed to fetch dashboard data. Please try again.');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+  // Fetch live dashboard data (re-runs when range / location changes, on manual reload and on a timer)
+  const fetchData = useCallback(async (silent = false) => {
+    const location = { state: locationState, district: locationDistrict };
+    try {
+      if (!silent) setLoading(true);
+      const [m, t, q, j, d, a] = await Promise.all([
+        getOverviewMetrics(range, location),
+        getApplicationsRegistrationTrend(range, location),
+        getActionQueues(range, location),
+        getJobActivity(range, location),
+        getHiringDistricts(range, location),
+        getRecentActivity(range, location)
+      ]);
+      setMetrics(m);
+      setTrends(t);
+      setQueues(q);
+      setJobActivity(j);
+      setDistricts(d);
+      setActivities(a);
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setError(null);
+      hasLoadedRef.current = true;
+    } catch (err) {
+      console.error(err);
+      // A failed background refresh keeps showing the last good data
+      if (!hasLoadedRef.current) {
+        setError('Failed to fetch dashboard data. Please try again.');
       }
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [range, locationState, locationDistrict]);
+
+  useEffect(() => {
+    // Wait for the saved location so the first load is already scoped correctly
+    if (isLoadingProfile) return undefined;
+    let active = true;
+    const run = (silent) => {
+      if (active) fetchData(silent);
     };
-    
-    fetchData();
+    run(false);
+    const timer = setInterval(() => run(true), AUTO_REFRESH_MS);
     return () => {
       active = false;
+      clearInterval(timer);
     };
-  }, [range]);
+  }, [fetchData, reloadKey, isLoadingProfile]);
 
   // Export report to CSV
   const handleExportCSV = () => {
@@ -148,7 +163,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
     setPanelOpen(true);
   };
 
-  // Submit action logic updates counters
+  // After a real moderation decision succeeds: drop the record locally, then re-sync with the backend
   const handleActionSubmit = (recordId) => {
     // Action updates local metrics and triggers layout re-renders
     if (panelType === 'employerVerifications') {
@@ -188,6 +203,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
         }
       }));
     }
+    setReloadKey(k => k + 1);
   };
 
   if (loading && !metrics) {
@@ -207,7 +223,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
         <h3 className="text-sm font-bold text-red-800">Error Loading Dashboard</h3>
         <p className="text-xs text-red-600 mt-1">{error}</p>
         <button 
-          onClick={() => setRange(prev => prev === '7days' ? '30days' : '7days')}
+          onClick={() => { setError(null); setReloadKey(k => k + 1); }}
           className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition-colors"
         >
           Retry
@@ -330,6 +346,18 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
         panelType={panelType}
         panelTitle={panelTitle}
         items={panelItems}
+        queueCounts={{
+          employerVerifications: queues.employerVerifications?.count ?? 0,
+          jobsPendingReview: queues.jobsPendingReview?.count ?? 0,
+          reportedJobs: queues.reportedJobs?.count ?? 0,
+          lowQualityProfiles: queues.lowQualityProfiles?.count ?? 0
+        }}
+        queueStats={{
+          employerVerifications: queues.employerVerifications?.stats,
+          jobsPendingReview: queues.jobsPendingReview?.stats,
+          reportedJobs: queues.reportedJobs?.stats,
+          lowQualityProfiles: queues.lowQualityProfiles?.stats
+        }}
         onActionSubmit={handleActionSubmit}
         onToast={onToast}
       />

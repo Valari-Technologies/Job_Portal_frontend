@@ -350,16 +350,16 @@ export default function CandidateSidePanel({
                     </button>
                     <button 
                       onClick={() => {
-                        onActionSubmit(candidate.status === 'Suspended' ? 'ACTIVATE' : 'SUSPEND', candidate);
+                        onActionSubmit(String(candidate.status || '').toUpperCase() === 'SUSPENDED' ? 'ACTIVATE' : 'SUSPEND', candidate);
                         onClose();
                       }}
                       className={`flex-1 rounded-xl py-3 text-base font-extrabold text-white transition-colors ${
-                        candidate.status === 'Suspended' 
+                        String(candidate.status || '').toUpperCase() === 'SUSPENDED' 
                           ? 'bg-emerald-600 hover:bg-emerald-700' 
                           : 'bg-red-650 hover:bg-red-700'
                       }`}
                     >
-                      {candidate.status === 'Suspended' ? 'Activate Account' : 'Suspend Account'}
+                      {String(candidate.status || '').toUpperCase() === 'SUSPENDED' ? 'Activate Account' : 'Suspend Account'}
                     </button>
                   </div>
                 </>

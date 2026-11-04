@@ -12,12 +12,16 @@
  * - PATCH /api/v1/users/me/settings/ -> Update preferences (language, timezone, notifications).
  */
 
+import { fetchWithAuth } from '../auth/adminAuthService';
+
+const API_BASE_URL = 'http://127.0.0.1:8000';
 const PROFILE_STORAGE_KEY = 'statejobz_super_admin_profile';
+const PLACEHOLDER_EMAIL = 'admin@statejobz.tn.gov';
 
 const DEFAULT_SUPER_ADMIN_PROFILE = {
   id: 'sa_usr_001',
   full_name: 'Super Admin',
-  email: 'admin@statejobz.tn.gov',
+  email: '',
   mobile_number: '+91 98765 43210',
   profile_picture: null, // Data URL or URL string
   role: 'SUPER_ADMIN',
@@ -31,9 +35,10 @@ const DEFAULT_SUPER_ADMIN_PROFILE = {
   
   // Settings & Preferences
   display_name: 'Super Admin',
-  location: 'Delhi, India',
-  state: 'Delhi',
-  district: 'New Delhi',
+  location: 'All India',
+  state: 'All India',
+  district: '',
+  location_user_set: false,
   preferred_language: 'en-US',
   time_zone: 'Asia/Kolkata',
   date_format: 'DD/MM/YYYY',
@@ -76,11 +81,19 @@ function loadStoredProfile() {
       return { ...DEFAULT_SUPER_ADMIN_PROFILE };
     }
     const parsed = JSON.parse(raw);
-    return {
+    const merged = {
       ...DEFAULT_SUPER_ADMIN_PROFILE,
       ...parsed,
-      location: parsed.location || 'Delhi'
+      location: parsed.location || 'All India'
     };
+    // A location the Super Admin never picked (old placeholder default) means "All India"
+    if (!parsed.location_user_set) {
+      merged.location = 'All India';
+      merged.state = 'All India';
+      merged.district = '';
+    }
+    if (merged.email === PLACEHOLDER_EMAIL) merged.email = '';
+    return merged;
   } catch (err) {
     console.error('Error loading Super Admin profile from storage:', err);
     return { ...DEFAULT_SUPER_ADMIN_PROFILE };
@@ -100,9 +113,22 @@ function saveProfileToStorage(profile) {
  * Fetch Super Admin Profile
  */
 export async function getSuperAdminProfile() {
-  // Simulate standard network delay
-  await new Promise(resolve => setTimeout(resolve, 150));
-  return loadStoredProfile();
+  const stored = loadStoredProfile();
+  // The identity (email / id) always comes from the logged-in account in the backend
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/me/`);
+    if (response.ok) {
+      const me = await response.json();
+      return {
+        ...stored,
+        id: me.id ?? stored.id,
+        email: me.email || stored.email
+      };
+    }
+  } catch (err) {
+    console.warn('Could not load Super Admin identity from backend:', err);
+  }
+  return stored;
 }
 
 /**
@@ -117,9 +143,10 @@ export async function updateSuperAdminProfile(data) {
     full_name: data.full_name !== undefined ? data.full_name.trim() : current.full_name,
     mobile_number: data.mobile_number !== undefined ? data.mobile_number.trim() : current.mobile_number,
     display_name: data.display_name !== undefined ? data.display_name.trim() : current.display_name,
-    location: data.location !== undefined ? data.location.trim() : (current.location || 'Delhi'),
+    location: data.location !== undefined ? data.location.trim() : (current.location || 'All India'),
     state: data.state !== undefined ? data.state.trim() : current.state,
-    district: data.district !== undefined ? data.district.trim() : current.district
+    district: data.district !== undefined ? data.district.trim() : current.district,
+    location_user_set: current.location_user_set || (data.location !== undefined && data.location.trim() !== current.location)
   };
 
   saveProfileToStorage(updated);
@@ -135,7 +162,8 @@ export async function updateSuperAdminLocation(location, state = '', district = 
     ...current,
     location: String(location).trim(),
     state: state ? String(state).trim() : current.state,
-    district: district ? String(district).trim() : current.district
+    district: String(district || '').trim(),
+    location_user_set: true
   };
   saveProfileToStorage(updated);
   return updated;

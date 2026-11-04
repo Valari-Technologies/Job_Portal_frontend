@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import logoJobz from '../../../assets/logo-jobz.png';
 
 export default function SuperAdminMobileDrawer({ isOpen, onClose, activeItem, onItemClick }) {
 
@@ -120,11 +121,7 @@ export default function SuperAdminMobileDrawer({ isOpen, onClose, activeItem, on
         {/* Drawer Header */}
         <div className="flex h-16 items-center justify-between px-5 border-b border-slate-100 sticky top-0 bg-white z-10 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </div>
+            <img src={logoJobz} alt="TN Jobz Logo" className="h-8 w-auto object-contain shrink-0" />
             <div className="flex flex-col">
               <span className="font-black text-slate-800 text-[15px] tracking-wide leading-none">TN Jobz</span>
               <span className="text-[9px] font-bold text-slate-400 tracking-widest mt-0.5">SUPER ADMIN</span>

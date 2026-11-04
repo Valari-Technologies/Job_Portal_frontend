@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { submitQueueDecision } from '../../../pages/superAdmin/superAdminOverview/superAdminOverviewService';
 
 // Priority Colors Mapper helper
 const getThemeColors = (type) => {
@@ -49,10 +50,13 @@ export default function AdminSidePanel({
   panelType,        // 'employerVerifications' | 'jobsPendingReview' | 'reportedJobs' | 'lowQualityProfiles' | 'recentActivity'
   panelTitle,
   items = [],
+  queueCounts = {}, // live total per queue (the list itself only carries the newest rows)
+  queueStats = {},  // live per-queue statistics from the backend
   onActionSubmit,   // callback to handle status changes
   onToast
 }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterChips, setFilterChips] = useState('All');
   
@@ -114,12 +118,14 @@ export default function AdminSidePanel({
       );
     }
 
-    // Filter Chips
+    // Filter Chips (driven by the real created_at / priority values from the backend)
     if (filterChips === 'High priority') {
-      // simulate priorities
-      list = list.filter((_, idx) => idx % 2 === 0);
+      list = list.filter(item => item.priority === 'HIGH');
     } else if (filterChips === 'Today') {
-      list = list.filter(item => item.date && item.date.includes('Today'));
+      const todayStr = new Date().toDateString();
+      list = list.filter(item => item.created_at && new Date(item.created_at).toDateString() === todayStr);
+    } else if (filterChips === 'Oldest first') {
+      list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
     }
     
     return list;
@@ -127,87 +133,93 @@ export default function AdminSidePanel({
 
   const filteredItems = getFilteredItems();
 
-  // Metric Insights Row Generator
+  // Metric Insights Row Generator (all values come from the live backend queue data)
   const renderInsightStrip = () => {
+    const total = queueCounts[panelType] ?? items.length;
+    const stats = queueStats[panelType] || {};
+    const high = stats.high ?? items.filter(i => i.priority === 'HIGH').length;
+    const todayStr = new Date().toDateString();
+    const newToday = stats.today ?? items.filter(i => i.created_at && new Date(i.created_at).toDateString() === todayStr).length;
+
+    let cells = null;
     if (panelType === 'employerVerifications') {
-      return (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Pending</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">18 Items</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Priority</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">5 High</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Avg Wait</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">1.8 Days</span>
-          </div>
-        </div>
-      );
+      const avgWait = stats.avg_wait_days ?? 0;
+      cells = [
+        ['Pending', `${total} Items`],
+        ['Priority', `${high} High`],
+        ['Avg Wait', total > 0 ? `${avgWait} Days` : '0 Days']
+      ];
+    } else if (panelType === 'jobsPendingReview') {
+      cells = [
+        ['Review', `${total} Jobs`],
+        ['Today', `${newToday} New`],
+        ['Attention', `${high} High`]
+      ];
+    } else if (panelType === 'reportedJobs') {
+      cells = [
+        ['Reports', `${total} Open`],
+        ['Severity', `${high} High`],
+        ['Decision', `${total} Open`]
+      ];
+    } else if (panelType === 'lowQualityProfiles') {
+      cells = [
+        ['Low Profiles', `${total} Items`],
+        ['No Resume', `${stats.no_resume ?? 0} Candidates`],
+        ['No Skills', `${stats.no_skills ?? 0} Candidates`]
+      ];
     }
-    if (panelType === 'jobsPendingReview') {
-      return (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Review</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">24 Jobs</span>
+    if (!cells) return null;
+
+    return (
+      <div className="grid grid-cols-3 gap-3">
+        {cells.map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
+            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">{label}</span>
+            <span className="text-sm font-black text-slate-800 mt-1 block">{value}</span>
           </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Today</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">7 New</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Attention</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">3 High</span>
-          </div>
-        </div>
-      );
-    }
-    if (panelType === 'reportedJobs') {
-      return (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Reports</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">6 Open</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Severity</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">2 High</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Decision</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">4 Open</span>
-          </div>
-        </div>
-      );
-    }
-    if (panelType === 'lowQualityProfiles') {
-      return (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Low Profiles</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">12 Items</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">No Resume</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">8 Candidates</span>
-          </div>
-          <div className="rounded-xl border border-slate-150 bg-slate-50/50 p-3 text-center">
-            <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">No Skills</span>
-            <span className="text-sm font-black text-slate-800 mt-1 block">4 Candidates</span>
-          </div>
-        </div>
-      );
-    }
-    return null;
+        ))}
+      </div>
+    );
   };
 
-  // Switch contexts handler
-  const handleAction = (label, message) => {
-    onActionSubmit && onActionSubmit(selectedRecord?.id, label);
-    onToast(`${message} locally. API integration will be added next.`);
+  // Real moderation action: calls the backend, then refreshes the dashboard
+  const handleAction = async (label, message) => {
+    if (isSubmitting) return;
+    const recordId = selectedRecord?.id;
+    const backendQueues = ['employerVerifications', 'jobsPendingReview', 'reportedJobs'];
+
+    // Queues backed by a real decision endpoint
+    if (backendQueues.includes(panelType)) {
+      let reason = '';
+      if (label === 'REJECT' || label === 'DISMISS') {
+        const entered = window.prompt(
+          label === 'DISMISS' ? 'Reason for dismissing this report:' : 'Reason for rejection:'
+        );
+        if (entered === null) return;
+        reason = entered.trim();
+        if (!reason) {
+          onToast('A reason is required for this action.');
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      const result = await submitQueueDecision(panelType, recordId, label, reason);
+      setIsSubmitting(false);
+      if (!result.success) {
+        onToast(result.message || 'Action failed. Please try again.');
+        return;
+      }
+      onToast(`${message} successfully.`);
+      onActionSubmit && onActionSubmit(recordId, label);
+      setSelectedRecord(null);
+      onClose();
+      return;
+    }
+
+    // Low-quality profiles / activity rows have no moderation endpoint: acknowledge locally
+    onActionSubmit && onActionSubmit(recordId, label);
+    onToast(`${message}.`);
     setSelectedRecord(null);
     onClose();
   };

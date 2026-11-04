@@ -1,5 +1,5 @@
 export default function OverviewMetricCard({ title, value, pctChange, icon, color = 'teal' }) {
-  const isPositive = pctChange.startsWith('+');
+  const isPositive = !String(pctChange ?? '').startsWith('-');
   
   // Icon colors mapping
   const colorMap = {

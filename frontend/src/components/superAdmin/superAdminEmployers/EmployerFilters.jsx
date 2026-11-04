@@ -4,7 +4,9 @@ import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function EmployerFilters({ 
   selectedState, 
-  setSelectedState, 
+  setSelectedState,
+  selectedDistrict,
+  setSelectedDistrict,
   verificationStatus, 
   setVerificationStatus, 
   trustLevel, 
@@ -13,6 +15,7 @@ export default function EmployerFilters({
   setJobStatus 
 }) {
   const [states, setStates] = useState([]);
+  const [districts, setDistricts] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -24,9 +27,22 @@ export default function EmployerFilters({
     return () => { active = false; };
   }, []);
 
+  // Districts are restricted to the selected state
+  useEffect(() => {
+    const state = states.find((st) => st.name === selectedState);
+    if (!state) {
+      return undefined;
+    }
+    let active = true;
+    fetchLocations({ parent_id: state.id }).then((data) => {
+      if (active) setDistricts(data.map((d) => ({ ...d, parentName: state.name })));
+    });
+    return () => { active = false; };
+  }, [selectedState, states]);
+
   return (
     <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs font-sans">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {/* State */}
         <div className="space-y-2">
           <label htmlFor="state-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
@@ -36,10 +52,29 @@ export default function EmployerFilters({
             id="state-filter"
             value={selectedState}
             searchable={true}
-            onChange={(e) => setSelectedState(e.target.value)}
+            onChange={(e) => {
+              setSelectedState(e.target.value);
+              setSelectedDistrict('All');
+            }}
             options={[
               { value: 'All', label: 'All States' },
               ...states.map((st) => ({ value: st.name, label: st.name }))
+            ]}
+          />
+        </div>
+
+        {/* District */}
+        <div className="space-y-2">
+          <label htmlFor="district-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+            District
+          </label>
+          <CustomDropdown
+            id="district-filter"
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            options={[
+              { value: 'All', label: 'All Districts' },
+              ...districts.filter((d) => d.parentName === selectedState).map((d) => ({ value: d.name, label: d.name }))
             ]}
           />
         </div>

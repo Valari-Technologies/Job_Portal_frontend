@@ -4,8 +4,7 @@ import {
   INDIA_STATES, 
   getDistrictsForState, 
   formatLocationString, 
-  parseLocationString,
-  POPULAR_LOCATIONS 
+  parseLocationString
 } from '../../../data/indiaLocations';
 
 export default function SuperAdminLocationModal({ 
@@ -36,23 +35,6 @@ export default function SuperAdminLocationModal({
     setSelectedDistrict(dists.length > 0 ? dists[0] : '');
   };
 
-  const handleQuickSelect = (locStr) => {
-    if (locStr === 'All India') {
-      setSelectedState('All India');
-      setSelectedDistrict('');
-      onSaveLocation('All India', 'All India', '');
-      onClose();
-      return;
-    }
-    const parsed = parseLocationString(locStr);
-    setSelectedState(parsed.state);
-    const dists = getDistrictsForState(parsed.state);
-    setDistrictsList(dists);
-    setSelectedDistrict(parsed.district || '');
-    onSaveLocation(locStr, parsed.state, parsed.district);
-    onClose();
-  };
-
   const handleSave = () => {
     const formatted = formatLocationString(selectedDistrict, selectedState, true);
     onSaveLocation(formatted, selectedState, selectedDistrict);
@@ -73,7 +55,6 @@ export default function SuperAdminLocationModal({
             </div>
             <div>
               <h2 className="text-sm font-black text-slate-900">Set Your Location</h2>
-              <p className="text-[11px] font-semibold text-slate-500">Official Government Directory (LGD)</p>
             </div>
           </div>
           <button
@@ -88,37 +69,7 @@ export default function SuperAdminLocationModal({
         {/* Body */}
         <div className="p-6 space-y-5">
           
-          {/* Quick Hubs */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
-              Quick Selection
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                'All India',
-                'Delhi, India',
-                'Chennai, Tamil Nadu, India',
-                'Bengaluru, Karnataka, India',
-                'Mumbai, Maharashtra, India',
-                'Hyderabad, Telangana, India'
-              ].map((hub) => (
-                <button
-                  key={hub}
-                  type="button"
-                  onClick={() => handleQuickSelect(hub)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                    currentLocation === hub 
-                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs' 
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                  }`}
-                >
-                  {hub === 'All India' ? '🇮🇳 All India' : hub.split(',')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3 space-y-4">
+          <div className="space-y-4">
             {/* State / UT Selector */}
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-700 block">

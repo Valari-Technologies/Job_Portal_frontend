@@ -46,7 +46,7 @@ export default function SuperAdminBreadcrumbs({ pathname }) {
             </>
           )}
 
-          <span className="text-slate-350" aria-hidden="true">/</span>
+          {currentMeta.section && <span className="text-slate-350" aria-hidden="true">/</span>}
           <span className="font-extrabold text-slate-805" aria-current="page">
             {currentMeta.label}
           </span>

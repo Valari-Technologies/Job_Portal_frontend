@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchCandidatesService } from '../../../services/superAdmin/superAdminService';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  fetchCandidatesService,
+  deleteCandidateService,
+  updateUserStatusService
+} from '../../../services/superAdmin/superAdminService';
 import { useNavigate } from 'react-router-dom';
 import CandidateFilters from '../../../components/superAdmin/superAdminCandidates/CandidateFilters';
 import CandidateTable from '../../../components/superAdmin/superAdminCandidates/CandidateTable';
@@ -12,7 +16,7 @@ export default function SuperAdminCandidates({ onToast }) {
   // We initialize candidates as an empty list to represent no data connected.
   const [candidates, setCandidates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [pickedCandidate, setSelectedCandidate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Search & filter state values
@@ -22,7 +26,12 @@ export default function SuperAdminCandidates({ onToast }) {
   const [profileStatus, setProfileStatus] = useState('All');
   const [accountStatus, setAccountStatus] = useState('All');
 
+  const requestIdRef = useRef(0);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const loadCandidates = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     try {
       const data = await fetchCandidatesService({
@@ -31,18 +40,36 @@ export default function SuperAdminCandidates({ onToast }) {
         district: selectedDistrict,
         status: accountStatus
       });
-      setCandidates(data);
-      if (data && data.length > 0) {
-        setSelectedCandidate(prev => prev ? (data.find(c => c.id === prev.id) || data[0]) : data[0]);
-      } else {
-        setSelectedCandidate(null);
+      // Ignore out-of-order responses from earlier filter selections
+      if (requestId === requestIdRef.current) {
+        setCandidates(data);
       }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [searchQuery, selectedState, selectedDistrict, accountStatus]);
+
+  // Profile status filter: derived from each candidate's real (calculated) profile completion
+  const visibleCandidates = useMemo(() => {
+    if (profileStatus === 'All') return candidates;
+    return candidates.filter((c) => {
+      const pct = Number(c.profile_completion ?? 0);
+      if (profileStatus === 'Complete') return pct >= 80;
+      if (profileStatus === 'Needs review') return pct >= 60 && pct < 80;
+      if (profileStatus === 'Incomplete') return pct < 60;
+      return true;
+    });
+  }, [candidates, profileStatus]);
+
+  // The preview card always points at a candidate that is still in the visible list
+  const selectedCandidate = useMemo(
+    () => visibleCandidates.find((c) => c.id === pickedCandidate?.id) || visibleCandidates[0] || null,
+    [visibleCandidates, pickedCandidate]
+  );
 
   useEffect(() => {
     loadCandidates();
@@ -82,11 +109,33 @@ export default function SuperAdminCandidates({ onToast }) {
       onToast(`Message client workflow initiated for candidate: ${record.full_name}`);
     } else if (actionType === 'REVIEW') {
       onToast(`Marked ${record.full_name} profile for administrator verification.`);
-    } else if (actionType === 'SUSPEND') {
-      onToast(`Candidate account: ${record.full_name} suspended successfully.`);
-    } else if (actionType === 'ACTIVATE') {
-      onToast(`Candidate account: ${record.full_name} activated successfully.`);
+    } else if (actionType === 'SUSPEND' || actionType === 'ACTIVATE') {
+      const newStatus = actionType === 'SUSPEND' ? 'SUSPENDED' : 'ACTIVE';
+      updateUserStatusService(record.id, newStatus).then((result) => {
+        if (!result.success) {
+          onToast(result.message);
+          return;
+        }
+        setCandidates(prev => prev.map(c => (c.id === record.id ? { ...c, status: newStatus } : c)));
+        onToast(`Candidate account: ${record.full_name} ${actionType === 'SUSPEND' ? 'suspended' : 'activated'} successfully.`);
+      });
+    } else if (actionType === 'DELETE') {
+      setDeleteTarget(record);
     }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
+    const result = await deleteCandidateService(deleteTarget.id);
+    setIsDeleting(false);
+    if (!result.success) {
+      onToast(result.message);
+      return;
+    }
+    setCandidates(prev => prev.filter(c => c.id !== deleteTarget.id));
+    onToast(`Candidate ${deleteTarget.full_name || deleteTarget.email} deleted successfully.`);
+    setDeleteTarget(null);
   };
 
   // Drawer panel save / action handler
@@ -175,7 +224,7 @@ export default function SuperAdminCandidates({ onToast }) {
         {/* Left main table wrapper */}
         <div className="lg:col-span-2 space-y-6">
           <CandidateTable
-            candidates={candidates}
+            candidates={visibleCandidates}
             selectedCandidate={selectedCandidate}
             onSelectCandidate={handleSelectCandidate}
             onTriggerAction={handleTriggerAction}
@@ -183,7 +232,7 @@ export default function SuperAdminCandidates({ onToast }) {
 
           {/* Pagination bar */}
           <div className="flex items-center justify-between text-sm font-bold text-slate-500">
-            <span>Showing 1 to {candidates.length} of {candidates.length} candidates</span>
+            <span>Showing {visibleCandidates.length > 0 ? 1 : 0} to {visibleCandidates.length} of {visibleCandidates.length} candidates</span>
             <div className="flex items-center gap-3">
               <select
                 value={pageSize}
@@ -218,7 +267,7 @@ export default function SuperAdminCandidates({ onToast }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">
-                    {candidates.filter(c => Number(c.profile_completion || 0) < 60).length}
+                    {visibleCandidates.filter(c => Number(c.profile_completion || 0) < 60).length}
                   </span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -311,13 +360,13 @@ export default function SuperAdminCandidates({ onToast }) {
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-400">Profile completion</span>
                   <span className="font-extrabold text-teal-700">
-                    {selectedCandidate.profile_completion ?? 20}%
+                    {selectedCandidate.profile_completion ?? 0}%
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-400">Account status</span>
-                  <span className={`font-extrabold uppercase ${selectedCandidate.is_active !== false ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {selectedCandidate.is_active !== false ? 'Active' : 'Suspended'}
+                  <span className={`font-extrabold uppercase ${String(selectedCandidate.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {String(selectedCandidate.status || 'ACTIVE').toLowerCase().replace(/^./, (ch) => ch.toUpperCase())}
                   </span>
                 </div>
               </div>
@@ -357,6 +406,36 @@ export default function SuperAdminCandidates({ onToast }) {
         onActionSubmit={handleActionSubmit}
         onToast={onToast}
       />
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => !isDeleting && setDeleteTarget(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" role="alertdialog" aria-modal="true" aria-labelledby="delete-candidate-title">
+            <h3 id="delete-candidate-title" className="text-lg font-extrabold text-slate-900">Delete candidate?</h3>
+            <p className="mt-2 text-sm font-semibold text-slate-600">
+              {deleteTarget.full_name || deleteTarget.email} will be removed from the platform and can no longer sign in. This action cannot be undone from this screen.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-red-700 cursor-pointer disabled:opacity-60"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Candidate Modal Form Overlay */}
       <CandidateModal 
         isOpen={modalOpen} 

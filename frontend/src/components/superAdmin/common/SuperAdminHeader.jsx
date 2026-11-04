@@ -5,11 +5,7 @@ import SuperAdminLocationModal from './SuperAdminLocationModal';
 import { normalizeLocationWithCountry } from '../../../data/indiaLocations';
 import { useSignOut } from '../../../context/SignOutContext';
 import { useSuperAdminUser } from '../../../context/SuperAdminUserContext';
-import { 
-  mockCandidates, 
-  mockEmployers, 
-  mockJobs 
-} from '../../../pages/superAdmin/superAdminOverview/superAdminOverviewData';
+import { searchAdminRecordsService } from '../../../services/superAdmin/superAdminService';
 
 export default function SuperAdminHeader({ 
   sidebarOpen, 
@@ -23,7 +19,7 @@ export default function SuperAdminHeader({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const currentLocation = normalizeLocationWithCountry(profile?.location || 'Delhi, India');
+  const currentLocation = normalizeLocationWithCountry(profile?.location || 'All India');
 
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
@@ -36,7 +32,7 @@ export default function SuperAdminHeader({
 
   // Derive display values from context profile
   const fullName = profile?.full_name || 'Super Admin';
-  const email = profile?.email || 'admin@statejobz.tn.gov';
+  const email = profile?.email || '';
   const profilePicture = profile?.profile_picture;
   
   // Initials fallback
@@ -111,27 +107,34 @@ export default function SuperAdminHeader({
     };
   }, [showNotificationDropdown]);
 
-  // Search candidate, employer, job
-  const getSearchResults = () => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    
-    const matchedCandidates = mockCandidates
-      .filter(c => c.full_name.toLowerCase().includes(q))
-      .map(c => ({ name: c.full_name, type: 'Candidate', status: `${c.profile_completion}% Completed`, original: c }));
+  // Live search over real candidates, employers and jobs (debounced backend query)
+  const [fetchedResults, setFetchedResults] = useState([]);
+  const searchResults = searchQuery.trim().length >= 2 ? fetchedResults : [];
 
-    const matchedEmployers = mockEmployers
-      .filter(e => e.company_name.toLowerCase().includes(q))
-      .map(e => ({ name: e.company_name, type: 'Employer', status: e.status, original: e }));
-
-    const matchedJobs = mockJobs
-      .filter(j => j.title.toLowerCase().includes(q))
-      .map(j => ({ name: j.title, type: 'Job', status: j.status, original: j }));
-
-    return [...matchedCandidates, ...matchedEmployers, ...matchedJobs].slice(0, 8);
-  };
-
-  const searchResults = getSearchResults();
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const rows = await searchAdminRecordsService(q, controller.signal);
+        setFetchedResults(rows.slice(0, 8).map(r => ({
+          name: r.name,
+          type: r.type,
+          status: r.status,
+          original: r.details
+        })));
+      } catch (err) {
+        if (err.name !== 'AbortError') setFetchedResults([]);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   const handleResultClick = (res) => {
     setSearchQuery('');

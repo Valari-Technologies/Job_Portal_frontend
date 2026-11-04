@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchEmployersService } from '../../../services/superAdmin/superAdminService';
+import { getActionQueues } from '../superAdminOverview/superAdminOverviewService';
 import { useNavigate } from 'react-router-dom';
 import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/EmployerFilters';
 import EmployerTable from '../../../components/superAdmin/superAdminEmployers/EmployerTable';
@@ -13,6 +14,8 @@ export default function SuperAdminEmployers() {
 
   // Filters dropdown state
   const [selectedState, setSelectedState] = useState('All');
+  const [selectedDistrict, setSelectedDistrict] = useState('All');
+  const [pendingJobsCount, setPendingJobsCount] = useState(0);
   const [verificationStatus, setVerificationStatus] = useState('All');
   const [trustLevel, setTrustLevel] = useState('All');
   const [jobStatus, setJobStatus] = useState('All');
@@ -25,28 +28,45 @@ export default function SuperAdminEmployers() {
   const [panelType, setPanelType] = useState('EMPTY_PROFILE');
   const [panelTitle, setPanelTitle] = useState('');
 
+  const requestIdRef = useRef(0);
+
   const loadEmployers = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     try {
       const data = await fetchEmployersService({
         search: searchQuery,
         state: selectedState,
+        district: selectedDistrict,
         verification_status: verificationStatus,
+        trust_level: trustLevel,
+        job_status: jobStatus,
       });
+      // Ignore out-of-order responses from earlier filter selections
+      if (requestId !== requestIdRef.current) return;
       setEmployers(data);
-      if (data.length > 0 && !selectedEmployer) {
-        setSelectedEmployer(data[0]);
-      }
+      setSelectedEmployer((prev) => data.find((e) => e.id === prev?.id) || data[0] || null);
     } catch (err) {
       console.error("Failed to fetch employers:", err);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [searchQuery, selectedState, verificationStatus]);
+  }, [searchQuery, selectedState, selectedDistrict, verificationStatus, trustLevel, jobStatus]);
 
   useEffect(() => {
     loadEmployers();
   }, [loadEmployers]);
+
+  // Live job approval queue size
+  useEffect(() => {
+    let active = true;
+    getActionQueues()
+      .then((q) => { if (active) setPendingJobsCount(q.jobsPendingReview?.count ?? 0); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Sidebar Focus filters trigger
   const handleFiltersToggle = () => {
@@ -132,6 +152,8 @@ export default function SuperAdminEmployers() {
       <EmployerFilters
         selectedState={selectedState}
         setSelectedState={setSelectedState}
+        selectedDistrict={selectedDistrict}
+        setSelectedDistrict={setSelectedDistrict}
         verificationStatus={verificationStatus}
         setVerificationStatus={setVerificationStatus}
         trustLevel={trustLevel}
@@ -231,7 +253,7 @@ export default function SuperAdminEmployers() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
+                  <span className="text-base font-extrabold text-slate-800">{pendingJobsCount}</span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
@@ -255,7 +277,7 @@ export default function SuperAdminEmployers() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">
-                    {employers.filter(e => e.trust_level === 'TRUSTED').length}
+                    {employers.filter(e => e.trust_level === 'TRUSTED' || e.trust_level === 'HIGH').length}
                   </span>
                   <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

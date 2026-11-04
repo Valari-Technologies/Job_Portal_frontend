@@ -148,6 +148,12 @@ export async function fetchEmployersService(params = {}) {
     if (params.district && params.district !== 'All') query.append('district', params.district);
     if (params.status && params.status !== 'All') query.append('status', params.status);
     if (params.verification_status && params.verification_status !== 'All') query.append('verification_status', params.verification_status);
+    if (params.trust_level && params.trust_level !== 'All') {
+      // UI labels -> backend trust level codes
+      const trustMap = { 'New': 'NEW', 'Building trust': 'BASIC', 'Trusted employer': 'TRUSTED,HIGH' };
+      query.append('trust_level', trustMap[params.trust_level] || params.trust_level);
+    }
+    if (params.job_status && params.job_status !== 'All') query.append('job_status', params.job_status);
 
     const url = `${API_BASE_URL}/accounts/employers/?${query.toString()}`;
     const response = await fetchWithAuth(url);
@@ -160,6 +166,52 @@ export async function fetchEmployersService(params = {}) {
     return list;
   } catch (error) {
     console.error("fetchEmployersService error:", error);
+    return [];
+  }
+}
+
+export async function deleteCandidateService(userId) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/candidates/${userId}/`, {
+      method: 'DELETE',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, message: data.detail || data.message || 'Failed to delete candidate.' };
+    }
+    return { success: true, data };
+  } catch {
+    return { success: false, message: 'Network error. Please check server connection.' };
+  }
+}
+
+export async function updateUserStatusService(userId, status) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/users/${userId}/status/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, message: data.detail || data.message || 'Failed to update account status.' };
+    }
+    return { success: true, data };
+  } catch {
+    return { success: false, message: 'Network error. Please check server connection.' };
+  }
+}
+
+export async function searchAdminRecordsService(query, signal) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/search/?q=${encodeURIComponent(query)}`, { signal });
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    console.error('searchAdminRecordsService error:', error);
     return [];
   }
 }

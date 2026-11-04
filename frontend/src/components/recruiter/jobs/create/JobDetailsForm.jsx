@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowRight } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
 import { getActiveIndustries, getSpecializationsByIndustry } from '../../../../services/candidate/candidateOnboardingService';
+import { fetchActivePublicSkills } from '../../../../services/superAdmin/categorySkillService';
 import { INDIA_STATES, getDistrictsForState } from '../../../../data/indiaLocations';
 import CustomDropdown from '../../../shared/CustomDropdown';
 
@@ -13,6 +14,8 @@ export default function JobDetailsForm() {
   const [formState, setFormState] = useState(jobDetails);
   const [errors, setErrors] = useState({});
   const [newSkillInput, setNewSkillInput] = useState('');
+  const [activeMasterSkills, setActiveMasterSkills] = useState([]);
+  const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
 
   // Live Super Admin taxonomy state
   const [industriesList, setIndustriesList] = useState([]);
@@ -39,6 +42,17 @@ export default function JobDetailsForm() {
       }
     }
     fetchIndustries();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Fetch active Master Skills from Super Admin catalog
+  useEffect(() => {
+    let isMounted = true;
+    fetchActivePublicSkills().then(list => {
+      if (isMounted && Array.isArray(list)) {
+        setActiveMasterSkills(list);
+      }
+    });
     return () => { isMounted = false; };
   }, []);
 
@@ -150,7 +164,27 @@ export default function JobDetailsForm() {
       }));
     }
     setNewSkillInput('');
+    setIsSkillDropdownOpen(false);
   };
+
+  const handleSelectMasterSkill = (skillName) => {
+    if (!skillName) return;
+    if (!formState.skills.includes(skillName)) {
+      setFormState(prev => ({
+        ...prev,
+        skills: [...prev.skills, skillName]
+      }));
+    }
+    setNewSkillInput('');
+    setIsSkillDropdownOpen(false);
+  };
+
+  const matchingMasterSkills = activeMasterSkills.filter(s => {
+    const name = s.name || '';
+    if (formState.skills.includes(name)) return false;
+    if (!newSkillInput.trim()) return true;
+    return name.toLowerCase().includes(newSkillInput.trim().toLowerCase());
+  }).slice(0, 8);
 
   const handleRemoveSkill = (skillToRemove) => {
     setFormState(prev => ({
@@ -609,21 +643,62 @@ export default function JobDetailsForm() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 max-w-sm">
-            <input 
-              type="text"
-              value={newSkillInput}
-              onChange={(e) => setNewSkillInput(e.target.value)}
-              placeholder="e.g. React.js, Python"
-              className="flex-1 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[40px]"
-            />
-            <button
-              type="button"
-              onClick={handleAddSkill}
-              className="px-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 font-extrabold text-xs hover:bg-indigo-100 transition-colors min-h-[40px]"
-            >
-              + Add Skill
-            </button>
+          <div className="relative max-w-sm">
+            <div className="flex items-center gap-2">
+              <input 
+                type="text"
+                value={newSkillInput}
+                onChange={(e) => {
+                  setNewSkillInput(e.target.value);
+                  setIsSkillDropdownOpen(true);
+                }}
+                onFocus={() => setIsSkillDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsSkillDropdownOpen(false), 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddSkill();
+                    setIsSkillDropdownOpen(false);
+                  }
+                }}
+                placeholder="e.g. React.js, Python"
+                className="flex-1 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500 min-h-[40px]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  handleAddSkill();
+                  setIsSkillDropdownOpen(false);
+                }}
+                className="px-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 font-extrabold text-xs hover:bg-indigo-100 transition-colors min-h-[40px]"
+              >
+                + Add Skill
+              </button>
+            </div>
+
+            {isSkillDropdownOpen && matchingMasterSkills.length > 0 && (
+              <div 
+                className="absolute left-0 top-full mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-52 overflow-y-auto p-1.5 space-y-0.5"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Select from Master Skills
+                </div>
+                {matchingMasterSkills.map(s => (
+                  <button
+                    key={s.id || s.name}
+                    type="button"
+                    onClick={() => handleSelectMasterSkill(s.name)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span>{s.name}</span>
+                    {s.category_name && (
+                      <span className="text-[10px] text-slate-400 font-medium">{s.category_name}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
