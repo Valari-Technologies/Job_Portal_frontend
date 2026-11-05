@@ -247,7 +247,7 @@ export default function SuperAdminProfile() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.full_name}</h2>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5">{profile.email}</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">{profile.email && !profile.email.includes('statejobz.tn.gov') ? profile.email : 'mohammeddhanais22@gmail.com'}</p>
               </div>
 
               {!isEditing && (
@@ -330,7 +330,7 @@ export default function SuperAdminProfile() {
               <div className="relative">
                 <input
                   type="email"
-                  value={profile.email}
+                  value={profile.email && !profile.email.includes('statejobz.tn.gov') ? profile.email : 'mohammeddhanais22@gmail.com'}
                   disabled
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-500 cursor-not-allowed"
                 />

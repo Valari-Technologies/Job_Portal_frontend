@@ -90,23 +90,6 @@ export async function fetchJobReviewsService(params = {}) {
 
   try {
     let localJobs = getAllLocalRecruiterJobs();
-    if (localJobs.length === 0) {
-      localJobs = [
-        {
-          id: 'job_rec_01',
-          title: 'Senior Full-Stack Developer',
-          company_name: 'MSD Tech',
-          employer_name: 'MSD Tech',
-          category: 'Engineering',
-          workMode: 'On-site',
-          location: 'Chennai, TN',
-          status: 'PENDING_REVIEW',
-          status_label: 'Pending Review',
-          submitted_date: new Date().toISOString().split('T')[0],
-          createdAt: new Date().toISOString().split('T')[0]
-        }
-      ];
-    }
 
     if (params.status && params.status !== 'ALL' && params.status !== 'All') {
       const target = params.status.toUpperCase();

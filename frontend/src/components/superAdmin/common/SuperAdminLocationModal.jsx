@@ -13,35 +13,56 @@ export default function SuperAdminLocationModal({
   currentLocation, 
   onSaveLocation 
 }) {
-  const initial = parseLocationString(currentLocation || 'Delhi');
-  const [selectedState, setSelectedState] = useState(initial.state || 'Delhi');
-  const [selectedDistrict, setSelectedDistrict] = useState(initial.district || 'New Delhi');
+  const initial = parseLocationString(currentLocation || 'All India');
+  const [selectedState, setSelectedState] = useState(initial.state || 'All India');
+  const [selectedDistrict, setSelectedDistrict] = useState(initial.district || '');
   const [districtsList, setDistrictsList] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      const parsed = parseLocationString(currentLocation || 'Delhi');
-      setSelectedState(parsed.state || 'Delhi');
-      const dists = getDistrictsForState(parsed.state || 'Delhi');
-      setDistrictsList(dists);
-      setSelectedDistrict(parsed.district || (dists.length > 0 ? dists[0] : ''));
+      const parsed = parseLocationString(currentLocation || 'All India');
+      const st = parsed.state || 'All India';
+      setSelectedState(st);
+      if (st === 'All India') {
+        setDistrictsList([]);
+        setSelectedDistrict('');
+      } else {
+        const dists = getDistrictsForState(st);
+        setDistrictsList(dists);
+        setSelectedDistrict(parsed.district || '');
+      }
     }
   }, [isOpen, currentLocation]);
 
   const handleStateChange = (stateName) => {
     setSelectedState(stateName);
-    const dists = getDistrictsForState(stateName);
-    setDistrictsList(dists);
-    setSelectedDistrict(dists.length > 0 ? dists[0] : '');
+    if (stateName === 'All India') {
+      setDistrictsList([]);
+      setSelectedDistrict('');
+    } else {
+      const dists = getDistrictsForState(stateName);
+      setDistrictsList(dists);
+      setSelectedDistrict('');
+    }
   };
 
   const handleSave = () => {
-    const formatted = formatLocationString(selectedDistrict, selectedState, true);
-    onSaveLocation(formatted, selectedState, selectedDistrict);
+    if (selectedState === 'All India') {
+      onSaveLocation('All India', 'All India', '');
+    } else if (!selectedDistrict) {
+      onSaveLocation(`${selectedState}, India`, selectedState, '');
+    } else {
+      const formatted = formatLocationString(selectedDistrict, selectedState, true);
+      onSaveLocation(formatted, selectedState, selectedDistrict);
+    }
     onClose();
   };
 
   if (!isOpen) return null;
+
+  const previewText = selectedState === 'All India' 
+    ? 'All India (National)' 
+    : (!selectedDistrict ? `${selectedState}, India (Statewide)` : formatLocationString(selectedDistrict, selectedState));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn font-sans">
@@ -80,6 +101,7 @@ export default function SuperAdminLocationModal({
                 onChange={(e) => handleStateChange(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
               >
+                <option value="All India">All India (National)</option>
                 {INDIA_STATES.map((st) => (
                   <option key={st} value={st}>{st}</option>
                 ))}
@@ -93,9 +115,11 @@ export default function SuperAdminLocationModal({
               </label>
               <select
                 value={selectedDistrict}
+                disabled={selectedState === 'All India'}
                 onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 disabled:bg-slate-100 disabled:text-slate-400"
               >
+                <option value="">{selectedState === 'All India' ? 'All India (National)' : 'All Districts (Statewide)'}</option>
                 {districtsList.map((dist) => (
                   <option key={dist} value={dist}>{dist}</option>
                 ))}
@@ -109,8 +133,8 @@ export default function SuperAdminLocationModal({
               <Globe className="h-4 w-4 text-teal-600" />
               <span>Selected Location:</span>
             </span>
-            <span className="font-black text-teal-700">
-              {formatLocationString(selectedDistrict, selectedState)}
+            <span className="font-black text-teal-700 truncate max-w-[200px]" title={previewText}>
+              {previewText}
             </span>
           </div>
 
@@ -128,10 +152,10 @@ export default function SuperAdminLocationModal({
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-xs font-bold text-white shadow-md shadow-teal-600/20 flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Check className="h-4 w-4" />
-            <span>Save Location</span>
+            <span>Apply Location</span>
           </button>
         </div>
 

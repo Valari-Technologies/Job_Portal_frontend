@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { fetchLocations } from '../../../services/superAdmin/locationService';
+import { useMemo } from 'react';
+import { INDIA_STATES, getDistrictsForState } from '../../../data/indiaLocations';
 import CustomDropdown from '../../shared/CustomDropdown';
 
 export default function CandidateFilters({ 
@@ -12,31 +12,16 @@ export default function CandidateFilters({
   accountStatus, 
   setAccountStatus 
 }) {
-  const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
-
-  useEffect(() => {
-    let active = true;
-    async function loadStates() {
-      const data = await fetchLocations({ location_type: 'STATE' });
-      if (active) setStates(data);
+  const districtOptions = useMemo(() => {
+    if (!selectedState || selectedState === 'All') {
+      return [{ value: 'All', label: 'All Districts' }];
     }
-    loadStates();
-    return () => { active = false; };
-  }, []);
-
-  // Districts are restricted to the selected state
-  useEffect(() => {
-    const state = states.find((st) => st.name === selectedState);
-    if (!state) {
-      return undefined;
-    }
-    let active = true;
-    fetchLocations({ parent_id: state.id }).then((data) => {
-      if (active) setDistricts(data.map((d) => ({ ...d, parentName: state.name })));
-    });
-    return () => { active = false; };
-  }, [selectedState, states]);
+    const dists = getDistrictsForState(selectedState);
+    return [
+      { value: 'All', label: 'All Districts' },
+      ...dists.map((d) => ({ value: d, label: d }))
+    ];
+  }, [selectedState]);
 
   return (
     <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs font-sans">
@@ -56,7 +41,7 @@ export default function CandidateFilters({
             }}
             options={[
               { value: 'All', label: 'All States' },
-              ...states.map((st) => ({ value: st.name, label: st.name }))
+              ...INDIA_STATES.map((st) => ({ value: st, label: st }))
             ]}
           />
         </div>
@@ -70,10 +55,7 @@ export default function CandidateFilters({
             id="district-filter"
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            options={[
-              { value: 'All', label: 'All Districts' },
-              ...districts.filter((d) => d.parentName === selectedState).map((d) => ({ value: d.name, label: d.name }))
-            ]}
+            options={districtOptions}
           />
         </div>
 
@@ -106,9 +88,9 @@ export default function CandidateFilters({
             onChange={(e) => setAccountStatus(e.target.value)}
             options={[
               { value: 'All', label: 'All' },
-              { value: 'Active', label: 'Active' },
-              { value: 'Inactive', label: 'Inactive' },
-              { value: 'Suspended', label: 'Suspended' }
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+              { value: 'INACTIVE', label: 'Inactive' }
             ]}
           />
         </div>

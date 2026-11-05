@@ -12,7 +12,7 @@
  * - PATCH /api/v1/users/me/settings/ -> Update preferences (language, timezone, notifications).
  */
 
-import { fetchWithAuth } from '../auth/adminAuthService';
+import { fetchWithAuth, getAuthenticatedUser } from '../auth/adminAuthService';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 const PROFILE_STORAGE_KEY = 'statejobz_super_admin_profile';
@@ -92,7 +92,10 @@ function loadStoredProfile() {
       merged.state = 'All India';
       merged.district = '';
     }
-    if (merged.email === PLACEHOLDER_EMAIL) merged.email = '';
+    if (!merged.email || merged.email === PLACEHOLDER_EMAIL || merged.email.includes('statejobz.tn.gov')) {
+      const authUser = getAuthenticatedUser();
+      merged.email = authUser?.email || '';
+    }
     return merged;
   } catch (err) {
     console.error('Error loading Super Admin profile from storage:', err);

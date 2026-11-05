@@ -124,6 +124,7 @@ export async function fetchCandidatesService(params = {}) {
     if (params.state && params.state !== 'All') query.append('state', params.state);
     if (params.district && params.district !== 'All') query.append('district', params.district);
     if (params.status && params.status !== 'All') query.append('status', params.status);
+    if (params.profile_status && params.profile_status !== 'All') query.append('profile_status', params.profile_status);
 
     const url = `${API_BASE_URL}/accounts/candidates/?${query.toString()}`;
     const response = await fetchWithAuth(url);
@@ -147,6 +148,7 @@ export async function fetchEmployersService(params = {}) {
     if (params.state && params.state !== 'All') query.append('state', params.state);
     if (params.district && params.district !== 'All') query.append('district', params.district);
     if (params.status && params.status !== 'All') query.append('status', params.status);
+    if (params.profile_status && params.profile_status !== 'All') query.append('profile_status', params.profile_status);
     if (params.verification_status && params.verification_status !== 'All') query.append('verification_status', params.verification_status);
     if (params.trust_level && params.trust_level !== 'All') {
       // UI labels -> backend trust level codes
