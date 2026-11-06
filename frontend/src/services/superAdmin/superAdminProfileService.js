@@ -156,16 +156,74 @@ export async function updateSuperAdminProfile(data) {
   return updated;
 }
 
+const RECENT_LOCATIONS_KEY = 'statejobz_super_admin_recent_locations';
+
+export const DEFAULT_RECENT_LOCATIONS = [
+  { label: 'Tamil Nadu', state: 'Tamil Nadu', district: '' },
+  { label: 'Chennai', state: 'Tamil Nadu', district: 'Chennai' },
+  { label: 'Coimbatore', state: 'Tamil Nadu', district: 'Coimbatore' },
+  { label: 'Erode', state: 'Tamil Nadu', district: 'Erode' },
+  { label: 'Tirunelveli', state: 'Tamil Nadu', district: 'Tirunelveli' },
+];
+
+export function getRecentAdminLocations() {
+  try {
+    const raw = localStorage.getItem(RECENT_LOCATIONS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.slice(0, 5);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return DEFAULT_RECENT_LOCATIONS;
+}
+
+export function saveRecentAdminLocation(state, district = '') {
+  if (!state || state.toLowerCase() === 'all india') return getRecentAdminLocations();
+  const cleanState = String(state).trim();
+  const cleanDistrict = String(district || '').trim();
+  const label = cleanDistrict || cleanState;
+  
+  const entry = {
+    label,
+    state: cleanState,
+    district: cleanDistrict
+  };
+
+  const current = getRecentAdminLocations();
+  const filtered = current.filter(item =>
+    !(item.state.toLowerCase() === cleanState.toLowerCase() &&
+      (item.district || '').toLowerCase() === cleanDistrict.toLowerCase())
+  );
+  const updated = [entry, ...filtered].slice(0, 5);
+  try {
+    localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    // ignore
+  }
+  return updated;
+}
+
 /**
  * Update Super Admin Location directly
  */
 export async function updateSuperAdminLocation(location, state = '', district = '') {
   const current = loadStoredProfile();
+  const locStr = String(location || '').trim();
+  const isAllIndia = !locStr || locStr.toLowerCase() === 'all india' || locStr.toLowerCase() === 'india';
+  
+  if (!isAllIndia && (state || district)) {
+    saveRecentAdminLocation(state, district);
+  }
+
   const updated = {
     ...current,
-    location: String(location).trim(),
-    state: state ? String(state).trim() : current.state,
-    district: String(district || '').trim(),
+    location: isAllIndia ? 'All India' : locStr,
+    state: isAllIndia ? 'All India' : (state ? String(state).trim() : current.state),
+    district: isAllIndia ? '' : String(district || '').trim(),
     location_user_set: true
   };
   saveProfileToStorage(updated);
