@@ -241,7 +241,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
           <h1 className="text-3xl font-black text-slate-800 tracking-tight">Platform overview</h1>
           <p className="text-base font-bold text-slate-500 mt-1">Monitor marketplace health, moderation queues and activity across Tamil Nadu.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm font-bold text-slate-650 bg-slate-100 rounded-lg px-3.5 py-1.5 border border-slate-200">
             Last updated: Today, {lastUpdated}
           </span>

@@ -38,7 +38,7 @@ export default function OverviewChart({ data, range, onRangeChange }) {
           <h3 className="text-xl font-bold text-slate-800">Applications & registrations</h3>
           <p className="text-sm font-bold text-slate-500 mt-1">Registration trends compared against monthly application volume</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-4 text-sm font-semibold mr-2">
             <span className="flex items-center gap-1.5 text-slate-700">
               <span className="h-3 w-3 rounded-full bg-teal-600" />

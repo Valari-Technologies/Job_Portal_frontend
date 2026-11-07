@@ -330,9 +330,9 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
         </div>
         <div className="flex items-center justify-between text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-2.5 mb-3.5">
           <span>District</span>
-          <div className="flex items-center gap-12">
+          <div className="flex items-center gap-6 sm:gap-12">
             <span>Live jobs</span>
-            <span className="w-16 text-right">Share</span>
+            <span className="w-12 sm:w-16 text-right">Share</span>
           </div>
         </div>
         <div className="space-y-4">
@@ -340,9 +340,9 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
             districts.map((d, idx) => (
               <div key={idx} className="flex items-center justify-between text-sm font-semibold">
                 <span className="text-slate-850 font-bold">{d.district}</span>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 sm:gap-6">
                   <span className="text-slate-900 font-extrabold">{(d.count ?? 0).toLocaleString()}</span>
-                  <div className="flex items-center gap-2.5 w-28">
+                  <div className="flex items-center gap-2 w-20 sm:w-28">
                     <div className="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
                       <div 
                         className="h-full bg-teal-600 rounded-full" 

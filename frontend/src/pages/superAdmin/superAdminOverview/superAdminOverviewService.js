@@ -150,10 +150,10 @@ export async function getRecentActivity(range = '7days', location = {}) {
  */
 export async function getNotifications() {
   try {
-    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/notifications/`);
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/notifications/`);
     if (response.ok) {
       const data = await response.json();
-      return data.notifications || data.results || [];
+      return data.notifications || data.results || (Array.isArray(data) ? data : []);
     }
   } catch (err) {
     console.warn("Could not fetch notifications:", err);
