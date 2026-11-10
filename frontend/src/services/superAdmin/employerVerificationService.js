@@ -6,7 +6,7 @@ export async function fetchEmployerVerificationsService(params = {}) {
   try {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
-    if (params.status && params.status !== 'ALL') query.append('status', params.status);
+    if (params.status) query.append('status', params.status);
     if (params.page) query.append('page', params.page);
 
     const url = `${API_BASE_URL}/accounts/admin/employer-verifications/?${query.toString()}`;

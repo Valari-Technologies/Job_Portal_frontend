@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import EmployerVerificationQueue from '../../../components/superAdmin/superAdminEmployerVerification/EmployerVerificationQueue';
 import EmployerVerificationReview from '../../../components/superAdmin/superAdminEmployerVerification/EmployerVerificationReview';
 import {
@@ -7,6 +8,10 @@ import {
 } from '../../../services/superAdmin/employerVerificationService';
 
 export default function SuperAdminEmployerVerification() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const targetEmployerId = searchParams.get('employerId') || searchParams.get('id') || location.state?.employerId;
+
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +28,16 @@ export default function SuperAdminEmployerVerification() {
     action: null,
   });
 
+  const handleBackToQueue = useCallback(() => {
+    setSelectedRequest(null);
+    if (searchParams.has('employerId') || searchParams.has('id')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('employerId');
+      newParams.delete('id');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const loadVerificationQueue = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -35,12 +50,34 @@ export default function SuperAdminEmployerVerification() {
       setRequests(res.results);
       setTotalPages(res.totalPages);
       setTotalCount(res.count);
+
+      // Auto-select target employer if passed in URL or navigation state
+      if (targetEmployerId) {
+        const found = res.results.find(
+          r => String(r.employer_id) === String(targetEmployerId) ||
+               String(r.id) === String(targetEmployerId) ||
+               String(r.user_id) === String(targetEmployerId)
+        );
+        if (found) {
+          setSelectedRequest(found);
+        } else {
+          try {
+            const allRes = await fetchEmployerVerificationsService({ status: 'ALL' });
+            const direct = (allRes.results || []).find(
+              r => String(r.employer_id) === String(targetEmployerId) ||
+                   String(r.id) === String(targetEmployerId) ||
+                   String(r.user_id) === String(targetEmployerId)
+            );
+            if (direct) setSelectedRequest(direct);
+          } catch (_) {}
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to load verification queue.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchQuery, page]);
+  }, [statusFilter, searchQuery, page, targetEmployerId]);
 
   useEffect(() => {
     loadVerificationQueue();
@@ -59,8 +96,8 @@ export default function SuperAdminEmployerVerification() {
   const handleDecisionSubmit = async (employerId, payload) => {
     const res = await verifyEmployerDecisionService(employerId, payload);
     if (res.success) {
+      handleBackToQueue();
       loadVerificationQueue();
-      setSelectedRequest(null);
     }
     return res;
   };
@@ -100,7 +137,7 @@ export default function SuperAdminEmployerVerification() {
       {selectedRequest ? (
         <EmployerVerificationReview
           request={selectedRequest}
-          onBack={() => setSelectedRequest(null)}
+          onBack={handleBackToQueue}
           onDecision={handleDecisionSubmit}
         />
       ) : (

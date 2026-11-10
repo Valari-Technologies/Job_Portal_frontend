@@ -85,6 +85,13 @@ import CandidateProfilePage from './pages/candidate/CandidateProfilePage';
 import CandidateSettingsPage from './pages/candidate/CandidateSettingsPage';
 import { getNotifications } from './pages/superAdmin/superAdminOverview/superAdminOverviewService';
 
+// Canonical redirect helper for /super_admin/* -> /super-admin/*
+function SuperAdminUnderscoreRedirect() {
+  const location = useLocation();
+  const canonicalPath = location.pathname.replace(/^\/super_admin/, '/super-admin');
+  return <Navigate to={`${canonicalPath}${location.search}`} replace />;
+}
+
 export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -352,6 +359,8 @@ export default function App() {
       <Route path="/super-admin/dashboard" element={<Navigate to="/super-admin/overview" replace />} />
       <Route path="/superadmin" element={<Navigate to="/super-admin/overview" replace />} />
       <Route path="/superadmin/overview" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/super_admin" element={<Navigate to="/super-admin/overview" replace />} />
+      <Route path="/super_admin/*" element={<SuperAdminUnderscoreRedirect />} />
 
       <Route path="/hr-dashboard" element={<Navigate to="/recruiter/dashboard" replace />} />
       <Route path="/hr-dashboard/*" element={<Navigate to="/recruiter/dashboard" replace />} />
@@ -436,7 +445,7 @@ function LayoutWrapper({ notifications, setNotifications, setGlobalDetailsRecord
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const isSuperAdminRoute = currentPath.startsWith('/super-admin');
+  const isSuperAdminRoute = currentPath.startsWith('/super-admin') || currentPath.startsWith('/super_admin');
 
   if (isSuperAdminRoute) {
     return (

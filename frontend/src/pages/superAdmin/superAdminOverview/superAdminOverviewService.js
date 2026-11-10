@@ -5,6 +5,11 @@ const API_BASE_URL = 'http://127.0.0.1:8000';
 let pendingPromise = null;
 let lastKey = null;
 
+export function invalidateOverviewCache() {
+  pendingPromise = null;
+  lastKey = null;
+}
+
 /**
  * Builds the location scope (state / district) sent to the backend.
  * "All India" (or nothing) means: no location filter.
@@ -184,6 +189,9 @@ export async function submitQueueDecision(queueKey, recordId, decision, reason =
     body = decision === 'DISMISS'
       ? { action: 'REJECTED', notes: reason }
       : { action: 'REVIEWED', notes: reason || 'Job hidden by Super Admin', job_action: 'CLOSED', job_reason: reason || 'Job hidden by Super Admin' };
+  } else if (queueKey === 'lowQualityProfiles') {
+    url = `${API_BASE_URL}/accounts/admin/candidates/${recordId}/action/`;
+    body = { action: decision, notes: reason };
   } else {
     return { success: false, message: 'This queue has no backend action.' };
   }
@@ -194,6 +202,7 @@ export async function submitQueueDecision(queueKey, recordId, decision, reason =
     if (!response.ok) {
       return { success: false, message: data.detail || data.message || 'Action failed. Please try again.' };
     }
+    invalidateOverviewCache();
     return { success: true, data };
   } catch (error) {
     return { success: false, message: error.message || 'Network error. Please check server connection.' };

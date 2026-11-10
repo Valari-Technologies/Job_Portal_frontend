@@ -230,24 +230,32 @@ export function ActionRequiredCard({ queues, onOpenQueue }) {
       <h3 className="text-xl font-bold text-slate-900 mb-6">Action required</h3>
       <div className="divide-y divide-slate-100">
         {items.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+          <div 
+            key={idx} 
+            onClick={() => onOpenQueue(item.key, item.title)}
+            className="group flex items-center justify-between py-4 first:pt-0 last:pb-0 cursor-pointer rounded-xl px-2 -mx-2 hover:bg-slate-50/70 transition-colors"
+          >
             <div className="flex items-center gap-3.5">
               <div className={`flex h-11 w-11 items-center justify-center rounded-xl border shrink-0 ${item.bg} ${item.border}`}>
                 {item.icon}
               </div>
               <div>
-                <h4 className="text-base font-extrabold text-slate-800 leading-snug">{item.title}</h4>
+                <h4 className="text-base font-extrabold text-slate-800 leading-snug group-hover:text-teal-650 transition-colors">{item.title}</h4>
                 <span className="text-sm font-bold text-slate-500 mt-1 block">{item.subtitle}</span>
               </div>
             </div>
             <div className="flex items-center gap-4.5">
               <span className="text-base font-extrabold text-slate-800">{item.count}</span>
               <button 
-                onClick={() => onOpenQueue(item.key, item.title)}
-                className="flex items-center gap-1.5 text-base font-bold text-teal-600 hover:text-teal-700 hover:underline"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenQueue(item.key, item.title);
+                }}
+                className="flex items-center gap-1.5 text-base font-bold text-teal-600 group-hover:text-teal-700 hover:underline"
               >
                 <span>View queue</span>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>
               </button>

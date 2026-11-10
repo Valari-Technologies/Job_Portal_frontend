@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { submitQueueDecision } from '../../../pages/superAdmin/superAdminOverview/superAdminOverviewService';
+
+const QUEUE_ROUTES = {
+  employerVerifications: '/super-admin/employer-verification',
+  jobsPendingReview: '/super-admin/job-review',
+  reportedJobs: '/super-admin/reports',
+  lowQualityProfiles: '/super-admin/candidates'
+};
 
 // Priority Colors Mapper helper
 const getThemeColors = (type) => {
@@ -55,10 +63,22 @@ export default function AdminSidePanel({
   onActionSubmit,   // callback to handle status changes
   onToast
 }) {
+  const navigate = useNavigate();
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingId, setSubmittingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterChips, setFilterChips] = useState('All');
+  
+  // Clean reason dialog for REJECT / DISMISS / HIDE actions
+  const [reasonModal, setReasonModal] = useState({
+    isOpen: false,
+    recordId: null,
+    actionLabel: '',
+    title: '',
+    reason: '',
+    suggestions: []
+  });
   
   // Lock background scroll when drawer is open
   useEffect(() => {
@@ -183,45 +203,114 @@ export default function AdminSidePanel({
   };
 
   // Real moderation action: calls the backend, then refreshes the dashboard
-  const handleAction = async (label, message) => {
-    if (isSubmitting) return;
-    const recordId = selectedRecord?.id;
-    const backendQueues = ['employerVerifications', 'jobsPendingReview', 'reportedJobs'];
+  const executeAction = async (recordId, label, message, reason = '') => {
+    if (isSubmitting || submittingId) return;
+    const backendQueues = ['employerVerifications', 'jobsPendingReview', 'reportedJobs', 'lowQualityProfiles'];
 
     // Queues backed by a real decision endpoint
     if (backendQueues.includes(panelType)) {
-      let reason = '';
-      if (label === 'REJECT' || label === 'DISMISS') {
-        const entered = window.prompt(
-          label === 'DISMISS' ? 'Reason for dismissing this report:' : 'Reason for rejection:'
-        );
-        if (entered === null) return;
-        reason = entered.trim();
-        if (!reason) {
-          onToast('A reason is required for this action.');
-          return;
-        }
-      }
-
       setIsSubmitting(true);
+      setSubmittingId(recordId);
       const result = await submitQueueDecision(panelType, recordId, label, reason);
       setIsSubmitting(false);
+      setSubmittingId(null);
       if (!result.success) {
         onToast(result.message || 'Action failed. Please try again.');
         return;
       }
       onToast(`${message} successfully.`);
       onActionSubmit && onActionSubmit(recordId, label);
-      setSelectedRecord(null);
-      onClose();
+      if (selectedRecord?.id === recordId) {
+        setSelectedRecord(null);
+      }
+      // If no items left in list after this removal, auto-close panel
+      if (items.length <= 1) {
+        onClose();
+      }
       return;
     }
 
     // Low-quality profiles / activity rows have no moderation endpoint: acknowledge locally
     onActionSubmit && onActionSubmit(recordId, label);
     onToast(`${message}.`);
-    setSelectedRecord(null);
-    onClose();
+    if (selectedRecord?.id === recordId) {
+      setSelectedRecord(null);
+    }
+    if (items.length <= 1) {
+      onClose();
+    }
+  };
+
+  const openReasonModal = (recordId, actionLabel, title, defaultSuggestions = []) => {
+    setReasonModal({
+      isOpen: true,
+      recordId,
+      actionLabel,
+      title,
+      reason: defaultSuggestions[0] || '',
+      suggestions: defaultSuggestions
+    });
+  };
+
+  const handleConfirmReasonModal = async () => {
+    const { recordId, actionLabel, reason } = reasonModal;
+    if (!reason.trim()) {
+      onToast('A reason is required for this action.');
+      return;
+    }
+    setReasonModal(prev => ({ ...prev, isOpen: false }));
+    const actionDesc = 
+      actionLabel === 'REJECT' ? 'Record rejected' :
+      actionLabel === 'DISMISS' ? 'Report dismissed' :
+      actionLabel === 'HIDE' ? 'Job hidden' : 'Action completed';
+    await executeAction(recordId, actionLabel, actionDesc, reason.trim());
+  };
+
+  const handleAction = async (label, message) => {
+    const recordId = selectedRecord?.id;
+    if (!recordId) return;
+
+    if (panelType === 'employerVerifications' && label === 'REJECT') {
+      openReasonModal(recordId, 'REJECT', 'Reject Employer Verification', [
+        'Incomplete company registration details',
+        'Unverifiable company phone or domain',
+        'Invalid business tax/registration proof',
+        'Duplicate or fraudulent account'
+      ]);
+      return;
+    }
+
+    if (panelType === 'jobsPendingReview' && label === 'REJECT') {
+      openReasonModal(recordId, 'REJECT', 'Reject Job Listing', [
+        'Job description violates community guidelines',
+        'Unrealistic compensation or fees requested',
+        'Incomplete role requirements or qualifications',
+        'Duplicate job posting'
+      ]);
+      return;
+    }
+
+    if (panelType === 'reportedJobs' && label === 'DISMISS') {
+      openReasonModal(recordId, 'DISMISS', 'Dismiss Job Report', [
+        'Job listing fully adheres to guidelines',
+        'Insufficient evidence of violation',
+        'Duplicate / resolved user report',
+        'Resolved directly with employer'
+      ]);
+      return;
+    }
+
+    if (panelType === 'reportedJobs' && label === 'HIDE') {
+      openReasonModal(recordId, 'HIDE', 'Hide Reported Job Listing', [
+        'Confirmed violation of job posting standards',
+        'Misleading job description or suspicious scam',
+        'Discriminatory or non-compliant content',
+        'Employer company unverified'
+      ]);
+      return;
+    }
+
+    await executeAction(recordId, label, message);
   };
 
   return (
@@ -267,6 +356,21 @@ export default function AdminSidePanel({
                   : 'Manage and review submissions pending verification'
                 }
               </p>
+              {QUEUE_ROUTES[panelType] && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClosePanel();
+                    navigate(QUEUE_ROUTES[panelType]);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-black text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs mt-2"
+                >
+                  <span>Open {panelTitle || 'queue'} page</span>
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -277,15 +381,32 @@ export default function AdminSidePanel({
           {selectedRecord ? (
             /* RECORD DETAILS SHEET */
             <div className="space-y-6">
-              <button 
-                onClick={() => setSelectedRecord(null)}
-                className="flex items-center gap-1.5 text-sm font-black text-teal-650 hover:text-teal-700 focus:outline-none"
-              >
-                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>Back to list</span>
-              </button>
+              <div className="flex items-center justify-between">
+                <button 
+                  onClick={() => setSelectedRecord(null)}
+                  className="flex items-center gap-1.5 text-sm font-black text-teal-650 hover:text-teal-700 focus:outline-none"
+                >
+                  <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span>Back to list</span>
+                </button>
+                {QUEUE_ROUTES[panelType] && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleClosePanel();
+                      navigate(QUEUE_ROUTES[panelType]);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-black text-teal-700 hover:text-teal-850 hover:underline focus:outline-none"
+                  >
+                    <span>Open full page</span>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
               <div className="rounded-2xl border border-slate-150 bg-slate-50/30 p-5 space-y-4">
                 <div className="flex items-center gap-3.5">
@@ -313,17 +434,19 @@ export default function AdminSidePanel({
 
               {/* Small Activity Timeline */}
               <div className="space-y-3.5">
-                <h4 className="text-sm font-black text-slate-550 uppercase tracking-wider">Activity Timeline</h4>
+                <h4 className="text-sm font-black text-slate-550 uppercase tracking-wider">Queue Timeline</h4>
                 <div className="relative border-l border-slate-150 pl-5 ml-2.5 space-y-4.5 text-sm">
                   <div className="relative">
                     <span className="absolute -left-[25.5px] top-1.5 h-2.5 w-2.5 rounded-full bg-teal-500 ring-4 ring-white" />
-                    <span className="font-black text-slate-800">State modified locally</span>
-                    <p className="text-xs font-bold text-slate-500 mt-1">Today, Just now</p>
+                    <span className="font-black text-slate-800">Pending Super Admin Action</span>
+                    <p className="text-xs font-bold text-slate-500 mt-1">Awaiting verification in moderation queue</p>
                   </div>
                   <div className="relative">
                     <span className="absolute -left-[25.5px] top-1.5 h-2.5 w-2.5 rounded-full bg-slate-300 ring-4 ring-white" />
-                    <span className="font-extrabold text-slate-700">Created initial record</span>
-                    <p className="text-xs font-bold text-slate-500 mt-1">Yesterday, 14:30 PM</p>
+                    <span className="font-extrabold text-slate-700">Record Submitted</span>
+                    <p className="text-xs font-bold text-slate-500 mt-1">
+                      {selectedRecord.created_at ? new Date(selectedRecord.created_at).toLocaleString() : 'Original submission'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -378,6 +501,26 @@ export default function AdminSidePanel({
                     <div
                       key={idx}
                       onClick={() => {
+                        if (panelType === 'employerVerifications') {
+                          handleClosePanel();
+                          navigate(`/super-admin/employer-verification?employerId=${item.id}`, { state: { employerId: item.id } });
+                          return;
+                        }
+                        if (panelType === 'jobsPendingReview') {
+                          handleClosePanel();
+                          navigate(`/super-admin/job-review?jobId=${item.id}`, { state: { jobId: item.id } });
+                          return;
+                        }
+                        if (panelType === 'reportedJobs') {
+                          handleClosePanel();
+                          navigate(`/super-admin/reports?reportId=${item.id}`, { state: { reportId: item.id } });
+                          return;
+                        }
+                        if (panelType === 'lowQualityProfiles') {
+                          handleClosePanel();
+                          navigate(`/super-admin/candidates?candidateId=${item.id}`, { state: { candidateId: item.id } });
+                          return;
+                        }
                         if (panelType === 'recentActivity') {
                           // Switch to detailing entity directly
                           setSelectedRecord({
@@ -407,7 +550,49 @@ export default function AdminSidePanel({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2">
+                        {panelType === 'employerVerifications' && (
+                          <button
+                            type="button"
+                            title="Quick Approve"
+                            disabled={submittingId === item.id || isSubmitting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              executeAction(item.id, 'APPROVE', 'Employer verification approved');
+                            }}
+                            className="rounded-lg bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 px-2.5 py-1 text-xs font-black transition-all"
+                          >
+                            {submittingId === item.id ? '...' : 'Approve'}
+                          </button>
+                        )}
+                        {panelType === 'jobsPendingReview' && (
+                          <button
+                            type="button"
+                            title="Quick Approve Job"
+                            disabled={submittingId === item.id || isSubmitting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              executeAction(item.id, 'APPROVE', 'Job approved');
+                            }}
+                            className="rounded-lg bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 px-2.5 py-1 text-xs font-black transition-all"
+                          >
+                            {submittingId === item.id ? '...' : 'Approve'}
+                          </button>
+                        )}
+                        {panelType === 'lowQualityProfiles' && (
+                          <button
+                            type="button"
+                            title="Send Profile Reminder"
+                            disabled={submittingId === item.id || isSubmitting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              executeAction(item.id, 'REMINDER', 'Profile completion reminder sent');
+                            }}
+                            className="rounded-lg bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white border border-purple-200 px-2.5 py-1 text-xs font-black transition-all"
+                          >
+                            {submittingId === item.id ? '...' : 'Remind'}
+                          </button>
+                        )}
                         {item.badge && (
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold uppercase ${theme.badge}`}>
                             {item.badge.replace('_', ' ')}
@@ -436,16 +621,18 @@ export default function AdminSidePanel({
             {panelType === 'employerVerifications' && (
               <>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('REJECT', 'Employer verification rejected')}
-                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Reject
                 </button>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('APPROVE', 'Employer verification approved')}
-                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700"
+                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700 disabled:opacity-50"
                 >
-                  Approve
+                  {isSubmitting && submittingId === selectedRecord.id ? 'Approving...' : 'Approve'}
                 </button>
               </>
             )}
@@ -453,16 +640,18 @@ export default function AdminSidePanel({
             {panelType === 'jobsPendingReview' && (
               <>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('REJECT', 'Job rejected')}
-                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Reject
                 </button>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('APPROVE', 'Job approved')}
-                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700"
+                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700 disabled:opacity-50"
                 >
-                  Approve Job
+                  {isSubmitting && submittingId === selectedRecord.id ? 'Approving...' : 'Approve Job'}
                 </button>
               </>
             )}
@@ -470,16 +659,18 @@ export default function AdminSidePanel({
             {panelType === 'reportedJobs' && (
               <>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('DISMISS', 'Report dismissed')}
-                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Dismiss Report
                 </button>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('HIDE', 'Job temporarily hidden')}
-                  className="flex-1 rounded-xl bg-red-600 py-3 text-base font-extrabold text-white hover:bg-red-700"
+                  className="flex-1 rounded-xl bg-red-600 py-3 text-base font-extrabold text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  Hide Job
+                  {isSubmitting && submittingId === selectedRecord.id ? 'Hiding...' : 'Hide Job'}
                 </button>
               </>
             )}
@@ -487,14 +678,16 @@ export default function AdminSidePanel({
             {panelType === 'lowQualityProfiles' && (
               <>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('REMINDER', 'Profile completion reminder sent')}
-                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-base font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  Send Reminder
+                  {isSubmitting && submittingId === selectedRecord.id ? 'Sending...' : 'Send Reminder'}
                 </button>
                 <button 
+                  disabled={isSubmitting}
                   onClick={() => handleAction('MARK_REVIEWED', 'Profile marked as reviewed')}
-                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700"
+                  className="flex-1 rounded-xl bg-teal-600 py-3 text-base font-extrabold text-white hover:bg-teal-700 disabled:opacity-50"
                 >
                   Mark Reviewed
                 </button>
@@ -503,12 +696,83 @@ export default function AdminSidePanel({
 
             {panelType === 'recentActivity' && (
               <button 
+                disabled={isSubmitting}
                 onClick={() => handleAction('MARK_REVIEWED', 'Activity marked as reviewed')}
-                className="w-full rounded-xl bg-teal-600 py-3.5 text-base font-extrabold text-white hover:bg-teal-700"
+                className="w-full rounded-xl bg-teal-600 py-3.5 text-base font-extrabold text-white hover:bg-teal-700 disabled:opacity-50"
               >
                 Mark Activity Reviewed
               </button>
             )}
+          </div>
+        )}
+
+        {/* MODAL: Inline Reason Input for Moderation Decisions */}
+        {reasonModal.isOpen && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl border border-slate-100">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-base font-black text-slate-800">{reasonModal.title}</h3>
+                <button
+                  type="button"
+                  onClick={() => setReasonModal({ isOpen: false, recordId: null, actionLabel: '', title: '', reason: '', suggestions: [] })}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-650"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Select or enter reason:
+                </label>
+                {reasonModal.suggestions?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {reasonModal.suggestions.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setReasonModal(prev => ({ ...prev, reason: s }))}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors text-left ${
+                          reasonModal.reason === s
+                            ? 'border-teal-500 bg-teal-50 text-teal-800 font-bold'
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  rows={3}
+                  value={reasonModal.reason}
+                  onChange={(e) => setReasonModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Enter reason or notes for this moderation action..."
+                  className="w-full rounded-xl border border-slate-250 bg-slate-50 p-3 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="mt-5 flex gap-2.5">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setReasonModal({ isOpen: false, recordId: null, actionLabel: '', title: '', reason: '', suggestions: [] })}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!reasonModal.reason.trim() || isSubmitting}
+                  onClick={handleConfirmReasonModal}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Confirm Action'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

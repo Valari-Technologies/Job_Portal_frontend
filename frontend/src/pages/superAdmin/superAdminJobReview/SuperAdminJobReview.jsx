@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import JobReviewQueue from '../../../components/superAdmin/superAdminJobReview/JobReviewQueue';
 import JobReviewDetails from '../../../components/superAdmin/superAdminJobReview/JobReviewDetails';
 import {
@@ -7,6 +8,10 @@ import {
 } from '../../../services/superAdmin/jobReviewService';
 
 export default function SuperAdminJobReview() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const targetJobId = searchParams.get('jobId') || searchParams.get('id') || location.state?.jobId;
+
   const [selectedJob, setSelectedJob] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +28,16 @@ export default function SuperAdminJobReview() {
     action: null,
   });
 
+  const handleBackToQueue = useCallback(() => {
+    setSelectedJob(null);
+    if (searchParams.has('jobId') || searchParams.has('id')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('jobId');
+      newParams.delete('id');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const loadJobQueue = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -35,12 +50,26 @@ export default function SuperAdminJobReview() {
       setJobs(res.results);
       setTotalPages(res.totalPages);
       setTotalCount(res.count);
+
+      // Auto-select target job if query param or state is set
+      if (targetJobId) {
+        const found = res.results.find(j => String(j.id) === String(targetJobId));
+        if (found) {
+          setSelectedJob(found);
+        } else {
+          try {
+            const allRes = await fetchJobReviewsService({ status: 'ALL' });
+            const direct = (allRes.results || []).find(j => String(j.id) === String(targetJobId));
+            if (direct) setSelectedJob(direct);
+          } catch (_) {}
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to load job review queue.');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchQuery, page]);
+  }, [statusFilter, searchQuery, page, targetJobId]);
 
   useEffect(() => {
     loadJobQueue();
@@ -59,8 +88,8 @@ export default function SuperAdminJobReview() {
   const handleDecisionSubmit = async (jobId, payload) => {
     const res = await reviewJobDecisionService(jobId, payload);
     if (res.success) {
+      handleBackToQueue();
       loadJobQueue();
-      setSelectedJob(null);
     }
     return res;
   };
@@ -100,7 +129,7 @@ export default function SuperAdminJobReview() {
       {selectedJob ? (
         <JobReviewDetails
           job={selectedJob}
-          onBack={() => setSelectedJob(null)}
+          onBack={handleBackToQueue}
           onDecision={handleDecisionSubmit}
         />
       ) : (

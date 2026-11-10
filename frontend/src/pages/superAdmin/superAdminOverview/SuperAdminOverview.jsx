@@ -23,6 +23,7 @@ import {
 const AUTO_REFRESH_MS = 30000;
 
 export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetailsRecord, onToast }) {
+  const navigate = useNavigate();
   const { profile, isLoadingProfile } = useSuperAdminUser();
   const locationState = profile?.state || '';
   const locationDistrict = profile?.district || '';
@@ -164,34 +165,54 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
     setPanelOpen(true);
   };
 
-  // After a real moderation decision succeeds: drop the record locally, then re-sync with the backend
-  const handleActionSubmit = (recordId) => {
-    // Action updates local metrics and triggers layout re-renders
+  // After a real moderation decision succeeds: drop the record locally, update metrics, then re-sync with backend
+  const handleActionSubmit = (recordId, decision) => {
+    // 1. Immediately drop the record from the active side panel list
+    setPanelItems(prev => prev.filter(item => item.id !== recordId));
+
+    // 2. Update queue counts and queue item list in local state
     if (panelType === 'employerVerifications') {
       setQueues(prev => ({
         ...prev,
         employerVerifications: {
           ...prev.employerVerifications,
-          count: Math.max(0, prev.employerVerifications.count - 1),
-          list: prev.employerVerifications.list.filter(item => item.id !== recordId)
+          count: Math.max(0, (prev.employerVerifications?.count || 1) - 1),
+          list: (prev.employerVerifications?.list || []).filter(item => item.id !== recordId)
         }
       }));
+      if (decision === 'APPROVE') {
+        setMetrics(prev => prev ? {
+          ...prev,
+          employers: { ...prev.employers, value: (prev.employers?.value || 0) + 1 }
+        } : prev);
+      }
     } else if (panelType === 'jobsPendingReview') {
       setQueues(prev => ({
         ...prev,
         jobsPendingReview: {
           ...prev.jobsPendingReview,
-          count: Math.max(0, prev.jobsPendingReview.count - 1),
-          list: prev.jobsPendingReview.list.filter(item => item.id !== recordId)
+          count: Math.max(0, (prev.jobsPendingReview?.count || 1) - 1),
+          list: (prev.jobsPendingReview?.list || []).filter(item => item.id !== recordId)
         }
       }));
+      if (decision === 'APPROVE') {
+        setMetrics(prev => prev ? {
+          ...prev,
+          liveJobs: { ...prev.liveJobs, value: (prev.liveJobs?.value || 0) + 1 }
+        } : prev);
+        setJobActivity(prev => prev ? {
+          ...prev,
+          live: (prev.live || 0) + 1,
+          pendingReview: Math.max(0, (prev.pendingReview || 1) - 1)
+        } : prev);
+      }
     } else if (panelType === 'reportedJobs') {
       setQueues(prev => ({
         ...prev,
         reportedJobs: {
           ...prev.reportedJobs,
-          count: Math.max(0, prev.reportedJobs.count - 1),
-          list: prev.reportedJobs.list.filter(item => item.id !== recordId)
+          count: Math.max(0, (prev.reportedJobs?.count || 1) - 1),
+          list: (prev.reportedJobs?.list || []).filter(item => item.id !== recordId)
         }
       }));
     } else if (panelType === 'lowQualityProfiles') {
@@ -199,12 +220,16 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
         ...prev,
         lowQualityProfiles: {
           ...prev.lowQualityProfiles,
-          count: Math.max(0, prev.lowQualityProfiles.count - 1),
-          list: prev.lowQualityProfiles.list.filter(item => item.id !== recordId)
+          count: Math.max(0, (prev.lowQualityProfiles?.count || 1) - 1),
+          list: (prev.lowQualityProfiles?.list || []).filter(item => item.id !== recordId)
         }
       }));
     }
-    setReloadKey(k => k + 1);
+
+    // 3. Trigger silent refresh from backend
+    setTimeout(() => {
+      fetchData(true);
+    }, 150);
   };
 
   if (loading && !metrics) {

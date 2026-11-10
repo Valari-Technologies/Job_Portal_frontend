@@ -445,7 +445,7 @@ export async function fetchWithAuth(url, options = {}) {
   let tokenKey = 'public_access_token';
   let refreshKey = 'public_refresh_token';
 
-  if (pathname.startsWith('/super-admin')) {
+  if (pathname.startsWith('/super-admin') || pathname.startsWith('/super_admin')) {
     tokenKey = 'super_admin_access_token';
     refreshKey = 'super_admin_refresh_token';
   } else if (pathname.startsWith('/admin')) {
@@ -461,6 +461,12 @@ export async function fetchWithAuth(url, options = {}) {
 
   let token = getAuthItem(tokenKey);
   let refreshToken = getAuthItem(refreshKey);
+
+  // Fallback to super_admin or admin tokens if calling admin API
+  if (!token && (url.includes('/accounts/admin/') || pathname.includes('admin'))) {
+    token = getAuthItem('super_admin_access_token') || getAuthItem('admin_access_token');
+    refreshToken = getAuthItem('super_admin_refresh_token') || getAuthItem('admin_refresh_token');
+  }
 
   const headers = {
     ...options.headers,
