@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import logoJobz from '../../../assets/logo-jobz.png';
-import { loginAdmin, loginWithGoogle, clearAllAuthTokens } from '../../../services/auth/adminAuthService';
+import { loginAdmin, loginWithGoogle, clearAllAuthTokens, getAuthItem } from '../../../services/auth/adminAuthService';
 
 export default function AdminPortalLoginForm() {
   const navigate = useNavigate();
@@ -47,10 +47,24 @@ export default function AdminPortalLoginForm() {
   };
 
   useEffect(() => {
+    // If already logged in as Admin / Super Admin, direct to overview
+    const saToken = getAuthItem('super_admin_access_token');
+    const saRole = getAuthItem('super_admin_auth_role');
+    if (saToken && saRole === 'SUPER_ADMIN') {
+      navigate('/super-admin/overview', { replace: true });
+      return;
+    }
+    const adminToken = getAuthItem('admin_access_token');
+    const adminRole = getAuthItem('admin_auth_role');
+    if (adminToken && adminRole === 'ADMIN') {
+      navigate('/admin/dashboard', { replace: true });
+      return;
+    }
+
     return () => {
       if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
     };
-  }, []);
+  }, [navigate]);
 
   const validateField = (fieldName, value) => {
     let errorMsg = '';

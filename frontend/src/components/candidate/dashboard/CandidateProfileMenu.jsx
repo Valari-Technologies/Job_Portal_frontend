@@ -85,7 +85,7 @@ export default function CandidateProfileMenu({ isOpen, onClose }) {
           type="button"
           onClick={() => {
             onClose();
-            requestSignOut(() => navigate('/login'));
+            requestSignOut('candidate');
           }}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
         >

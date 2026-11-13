@@ -83,7 +83,9 @@ import CandidateInterviewsPage from './pages/candidate/CandidateInterviewsPage';
 import CandidateResumePage from './pages/candidate/CandidateResumePage';
 import CandidateProfilePage from './pages/candidate/CandidateProfilePage';
 import CandidateSettingsPage from './pages/candidate/CandidateSettingsPage';
+import CandidateAICopilot from './components/candidate/ai/CandidateAICopilot';
 import { getNotifications } from './pages/superAdmin/superAdminOverview/superAdminOverviewService';
+import { getAuthItem } from './services/auth/adminAuthService';
 
 // Canonical redirect helper for /super_admin/* -> /super-admin/*
 function SuperAdminUnderscoreRedirect() {
@@ -96,9 +98,12 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
-  // Fetch notifications
+  // Fetch notifications only if an active Super Admin session exists
   useEffect(() => {
-    getNotifications().then(setNotifications);
+    const saToken = getAuthItem('super_admin_access_token');
+    if (saToken) {
+      getNotifications().then(setNotifications).catch(() => {});
+    }
   }, []);
 
   const handleToast = (message) => {
@@ -258,30 +263,32 @@ export default function App() {
       />
 
       {/* Employer Routes */}
-      <Route 
-        path="/employer/overview" 
-        element={<EmployerOverview />} 
-      />
-      <Route 
-        path="/employer/jobs" 
-        element={<EmployerJobs />} 
-      />
-      <Route 
-        path="/employer/applications" 
-        element={<EmployerApplications />} 
-      />
-      <Route 
-        path="/employer/interviews" 
-        element={<EmployerInterviews />} 
-      />
-      <Route 
-        path="/employer/messages" 
-        element={<EmployerMessages />} 
-      />
-      <Route 
-        path="/employer/company-profile" 
-        element={<EmployerCompanyProfile />} 
-      />
+      <Route element={<RecruiterPortalWrapper />}>
+        <Route 
+          path="/employer/overview" 
+          element={<EmployerOverview />} 
+        />
+        <Route 
+          path="/employer/jobs" 
+          element={<EmployerJobs />} 
+        />
+        <Route 
+          path="/employer/applications" 
+          element={<EmployerApplications />} 
+        />
+        <Route 
+          path="/employer/interviews" 
+          element={<EmployerInterviews />} 
+        />
+        <Route 
+          path="/employer/messages" 
+          element={<EmployerMessages />} 
+        />
+        <Route 
+          path="/employer/company-profile" 
+          element={<EmployerCompanyProfile />} 
+        />
+      </Route>
       
       {/* Recruiter Portal Routes */}
       <Route element={<RecruiterPortalWrapper />}>
@@ -319,6 +326,7 @@ export default function App() {
       {/* Admin Portal Login Route */}
       <Route path="/admin" element={<AdminPortalLogin />} />
       <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
+      <Route path="/admin-portal" element={<Navigate to="/admin" replace />} />
 
       {/* Persistent Admin Layout routing container */}
       <Route 
@@ -423,6 +431,7 @@ function CandidatePortalWrapper() {
       <CandidateRouteGuard>
         <CandidateUserProvider>
           <Outlet />
+          <CandidateAICopilot />
         </CandidateUserProvider>
       </CandidateRouteGuard>
     </ErrorBoundary>

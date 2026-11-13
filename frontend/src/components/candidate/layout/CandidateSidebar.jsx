@@ -101,7 +101,7 @@ export default function CandidateSidebar() {
 
         <button
           type="button"
-          onClick={() => requestSignOut(() => navigate('/login'))}
+          onClick={() => requestSignOut('candidate')}
           className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-extrabold text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
         >
           <LogOut className="h-4.5 w-4.5 text-slate-500 shrink-0" />

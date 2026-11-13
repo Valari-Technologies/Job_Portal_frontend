@@ -340,8 +340,13 @@ export default function CandidateApplicationsPage() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 pt-0.5">
+                    <div className="shrink-0 pt-0.5 flex flex-col items-end gap-1">
                       {renderStatusBadge(app.status)}
+                      {app.applicationType === 'AI_COPILOT' && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[9px] font-black text-amber-700">
+                          ✨ AI Copilot
+                        </span>
+                      )}
                     </div>
                   </div>
 

@@ -148,7 +148,9 @@ export async function loginAdmin({ email, password, expectedRole }) {
     // Client-side role mismatch safeguard before persisting any session tokens
     if (expectedRole) {
       const exp = expectedRole.toUpperCase().trim();
-      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
+      const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+
+      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE' && !isAdminRole) {
         return {
           success: false,
           message: (user.role === 'HR' || user.role === 'RECRUITER')
@@ -156,7 +158,7 @@ export async function loginAdmin({ email, password, expectedRole }) {
             : "Access denied. Candidate login only.",
         };
       }
-      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
+      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER' && !isAdminRole) {
         return {
           success: false,
           message: user.role === 'CANDIDATE'
@@ -164,7 +166,7 @@ export async function loginAdmin({ email, password, expectedRole }) {
             : "Access denied. HR / Recruiter login only.",
         };
       }
-      if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && !isAdminRole) {
         return {
           success: false,
           message: "Access denied. Candidate and HR users must log in at /login.",
@@ -248,7 +250,9 @@ export async function loginWithGoogle({ token, expectedRole }) {
 
     if (expectedRole) {
       const exp = expectedRole.toUpperCase().trim();
-      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE') {
+      const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+
+      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE' && !isAdminRole) {
         return {
           success: false,
           message: (user.role === 'HR' || user.role === 'RECRUITER')
@@ -256,7 +260,7 @@ export async function loginWithGoogle({ token, expectedRole }) {
             : "Access denied. Candidate login only.",
         };
       }
-      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER') {
+      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER' && !isAdminRole) {
         return {
           success: false,
           message: user.role === 'CANDIDATE'
@@ -333,6 +337,7 @@ export function clearRoleAuthTokens(role) {
       'super_admin_refresh_token',
       'super_admin_auth_user',
       'super_admin_auth_role',
+      'auth_user',
     ];
   } else if (normalized === 'ADMIN') {
     keysToRemove = [
@@ -340,6 +345,7 @@ export function clearRoleAuthTokens(role) {
       'admin_refresh_token',
       'admin_auth_user',
       'admin_auth_role',
+      'auth_user',
     ];
   } else if (normalized === 'HR' || normalized === 'RECRUITER') {
     keysToRemove = [
@@ -347,6 +353,7 @@ export function clearRoleAuthTokens(role) {
       'public_refresh_token',
       'public_auth_user',
       'public_auth_role',
+      'auth_user',
     ];
   } else if (normalized === 'CANDIDATE') {
     keysToRemove = [
@@ -354,6 +361,7 @@ export function clearRoleAuthTokens(role) {
       'candidate_refresh_token',
       'candidate_auth_user',
       'candidate_auth_role',
+      'auth_user',
     ];
   } else {
     clearAllAuthTokens();

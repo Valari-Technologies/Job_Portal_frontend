@@ -140,6 +140,15 @@ export default function Login() {
 
         if (response.success) {
           const role = response.role;
+          if (role === 'SUPER_ADMIN') {
+            window.location.href = '/super-admin/overview';
+            return;
+          }
+          if (role === 'ADMIN') {
+            window.location.href = '/admin/dashboard';
+            return;
+          }
+
           if (activeRole === 'candidate') {
             if (role === 'CANDIDATE') {
               const isCompleted = isCandidateOnboardingCompleted();
@@ -197,6 +206,15 @@ export default function Login() {
 
       if (response.success) {
         const role = response.role;
+        if (role === 'SUPER_ADMIN') {
+          window.location.href = '/super-admin/overview';
+          return;
+        }
+        if (role === 'ADMIN') {
+          window.location.href = '/admin/dashboard';
+          return;
+        }
+
         if (activeRole === 'candidate') {
           if (role === 'CANDIDATE') {
             const isCompleted = isCandidateOnboardingCompleted();
