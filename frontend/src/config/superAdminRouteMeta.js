@@ -92,12 +92,12 @@ export const superAdminRouteMeta = {
   },
   "/super-admin/admins": {
     section: "Admins",
-    label: "Admin"
+    label: "Admin",
+    hideBreadcrumbs: true
   },
   "/super-admin/admins/create": {
     items: [
       { label: "Admins", path: "/super-admin/admins" },
-      { label: "Admin", path: "/super-admin/admins" },
       { label: "Create Admin" }
     ]
   }

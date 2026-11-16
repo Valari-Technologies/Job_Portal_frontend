@@ -104,9 +104,9 @@ export default function SkillsTable({
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs">
+    <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       <div className="w-full overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse min-w-[600px]">
+        <table className="w-full text-left border-collapse min-w-[480px]">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
               <th className="px-5 py-4 w-[38%]">Skill</th>

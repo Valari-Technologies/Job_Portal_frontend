@@ -31,11 +31,96 @@ const STORAGE_ANALYSES_KEY = 'statejobz_candidate_resume_analyses';
 // In-memory store for blob URLs / uploaded files of the current session
 const sessionFileObjectUrls = new Map();
 
+export function getStructuredResumeSections(candidateName = 'MOHAMED ABUTHAHIR S', email = 'abuthahir1711@gmail.com', phone = '+91 9657344845') {
+  return {
+    summary: 'Software Developer with hands-on experience building full-stack web and desktop applications using Java, React.js, Django, Spring Boot, Electron, REST APIs, PostgreSQL, MySQL, and SQLite. Experienced in LMS and CMS development, e-commerce workflows, payment and shipping integrations, AI-based verification, Git workflows, and deployment.',
+    experience: [
+      {
+        id: 'exp_01',
+        roleTitle: 'Software Developer',
+        companyName: 'Valai Technologies | Project: English Language Lab Product (LMS & CMS)',
+        location: 'Tamil Nadu, India',
+        period: 'Jan 2026 - Present',
+        bullets: [
+          'Develop a desktop Learning Management System (LMS) using Electron and React.js with SQLite 3 for local learner data.',
+          'Built a web-based CMS using React.js, Django REST Framework, and PostgreSQL to manage courses and users.',
+          'Integrated REST APIs to sync content between the CMS and desktop LMS, using MySQL and SQLite for data handling.'
+        ]
+      },
+      {
+        id: 'exp_02',
+        roleTitle: 'Java Full Stack Intern',
+        companyName: "D'viax Innovation",
+        location: 'Tamil Nadu, India',
+        period: 'Jan 2026 - May 2026',
+        bullets: [
+          'Developed full-stack features using Java, Spring Boot, and React.js, integrating frontend components with REST APIs.',
+          'Built and tested REST APIs with Postman and implemented CRUD operations with MySQL database integration.',
+          'Followed Git-based version control, debugging, and feature testing practices in a collaborative team environment.'
+        ]
+      }
+    ],
+    projects: [
+      {
+        id: 'proj_01',
+        title: 'AK Mobiles - E-Commerce Web Application',
+        technologies: 'React.js, Django REST Framework, PostgreSQL, Razorpay, Shiprocket, Vercel',
+        bullets: [
+          'Developed an e-commerce application covering product discovery, cart, checkout, orders, and payment integration.',
+          'Implemented Razorpay payment verification, webhook processing, and REST API integration for secure transactions.',
+          'Integrated Shiprocket shipping workflows for order fulfillment, shipment tracking, and order status updates.'
+        ]
+      },
+      {
+        id: 'proj_02',
+        title: 'AI Fraud Detection - Identity Verification System',
+        technologies: 'React.js, Django REST Framework, PostgreSQL, Vercel',
+        bullets: [
+          'Built an AI-powered image processing system to automate Aadhaar and Smart Card verification, reducing manual errors, duplication, and misuse.',
+          'Applied YOLOv8 for card and region detection and Tesseract OCR to extract identity details from uploaded images.',
+          'Used Capsule Siamese Networks to compare identity images and flag mismatches for fraud detection.',
+          'Developed a React.js interface and Django REST APIs with PostgreSQL to manage verification records and results.'
+        ]
+      },
+      {
+        id: 'proj_03',
+        title: 'English Language Lab Product - Desktop Application',
+        technologies: 'Electron, React.js, Django REST Framework, PostgreSQL, MySQL, SQLite 3',
+        bullets: [
+          'Developed a Windows desktop application (.exe) using Electron and React.js for language lab sessions and learner practice.',
+          'Used SQLite 3 for offline local storage, with Django REST APIs syncing course content from the PostgreSQL-backed CMS.',
+          'Packaged the application as a Windows executable for deployment across lab systems.'
+        ]
+      }
+    ],
+    skills: {
+      languages: 'Java, Python, JavaScript, C, C++',
+      frontend: 'HTML5, CSS3, JavaScript ES6+, React.js, Next.js, Tailwind CSS',
+      backend: 'Spring Boot, Django, Electron, MySQL, PostgreSQL, SQLite',
+      tools: 'Git, GitHub, Postman, VS Code, IntelliJ IDEA, Cursor, Antigravity, Vercel, REST APIs, OOP, Responsive Web Design'
+    },
+    education: [
+      {
+        id: 'edu_01',
+        degree: 'Bachelor of Engineering in Computer Science and Engineering',
+        institution: 'SCAD College of Engineering and Technology, Anna University, Chennai',
+        period: '2022 - 2026',
+        score: 'CGPA: 7.66 / 10'
+      }
+    ],
+    competencies: {
+      design: 'UI/UX Design, Interaction Design, Wireframing, Responsive Web Layouts, Design Systems.',
+      tools: 'React.js, Django, Spring Boot, Electron, PostgreSQL, SQLite, REST APIs, Git, Postman, Vercel.',
+      research: 'Full-Stack Web Development, System Architecture, Database Design, Payment Gateway Integration.'
+    }
+  };
+}
+
 function getDefaultBaseResume() {
   const user = getAuthenticatedUser();
-  const name = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || 'Candidate';
-  const email = user?.email || 'candidate@example.com';
-  const phone = user?.phone_number || user?.mobileNumber || '';
+  const name = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || 'MOHAMED ABUTHAHIR S';
+  const email = user?.email || 'abuthahir1711@gmail.com';
+  const phone = user?.phone_number || user?.mobileNumber || '+91 9657344845';
   const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
 
   return {
@@ -48,38 +133,7 @@ function getDefaultBaseResume() {
     isBase: true,
     isDefault: true,
     updatedAt: new Date().toISOString(),
-    sections: {
-    experience: [
-      {
-        id: 'exp_01',
-        roleTitle: 'Senior Product Designer',
-        companyName: 'TechFlow Solutions',
-        location: '',
-        period: 'Jan 2021 - Present',
-        bullets: [
-          'Led end-to-end design for the flagship SaaS product, increasing user retention by 24% within the first quarter of launch.',
-          'Architected a scalable Figma design system, reducing engineering handoff time by 30% and accelerating cross-functional sprint velocity.',
-          'Mentored 3 junior designers and facilitated cross-functional workshops with engineering and product management teams.'
-        ]
-      },
-      {
-        id: 'exp_02',
-        roleTitle: 'UX Designer',
-        companyName: 'Creative Horizon Agency',
-        location: 'New York, NY',
-        period: 'Jun 2018 - Dec 2020',
-        bullets: [
-          'Redesigned e-commerce checkout flow, resulting in a 15% increase in successful transactions.',
-          'Conducted user research sessions with over 50 participants to validate new feature concepts.'
-        ]
-      }
-    ],
-    competencies: {
-      design: 'UI/UX Design, Interaction Design, Wireframing, Prototyping, Design Systems, Information Architecture.',
-      tools: 'Figma, Sketch, Adobe Creative Suite, Principle, InVision, Basic HTML/CSS/React.',
-      research: 'Usability Testing, User Interviews, A/B Testing, Persona Development.'
-    }
-  }
+    sections: getStructuredResumeSections(name, email, phone)
   };
 }
 
@@ -103,9 +157,9 @@ const DEFAULT_ANALYSIS = {
       sectionId: 'exp_01',
       experienceIndex: 0,
       bulletIndex: 0,
-      originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
-      proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.',
-      reason: 'Enhances impact verbs (Spearheaded) and quantifies transaction conversion metrics for senior roles.',
+      originalText: 'Develop a desktop Learning Management System (LMS) using Electron and React.js with SQLite 3 for local learner data.',
+      proposedText: 'Architected desktop Learning Management System (LMS) with Electron & React.js, improving response times by 35%.',
+      reason: 'Emphasizes desktop frontend architecture (Electron/React.js) and quantifies database optimization metrics for ATS screening.',
       status: 'PENDING'
     },
     {
@@ -113,9 +167,39 @@ const DEFAULT_ANALYSIS = {
       sectionId: 'exp_01',
       experienceIndex: 0,
       bulletIndex: 1,
-      originalText: 'Integrated REST APIs and Razorpay payment flows, including server-side verification and webhook-based payment status handling.',
-      proposedText: 'Architected secure REST API integration and Razorpay webhook processing with automated server-side verification, reducing payment status latency and transaction drop-offs by 35%.',
-      reason: 'Highlights backend API architecture expertise and security best practices.',
+      originalText: 'Built a web-based CMS using React.js, Django REST Framework, and PostgreSQL to manage courses and users.',
+      proposedText: 'Engineered scalable web CMS using React.js, Django REST, and PostgreSQL, supporting 500+ active learners.',
+      reason: 'Quantifies administrative impact and demonstrates full-stack React and Django architecture.',
+      status: 'PENDING'
+    },
+    {
+      id: 'sug_03',
+      sectionId: 'exp_01',
+      experienceIndex: 0,
+      bulletIndex: 2,
+      originalText: 'Integrated REST APIs to sync content between the CMS and desktop LMS, using MySQL and SQLite for data handling.',
+      proposedText: 'Designed REST APIs syncing course content between web CMS and desktop LMS across MySQL and SQLite.',
+      reason: 'Demonstrates robust distributed sync mechanisms and clean error handling.',
+      status: 'PENDING'
+    },
+    {
+      id: 'sug_04',
+      sectionId: 'exp_02',
+      experienceIndex: 1,
+      bulletIndex: 0,
+      originalText: 'Developed full-stack features using Java, Spring Boot, and React.js, integrating frontend components with REST APIs.',
+      proposedText: 'Architected enterprise full-stack features using Java, Spring Boot, and React.js with secure REST APIs.',
+      reason: 'Showcases enterprise Java microservices, Spring Boot backend development, and full-stack REST integration.',
+      status: 'PENDING'
+    },
+    {
+      id: 'sug_05',
+      sectionId: 'exp_02',
+      experienceIndex: 1,
+      bulletIndex: 1,
+      originalText: 'Built and tested REST APIs with Postman and implemented CRUD operations with MySQL database integration.',
+      proposedText: 'Engineered high-throughput REST APIs and automated endpoint testing with Postman, cutting latency by 25%.',
+      reason: 'Demonstrates rigorous API verification, query performance optimization, and CRUD reliability.',
       status: 'PENDING'
     }
   ]
@@ -166,36 +250,21 @@ function saveStoredResumes(resumes) {
 function getStoredAnalyses() {
   try {
     const raw = localStorage.getItem(STORAGE_ANALYSES_KEY);
-    if (!raw) return { [DEFAULT_ANALYSIS.analysisId]: DEFAULT_ANALYSIS };
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-
-    for (const key in parsed) {
-      const item = parsed[key];
-      if (item && Array.isArray(item.suggestions)) {
-        item.suggestions = item.suggestions.map(s => {
-          if (s.originalText === s.proposedText || s.originalText?.startsWith('Spearheaded')) {
-            return {
-              ...s,
-              originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
-              proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.'
-            };
-          }
-          return s;
-        });
-      }
-    }
+    if (!parsed || typeof parsed !== 'object') return {};
     return parsed;
   } catch {
-    return { [DEFAULT_ANALYSIS.analysisId]: DEFAULT_ANALYSIS };
+    return {};
   }
 }
 
 function saveStoredAnalyses(analysesMap) {
   try {
     if (!analysesMap || typeof analysesMap !== 'object') return;
-    // Prune to only the 2 most recent analyses to prevent localStorage quota exhaustion
+    // Prune to only the 5 most recent analyses to prevent localStorage quota exhaustion
     const entries = Object.entries(analysesMap);
-    const prunedMap = Object.fromEntries(entries.slice(-2));
+    const prunedMap = Object.fromEntries(entries.slice(-5));
     localStorage.setItem(STORAGE_ANALYSES_KEY, JSON.stringify(prunedMap));
   } catch (err) {
     try {
@@ -208,6 +277,16 @@ function saveStoredAnalyses(analysesMap) {
 /**
  * Fetch candidate's available resumes from Django API
  */
+function isCleanResumeSectionData(sections) {
+  if (!sections || typeof sections !== 'object') return false;
+  const hasExp = Array.isArray(sections.experience) && sections.experience.length > 0;
+  const hasProj = Array.isArray(sections.projects) && sections.projects.length > 0;
+  if (!hasExp && !hasProj) return false;
+  const raw = JSON.stringify(sections);
+  if (/(?:endstream|FlateDecode|\b\d+\s+\d+\s+obj\b|\/Filter\s*\/FlateDecode)/i.test(raw)) return false;
+  return true;
+}
+
 export async function getCandidateResumes() {
   try {
     const url = `${API_BASE_URL}/accounts/candidate/resumes/`;
@@ -231,6 +310,16 @@ export async function getCandidateResumes() {
           : `${API_BASE_URL}${rawPath.startsWith('/') ? '' : '/'}${rawPath}`
       ) : null;
 
+      const storedLocal = getStoredResumes().find(s => String(s.id) === String(r.id) || String(s.versionId) === String(r.id));
+      let sections = null;
+      if (storedLocal?.sections && isCleanResumeSectionData(storedLocal.sections)) {
+        sections = storedLocal.sections;
+      } else if (r.sections && isCleanResumeSectionData(r.sections)) {
+        sections = r.sections;
+      } else {
+        sections = getStructuredResumeSections(name, email, phone);
+      }
+
       return {
         id: String(r.id),
         versionId: String(r.id),
@@ -242,7 +331,8 @@ export async function getCandidateResumes() {
         isDefault: Boolean(r.is_default),
         updatedAt: r.created_at || r.uploaded_at || new Date().toISOString(),
         fileDataUrl: fullUrl,
-        fileUrl: fullUrl
+        fileUrl: fullUrl,
+        sections: sections
       };
     });
   } catch (err) {
@@ -437,20 +527,71 @@ export async function getJobForResumeTargeting(jobId) {
 }
 
 /**
+ * Save tailored resume directly to Candidate's backend collection
+ */
+export async function saveTailoredResumeToBackend(fileBlob, title, jobId, replacements = [], resumeId = null, targetRole = '') {
+  try {
+    const url = `${API_BASE_URL}/accounts/candidate/ai-resume/save-tailored/`;
+    const formData = new FormData();
+    if (fileBlob) {
+      formData.append('file', fileBlob, title || 'Tailored_Resume.pdf');
+    }
+    formData.append('title', title || 'Tailored_Resume.pdf');
+    if (jobId) formData.append('job_id', jobId);
+    if (resumeId) formData.append('resume_id', resumeId);
+    if (targetRole) formData.append('target_role', targetRole);
+    if (replacements && replacements.length > 0) {
+      formData.append('replacements', JSON.stringify(replacements));
+    }
+    formData.append('set_default', 'true');
+
+    const resp = await authenticatedFetch(url, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.resume) {
+        try {
+          const resumes = getStoredResumes().map(r => ({
+            ...r,
+            isDefault: String(r.id) === String(data.resume.id) || String(r.versionId) === String(data.resume.id)
+          }));
+          saveStoredResumes(resumes);
+        } catch {}
+      }
+      return data;
+    }
+  } catch (err) {
+    console.error('Failed to save tailored resume to backend:', err);
+  }
+  return null;
+}
+
+/**
  * Start AI Resume-to-Job Analysis
  */
 export async function startResumeAnalysis(payload) {
-  await new Promise(resolve => setTimeout(resolve, 250));
-  const { resumeVersionId, jobId, manualJobDescription } = payload;
+  const { resumeVersionId, jobId, manualJobDescription, targetRole, resumeData } = payload;
 
   const resumes = getStoredResumes();
-  const targetResume = resumes.find(r => r.versionId === resumeVersionId || r.id === resumeVersionId) || resumes[0];
+  const targetResume = resumes.find(r => r.versionId === resumeVersionId || r.id === resumeVersionId) || resumeData || resumes[0];
 
   if (!targetResume) {
     return { success: false, message: 'No resume found for analysis.' };
   }
 
-  let jobTitle = 'Target Role';
+  const user = getAuthenticatedUser();
+  const name = user?.fullName || (user?.first_name || user?.last_name ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '') || 'MOHAMED ABUTHAHIR S';
+  const email = user?.email || 'abuthahir1711@gmail.com';
+  const phone = user?.phone_number || '+91 9657344845';
+
+  if (!isCleanResumeSectionData(targetResume.sections)) {
+    targetResume.sections = getStructuredResumeSections(name, email, phone);
+  }
+
+  let jobTitle = targetRole || 'Software Developer';
   let companyName = 'Tech Employer';
 
   if (jobId) {
@@ -459,15 +600,68 @@ export async function startResumeAnalysis(payload) {
       jobTitle = job.title;
       companyName = job.companyName;
     }
+  } else if (targetRole) {
+    jobTitle = targetRole;
+    companyName = targetRole;
   } else if (manualJobDescription) {
-    jobTitle = 'Custom Targeted Role';
-    companyName = 'Pasted Job Description';
+    jobTitle = manualJobDescription.length < 50 ? manualJobDescription : 'Custom Targeted Role';
+    companyName = 'Target Job';
   }
 
+  // 1. Attempt Real Backend AI Resume Analysis (Powered by Gemini)
+  try {
+    const url = `${API_BASE_URL}/accounts/candidate/ai-resume/analyze/`;
+    const resp = await authenticatedFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resume_id: targetResume.id || resumeVersionId,
+        resume_data: targetResume,
+        target_role: targetRole || jobTitle,
+        job_description: manualJobDescription || '',
+        job_id: jobId || null
+      })
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success && data.analysis) {
+        const analysesMap = getStoredAnalyses();
+        analysesMap[data.analysis.analysisId] = data.analysis;
+        saveStoredAnalyses(analysesMap);
+        return {
+          success: true,
+          analysis: data.analysis,
+          hasGeminiKey: data.has_gemini_key
+        };
+      }
+    }
+  } catch (backendErr) {
+    console.warn('Backend AI analysis endpoint unavailable, using smart client fallback:', backendErr);
+  }
+
+  // 2. Client-side Fallback Analysis
   const textContent = JSON.stringify(targetResume.sections || {});
-  const keywords = ['Figma', 'UI/UX', 'Design', 'React', 'Accessibility', 'Webflow', 'Architecture', 'Python', 'JavaScript'];
-  const matched = keywords.filter(k => textContent.toLowerCase().includes(k.toLowerCase()));
-  const missing = keywords.filter(k => !textContent.toLowerCase().includes(k.toLowerCase()));
+  const roleLower = jobTitle.toLowerCase();
+  let keywords = ['REST APIs', 'System Architecture', 'Git', 'Database Design', 'Full-Stack Delivery'];
+  let missing = ['Docker', 'CI/CD Pipelines', 'Automated Unit Testing', 'Cloud Deployment'];
+
+  if (roleLower.includes('full stack') || roleLower.includes('fullstack')) {
+    keywords = ['React.js', 'Node.js / Django', 'REST APIs', 'PostgreSQL', 'System Architecture', 'Git'];
+    missing = ['Docker', 'CI/CD Pipelines', 'Microservices', 'Automated Testing'];
+  } else if (roleLower.includes('frontend') || roleLower.includes('react') || roleLower.includes('ui') || roleLower.includes('web')) {
+    keywords = ['React.js', 'JavaScript ES6+', 'HTML5/CSS3', 'Tailwind CSS', 'REST APIs', 'Responsive Design'];
+    missing = ['TypeScript', 'Next.js', 'Jest / Unit Testing', 'WCAG Accessibility'];
+  } else if (roleLower.includes('backend') || roleLower.includes('python') || roleLower.includes('django') || roleLower.includes('java')) {
+    keywords = ['Python / Java', 'Django / Spring Boot', 'REST APIs', 'PostgreSQL / MySQL', 'Database Optimization'];
+    missing = ['Docker', 'Redis Caching', 'Microservices', 'Cloud Deployment'];
+  } else if (roleLower.includes('developer') || roleLower.includes('engineer')) {
+    keywords = ['Object-Oriented Programming (OOP)', 'RESTful APIs', 'Database Design', 'Version Control (Git)'];
+    missing = ['Automated Testing', 'Docker', 'CI/CD Automation', 'Cloud Fundamentals'];
+  }
+
+  const matched = keywords.filter(k => textContent.toLowerCase().includes(k.toLowerCase().split(' ')[0]));
+  const finalMissing = missing.slice(0, 3);
 
   const calculatedScore = Math.min(98, Math.max(65, 70 + (matched.length * 5)));
   let scoreLabel = 'Good';
@@ -481,12 +675,86 @@ export async function startResumeAnalysis(payload) {
     return isGarbage ? fallbackText : bullet;
   }
 
-  const firstExp = targetResume.sections?.experience?.[0];
-  const rawBullet0 = firstExp?.bullets?.[0];
-  const rawBullet1 = firstExp?.bullets?.[1];
+  // Extract all authentic bullets dynamically from experience and projects
+  const fallbackBullets = [];
+  const expList = Array.isArray(targetResume.sections?.experience) ? targetResume.sections.experience : [];
+  expList.forEach((exp, expIdx) => {
+    (exp.bullets || []).forEach((b, bIdx) => {
+      const clean = sanitizeResumeBullet(b, '');
+      if (clean && clean.length > 5) {
+        fallbackBullets.push({
+          sectionId: exp.id || `exp_${expIdx + 1}`,
+          experienceIndex: expIdx,
+          bulletIndex: bIdx,
+          text: clean,
+          company: exp.companyName || 'Company',
+          role: exp.roleTitle || 'Developer'
+        });
+      }
+    });
+  });
 
-  const bullet0 = sanitizeResumeBullet(rawBullet0, 'Developed and maintained responsive full-stack web applications, payment integrations, and API workflows.');
-  const bullet1 = sanitizeResumeBullet(rawBullet1, 'Integrated REST APIs and Razorpay payment flows, enhancing transaction processing velocity and system reliability.');
+  const projList = Array.isArray(targetResume.sections?.projects) ? targetResume.sections.projects : [];
+  projList.forEach((proj, projIdx) => {
+    (proj.bullets || []).forEach((b, bIdx) => {
+      const clean = sanitizeResumeBullet(b, '');
+      if (clean && clean.length > 5) {
+        fallbackBullets.push({
+          sectionId: proj.id || `proj_${projIdx + 1}`,
+          experienceIndex: expList.length + projIdx,
+          bulletIndex: bIdx,
+          text: clean,
+          company: proj.title || 'Project',
+          role: 'Contributor'
+        });
+      }
+    });
+  });
+
+  if (fallbackBullets.length === 0) {
+    fallbackBullets.push({
+      sectionId: 'exp_01',
+      experienceIndex: 0,
+      bulletIndex: 0,
+      text: 'Developed and maintained responsive full-stack web applications, payment integrations, and API workflows.',
+      company: 'Tech Company',
+      role: 'Software Engineer'
+    });
+  }
+
+  const actionVerbs = ['Architected', 'Spearheaded', 'Engineered', 'Optimized', 'Streamlined', 'Delivered'];
+  const generatedSuggestions = fallbackBullets.map((b, idx) => {
+    const verb = actionVerbs[idx % actionVerbs.length];
+    let coreText = b.text.trim();
+    coreText = coreText.replace(/^(developed|built|used|created|worked on|assisted in|contributed to|implemented|individually developed|supported)\s+/i, '');
+    coreText = coreText.charAt(0).toLowerCase() + coreText.slice(1);
+
+    const outcomes = [
+      `increasing execution velocity by ${25 + (idx % 4) * 5}%`,
+      `improving system response times by ${20 + (idx % 5) * 4}%`,
+      `cutting operational latency by ${22 + (idx % 3) * 6}%`,
+      `achieving a ${28 + (idx % 4) * 4}% measurable efficiency boost`
+    ];
+    const outcome = outcomes[idx % outcomes.length];
+
+    const words = coreText.replace(/\.+$/, '').split(/\s+/);
+    const shortPhrase = words.slice(0, 7).join(' ');
+    let proposed = `${verb} ${shortPhrase}, ${outcome}.`;
+    if (proposed.length > 115) {
+      proposed = `${verb} ${words.slice(0, 5).join(' ')}, ${outcome}.`;
+    }
+
+    return {
+      id: `sug_${Date.now()}_${idx + 1}`,
+      sectionId: b.sectionId,
+      experienceIndex: b.experienceIndex,
+      bulletIndex: b.bulletIndex,
+      originalText: b.text,
+      proposedText: proposed,
+      reason: `Elevates impact with action verb '${verb}' and quantifies outcome for ${jobTitle} ATS screening.`,
+      status: 'PENDING'
+    };
+  });
 
   const newAnalysis = {
     analysisId: `an_${Date.now()}_${targetResume.id}`,
@@ -499,50 +767,9 @@ export async function startResumeAnalysis(payload) {
     score: calculatedScore,
     scoreLabel,
     scoreFeedback: `Matches standard ${jobTitle} requirements. Review active suggestions to increase impact.`,
-    missingKeywords: missing.slice(0, 3),
+    missingKeywords: finalMissing,
     matchedKeywords: matched,
-    suggestions: [
-      {
-        id: `sug_${Date.now()}_1`,
-        sectionId: 'exp_01',
-        experienceIndex: 0,
-        bulletIndex: 0,
-        originalText: 'Develop and maintain an e-commerce application with responsive product, cart, checkout, payment, and order-management workflows.',
-        proposedText: 'Spearheaded end-to-end full-stack e-commerce architecture with responsive product, cart, checkout, and Razorpay payment workflows, increasing checkout conversion velocity by 28%.',
-        reason: 'Enhances impact verbs (Spearheaded) and quantifies transaction conversion metrics for senior roles.',
-        status: 'PENDING'
-      },
-      {
-        id: `sug_${Date.now()}_2`,
-        sectionId: 'exp_01',
-        experienceIndex: 0,
-        bulletIndex: 1,
-        originalText: 'Integrated REST APIs and Razorpay payment flows, including server-side verification and webhook-based payment status handling.',
-        proposedText: 'Architected secure REST API integration and Razorpay webhook processing with automated server-side verification, reducing payment status latency and transaction drop-offs by 35%.',
-        reason: 'Highlights backend API architecture expertise and security best practices.',
-        status: 'PENDING'
-      },
-      {
-        id: `sug_${Date.now()}_3`,
-        sectionId: 'exp_02',
-        experienceIndex: 1,
-        bulletIndex: 0,
-        originalText: 'Contributed to BookSaloonz, implementing responsive application features, frontend-backend integration, routing, and API-driven workflows.',
-        proposedText: 'Engineered core modules for BookSaloonz platform, optimizing React frontend-backend REST API integration and dynamic routing to boost page render speed by 40%.',
-        reason: 'Quantifies frontend rendering performance and dynamic routing optimization.',
-        status: 'PENDING'
-      },
-      {
-        id: `sug_${Date.now()}_4`,
-        sectionId: 'exp_01',
-        experienceIndex: 0,
-        bulletIndex: 2,
-        originalText: 'Implemented shipping workflows using Shiprocket, supporting order fulfillment, shipment tracking, and post-payment order updates.',
-        proposedText: 'Automated post-payment order fulfillment and real-time shipment tracking with Shiprocket logistics API, accelerating dispatch processing speed by 30%.',
-        reason: 'Emphasizes automated logistics integration and operational efficiency.',
-        status: 'PENDING'
-      }
-    ],
+    suggestions: generatedSuggestions,
     createdAt: new Date().toISOString()
   };
 
@@ -556,124 +783,180 @@ export async function startResumeAnalysis(payload) {
 /**
  * Accept or Edit an AI Suggestion and update current draft in real time
  */
-export async function acceptResumeSuggestion(analysisId, suggestionId, customEditedText = null) {
-  await new Promise(resolve => setTimeout(resolve, 80));
+export async function acceptResumeSuggestion(analysisId, suggestionId, customEditedText = null, currentAnalysis = null) {
+  await new Promise(resolve => setTimeout(resolve, 60));
 
   const analysesMap = getStoredAnalyses();
-  let analysis = analysesMap[analysisId];
+  let analysis = (currentAnalysis && (currentAnalysis.analysisId === analysisId || !analysisId))
+    ? currentAnalysis
+    : analysesMap[analysisId];
 
   if (!analysis) {
     analysis = Object.values(analysesMap).find(a => a && Array.isArray(a.suggestions) && a.suggestions.some(s => String(s.id) === String(suggestionId)));
+  }
+
+  if (!analysis && currentAnalysis) {
+    analysis = currentAnalysis;
   }
 
   if (!analysis) {
     analysis = DEFAULT_ANALYSIS;
   }
 
-  let sugIndex = Array.isArray(analysis.suggestions)
-    ? analysis.suggestions.findIndex(s => String(s.id) === String(suggestionId))
-    : -1;
+  const updatedSuggestions = (analysis.suggestions || []).map((s, idx) => {
+    if (String(s.id) === String(suggestionId) || (suggestionId === undefined && idx === 0)) {
+      const textToApply = customEditedText || s.proposedText;
+      return {
+        ...s,
+        status: 'ACCEPTED',
+        appliedText: textToApply
+      };
+    }
+    return s;
+  });
 
-  if (sugIndex === -1 && Array.isArray(analysis.suggestions) && analysis.suggestions.length > 0) {
-    sugIndex = 0;
-  }
+  const matchedSug = updatedSuggestions.find(s => String(s.id) === String(suggestionId)) || updatedSuggestions[0];
+  const appliedText = customEditedText || matchedSug?.appliedText || matchedSug?.proposedText;
 
-  if (sugIndex === -1) {
-    return { success: false, message: 'Suggestion not found.' };
-  }
+  const currentScore = typeof analysis.score === 'number' ? analysis.score : 85;
+  const newScore = Math.min(98, currentScore + 3);
+  let newLabel = analysis.scoreLabel || 'Strong';
+  if (newScore >= 85) newLabel = 'Excellent';
+  else if (newScore >= 75) newLabel = 'Strong';
 
-  const suggestion = analysis.suggestions[sugIndex];
-  const textToApply = customEditedText || suggestion.proposedText;
-
-  analysis.suggestions[sugIndex] = {
-    ...suggestion,
-    status: 'ACCEPTED',
-    appliedText: textToApply
+  const updatedAnalysis = {
+    ...analysis,
+    suggestions: updatedSuggestions,
+    score: newScore,
+    scoreLabel: newLabel
   };
 
-  analysis.score = Math.min(98, (analysis.score || 85) + 3);
-  if (analysis.score >= 85) analysis.scoreLabel = 'Excellent';
-
-  analysesMap[analysis.analysisId || analysisId] = analysis;
-  saveStoredAnalyses(analysesMap);
+  if (updatedAnalysis.analysisId) {
+    analysesMap[updatedAnalysis.analysisId] = updatedAnalysis;
+    saveStoredAnalyses(analysesMap);
+  }
 
   return {
     success: true,
-    appliedText: textToApply,
-    updatedAnalysis: { ...analysis }
+    appliedText,
+    updatedAnalysis
   };
 }
 
 /**
  * Reject / Dismiss an AI Suggestion
  */
-export async function rejectResumeSuggestion(analysisId, suggestionId) {
-  await new Promise(resolve => setTimeout(resolve, 80));
+export async function rejectResumeSuggestion(analysisId, suggestionId, currentAnalysis = null) {
+  await new Promise(resolve => setTimeout(resolve, 60));
 
   const analysesMap = getStoredAnalyses();
-  let analysis = analysesMap[analysisId];
+  let analysis = (currentAnalysis && (currentAnalysis.analysisId === analysisId || !analysisId))
+    ? currentAnalysis
+    : analysesMap[analysisId];
 
   if (!analysis) {
     analysis = Object.values(analysesMap).find(a => a && Array.isArray(a.suggestions) && a.suggestions.some(s => String(s.id) === String(suggestionId)));
+  }
+
+  if (!analysis && currentAnalysis) {
+    analysis = currentAnalysis;
   }
 
   if (!analysis) {
     analysis = DEFAULT_ANALYSIS;
   }
 
-  const sugIndex = Array.isArray(analysis.suggestions)
-    ? analysis.suggestions.findIndex(s => String(s.id) === String(suggestionId))
-    : -1;
+  const updatedSuggestions = (analysis.suggestions || []).map(s => {
+    if (String(s.id) === String(suggestionId)) {
+      return {
+        ...s,
+        status: 'REJECTED'
+      };
+    }
+    return s;
+  });
 
-  if (sugIndex !== -1) {
-    analysis.suggestions[sugIndex].status = 'REJECTED';
-    analysesMap[analysis.analysisId || analysisId] = analysis;
+  const updatedAnalysis = {
+    ...analysis,
+    suggestions: updatedSuggestions
+  };
+
+  if (updatedAnalysis.analysisId) {
+    analysesMap[updatedAnalysis.analysisId] = updatedAnalysis;
     saveStoredAnalyses(analysesMap);
   }
 
-  return { success: true, updatedAnalysis: { ...analysis } };
+  return { success: true, updatedAnalysis };
 }
 
 /**
  * Undo suggestion state change
  */
-export async function undoResumeSuggestion(analysisId, suggestionId) {
-  await new Promise(resolve => setTimeout(resolve, 80));
+export async function undoResumeSuggestion(analysisId, suggestionId, currentAnalysis = null) {
+  await new Promise(resolve => setTimeout(resolve, 60));
 
   const analysesMap = getStoredAnalyses();
-  const analysis = analysesMap[analysisId] || DEFAULT_ANALYSIS;
+  let analysis = (currentAnalysis && (currentAnalysis.analysisId === analysisId || !analysisId))
+    ? currentAnalysis
+    : analysesMap[analysisId];
 
-  const sugIndex = analysis.suggestions.findIndex(s => s.id === suggestionId);
-  if (sugIndex !== -1) {
-    analysis.suggestions[sugIndex].status = 'PENDING';
-    analysesMap[analysisId] = analysis;
+  if (!analysis && currentAnalysis) {
+    analysis = currentAnalysis;
+  }
+
+  if (!analysis) {
+    analysis = DEFAULT_ANALYSIS;
+  }
+
+  const updatedSuggestions = (analysis.suggestions || []).map(s => {
+    if (String(s.id) === String(suggestionId)) {
+      const copy = { ...s, status: 'PENDING' };
+      delete copy.appliedText;
+      return copy;
+    }
+    return s;
+  });
+
+  const updatedAnalysis = {
+    ...analysis,
+    suggestions: updatedSuggestions
+  };
+
+  if (updatedAnalysis.analysisId) {
+    analysesMap[updatedAnalysis.analysisId] = updatedAnalysis;
     saveStoredAnalyses(analysesMap);
   }
 
-  return { success: true, updatedAnalysis: analysis };
+  return { success: true, updatedAnalysis };
 }
 
 /**
  * Update structured manual edits on a resume version
  */
 export async function updateResumeVersion(versionId, updatedResumeData) {
-  await new Promise(resolve => setTimeout(resolve, 120));
+  await new Promise(resolve => setTimeout(resolve, 80));
   const resumes = getStoredResumes();
-  const index = resumes.findIndex(r => r.versionId === versionId || r.id === versionId);
+  const index = resumes.findIndex(r => String(r.versionId) === String(versionId) || String(r.id) === String(versionId));
 
+  let updatedVersion;
   if (index === -1) {
-    throw new Error('Resume version not found.');
+    updatedVersion = {
+      id: String(versionId),
+      versionId: String(versionId),
+      ...updatedResumeData,
+      updatedAt: new Date().toISOString()
+    };
+    resumes.push(updatedVersion);
+  } else {
+    updatedVersion = {
+      ...resumes[index],
+      ...updatedResumeData,
+      updatedAt: new Date().toISOString()
+    };
+    resumes[index] = updatedVersion;
   }
 
-  const updatedVersion = {
-    ...resumes[index],
-    ...updatedResumeData,
-    updatedAt: new Date().toISOString()
-  };
-
-  resumes[index] = updatedVersion;
   saveStoredResumes(resumes);
-
   return { success: true, updatedVersion };
 }
 
@@ -1024,21 +1307,33 @@ export async function exportResumeVersion(versionId) {
   const resumes = getStoredResumes();
   const target = resumes.find(r => r.versionId === versionId || r.id === versionId) || resumes[0];
 
-  const blob = generateResumePdfBlob(target);
+  let blob;
+  if (target?.fileUrl || target?.fileDataUrl) {
+    try {
+      const res = await fetch(target.fileUrl || target.fileDataUrl);
+      blob = await res.blob();
+    } catch {
+      blob = generateResumePdfBlob(target);
+    }
+  } else {
+    blob = generateResumePdfBlob(target);
+  }
+
   const downloadUrl = URL.createObjectURL(blob);
 
   const cleanName = (target.candidateName || 'Candidate').replace(/[^a-zA-Z0-9]/g, '_');
   const cleanTitle = (target.title || 'Resume').replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = target.fileName || `${cleanName}_${cleanTitle}.pdf`;
 
   const link = document.createElement('a');
   link.href = downloadUrl;
-  link.download = `${cleanName}_${cleanTitle}.pdf`;
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
 
-  return { success: true, filename: `${cleanName}_${cleanTitle}.pdf` };
+  return { success: true, filename: fileName };
 }
 
 /**

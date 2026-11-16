@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function OverviewChart({ data, range, onRangeChange }) {
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h3 className="text-xl font-bold text-slate-800">Applications & registrations</h3>

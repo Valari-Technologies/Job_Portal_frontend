@@ -15,7 +15,9 @@ import {
   downloadOriginalResume,
   uploadCandidateResume,
   deleteCandidateResume,
-  updateResumeVersion
+  updateResumeVersion,
+  saveTailoredResumeToBackend,
+  generateResumePdfBlob
 } from '../../services/candidate/candidateResumeService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
 import {
@@ -38,7 +40,8 @@ import {
   Plus,
   Trash2,
   FileType,
-  FileCode
+  FileCode,
+  Target
 } from 'lucide-react';
 
 export default function CandidateResumePage() {
@@ -80,6 +83,7 @@ export default function CandidateResumePage() {
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [currentBatch, setCurrentBatch] = useState(0);
 
   // Edit Suggestion State
   const [isEditingSuggestion, setIsEditingSuggestion] = useState(false);
@@ -172,18 +176,25 @@ export default function CandidateResumePage() {
 
       if (jobData) {
         setTargetJob(jobData);
+        setPastedJd(jobData.title || '');
       }
 
-      if (defaultOrFirst) {
+      if (defaultOrFirst && jobData?.id) {
         setIsAnalyzing(true);
         const initialAnalysisRes = await startResumeAnalysis({
           resumeVersionId: defaultOrFirst.versionId || defaultOrFirst.id,
-          jobId: jobData?.id || 'job_techflow_01'
+          resumeData: defaultOrFirst,
+          targetRole: jobData.title,
+          jobId: jobData.id,
+          manualJobDescription: jobData.description || null
         });
 
         if (initialAnalysisRes.success) {
           setAnalysis(initialAnalysisRes.analysis);
         }
+        setIsAnalyzing(false);
+      } else {
+        setAnalysis(null);
         setIsAnalyzing(false);
       }
     } catch (err) {
@@ -214,19 +225,28 @@ export default function CandidateResumePage() {
 
         if (jobData) {
           setTargetJob(jobData);
+          setPastedJd(jobData.title || '');
         }
 
-        if (defaultOrFirst) {
+        if (defaultOrFirst && jobData?.id) {
           setIsAnalyzing(true);
           const initialAnalysisRes = await startResumeAnalysis({
             resumeVersionId: defaultOrFirst.versionId || defaultOrFirst.id,
-            jobId: jobData?.id || 'job_techflow_01'
+            resumeData: defaultOrFirst,
+            targetRole: jobData.title,
+            jobId: jobData.id,
+            manualJobDescription: jobData.description || null
           });
 
           if (isMounted && initialAnalysisRes.success) {
             setAnalysis(initialAnalysisRes.analysis);
           }
           if (isMounted) setIsAnalyzing(false);
+        } else {
+          if (isMounted) {
+            setAnalysis(null);
+            setIsAnalyzing(false);
+          }
         }
       } catch (err) {
         console.error('Failed to load candidate resume workspace:', err);
@@ -246,6 +266,13 @@ export default function CandidateResumePage() {
     setIsDropdownOpen(false);
     setCurrentResume(targetResume);
 
+    // If no target job and no role specified, clear analysis and wait for user role input
+    if (!targetJob?.id && !pastedJd.trim()) {
+      setAnalysis(null);
+      setIsAnalyzing(false);
+      return;
+    }
+
     // Immediately clear previous AI analysis state
     setAnalysis(null);
     setIsAnalyzing(true);
@@ -253,12 +280,15 @@ export default function CandidateResumePage() {
     try {
       const res = await startResumeAnalysis({
         resumeVersionId: targetResume.versionId || targetResume.id,
+        resumeData: targetResume,
+        targetRole: pastedJd.trim() || targetJob?.title || 'Software Developer',
         jobId: targetJob?.id || null,
         manualJobDescription: pastedJd.trim() || null
       });
 
       if (res.success) {
         setAnalysis(res.analysis);
+        setCurrentBatch(0);
         setActiveSuggestionIndex(0);
       }
     } catch (err) {
@@ -301,20 +331,37 @@ export default function CandidateResumePage() {
   };
 
   // Action: Trigger new AI analysis
-  const handleRunAnalysis = async () => {
+  const handleRunAnalysis = async (roleOverride) => {
     if (!currentResume) return;
+
+    const roleToTarget = (typeof roleOverride === 'string' && roleOverride.trim())
+      ? roleOverride.trim()
+      : (pastedJd.trim() || targetJob?.title || '');
+
+    if (!roleToTarget) {
+      triggerToast('Please select or enter a target role to generate AI suggestions.');
+      return;
+    }
+
+    if (typeof roleOverride === 'string' && roleOverride.trim()) {
+      setPastedJd(roleOverride.trim());
+    }
+
     setIsAnalyzing(true);
     try {
       const res = await startResumeAnalysis({
         resumeVersionId: currentResume.versionId || currentResume.id,
+        resumeData: currentResume,
+        targetRole: roleToTarget,
         jobId: targetJob?.id || null,
-        manualJobDescription: pastedJd.trim() || null
+        manualJobDescription: (pastedJd.trim().length > 50) ? pastedJd.trim() : (targetJob?.description || null)
       });
 
       if (res.success) {
         setAnalysis(res.analysis);
+        setCurrentBatch(0);
         setActiveSuggestionIndex(0);
-        triggerToast('AI Resume Analysis updated!');
+        triggerToast(`AI Suggestions tailored for ${roleToTarget}!`);
       }
     } catch (err) {
       console.error('Error running AI analysis:', err);
@@ -330,25 +377,78 @@ export default function CandidateResumePage() {
     const textToApply = isEditingSuggestion ? editedText : suggestion.proposedText;
 
     try {
-      const res = await acceptResumeSuggestion(analysis.analysisId, suggestion.id, textToApply);
+      const res = await acceptResumeSuggestion(analysis.analysisId, suggestion.id, textToApply, analysis);
       if (res.success) {
-        setAnalysis(res.updatedAnalysis);
+        const updatedAnalysis = res.updatedAnalysis || analysis;
+        setAnalysis(updatedAnalysis);
 
         const targetExpIdx = suggestion.experienceIndex ?? 0;
         const targetBulletIdx = suggestion.bulletIndex ?? 0;
+        const isProject = String(suggestion.sectionId).startsWith('proj');
 
-        const updatedExp = (currentResume.sections?.experience || []).map((exp, idx) => {
-          if (exp.id === suggestion.sectionId || idx === targetExpIdx) {
-            const newBullets = [...(exp.bullets || [])];
-            newBullets[targetBulletIdx] = textToApply;
-            return { ...exp, bullets: newBullets };
+        let updatedSections = { ...(currentResume.sections || {}) };
+        let replaced = false;
+
+        // 1. Precise match by original bullet text
+        if (suggestion.originalText) {
+          const origTrim = suggestion.originalText.trim().toLowerCase();
+          if (Array.isArray(updatedSections.experience)) {
+            updatedSections.experience = updatedSections.experience.map(exp => {
+              if (!replaced && Array.isArray(exp.bullets)) {
+                const bIdx = exp.bullets.findIndex(b => typeof b === 'string' && b.trim().toLowerCase() === origTrim);
+                if (bIdx !== -1) {
+                  const newBullets = [...exp.bullets];
+                  newBullets[bIdx] = textToApply;
+                  replaced = true;
+                  return { ...exp, bullets: newBullets };
+                }
+              }
+              return exp;
+            });
           }
-          return exp;
-        });
+
+          if (!replaced && Array.isArray(updatedSections.projects)) {
+            updatedSections.projects = updatedSections.projects.map(proj => {
+              if (!replaced && Array.isArray(proj.bullets)) {
+                const bIdx = proj.bullets.findIndex(b => typeof b === 'string' && b.trim().toLowerCase() === origTrim);
+                if (bIdx !== -1) {
+                  const newBullets = [...proj.bullets];
+                  newBullets[bIdx] = textToApply;
+                  replaced = true;
+                  return { ...proj, bullets: newBullets };
+                }
+              }
+              return proj;
+            });
+          }
+        }
+
+        // 2. Index-based fallback if text didn't match exactly
+        if (!replaced) {
+          if (isProject && Array.isArray(updatedSections.projects)) {
+            updatedSections.projects = updatedSections.projects.map((proj, idx) => {
+              if (proj.id === suggestion.sectionId || idx === (targetExpIdx - (updatedSections.experience?.length || 0))) {
+                const newBullets = [...(proj.bullets || [])];
+                newBullets[targetBulletIdx] = textToApply;
+                return { ...proj, bullets: newBullets };
+              }
+              return proj;
+            });
+          } else if (Array.isArray(updatedSections.experience)) {
+            updatedSections.experience = updatedSections.experience.map((exp, idx) => {
+              if (exp.id === suggestion.sectionId || idx === targetExpIdx) {
+                const newBullets = [...(exp.bullets || [])];
+                newBullets[targetBulletIdx] = textToApply;
+                return { ...exp, bullets: newBullets };
+              }
+              return exp;
+            });
+          }
+        }
 
         const updatedResume = {
           ...currentResume,
-          sections: { ...currentResume.sections, experience: updatedExp }
+          sections: updatedSections
         };
 
         setCurrentResume(updatedResume);
@@ -363,7 +463,16 @@ export default function CandidateResumePage() {
         }
 
         setIsEditingSuggestion(false);
-        triggerToast('Suggestion applied to Current Draft!');
+
+        // Auto-advance to next pending suggestion in current batch
+        const batchSlice = (updatedAnalysis.suggestions || []).slice(currentBatch * 5, (currentBatch + 1) * 5);
+        const nextPending = batchSlice.findIndex((s, idx) => idx > activeSuggestionIndex && s.status !== 'ACCEPTED');
+        if (nextPending !== -1) {
+          setActiveSuggestionIndex(nextPending);
+          triggerToast(`Change applied! Showing next suggestion (${nextPending + 1} of ${batchSlice.length}).`);
+        } else {
+          triggerToast('Suggestion applied to Current Draft!');
+        }
       } else {
         triggerToast(res.message || 'Failed to apply suggestion.');
       }
@@ -373,12 +482,13 @@ export default function CandidateResumePage() {
     }
   };
 
-  // Action: Apply All Pending AI Suggestions
+  // Action: Apply All Pending AI Suggestions in Active Batch
   const handleApplyAllSuggestions = async () => {
     if (!analysis || !currentResume || !analysis.suggestions?.length) return;
-    const pending = analysis.suggestions.filter(s => s.status !== 'ACCEPTED');
+    const batchSlice = (analysis.suggestions || []).slice(currentBatch * 5, (currentBatch + 1) * 5);
+    const pending = batchSlice.filter(s => s.status !== 'ACCEPTED');
     if (pending.length === 0) {
-      triggerToast('All AI suggestions have already been applied!');
+      triggerToast('All AI suggestions in this batch have already been applied!');
       return;
     }
 
@@ -386,24 +496,74 @@ export default function CandidateResumePage() {
     let latestAnalysis = { ...analysis };
 
     for (const sug of pending) {
-      const res = await acceptResumeSuggestion(latestAnalysis.analysisId, sug.id, sug.proposedText);
+      const res = await acceptResumeSuggestion(latestAnalysis.analysisId, sug.id, sug.proposedText, latestAnalysis);
       if (res.success) {
         latestAnalysis = res.updatedAnalysis;
         const targetExpIdx = sug.experienceIndex ?? 0;
         const targetBulletIdx = sug.bulletIndex ?? 0;
+        const isProject = String(sug.sectionId).startsWith('proj');
 
-        const updatedExp = (updatedResume.sections?.experience || []).map((exp, idx) => {
-          if (exp.id === sug.sectionId || idx === targetExpIdx) {
-            const newBullets = [...(exp.bullets || [])];
-            newBullets[targetBulletIdx] = sug.proposedText;
-            return { ...exp, bullets: newBullets };
+        let updatedSections = { ...(updatedResume.sections || {}) };
+        let replaced = false;
+
+        if (sug.originalText) {
+          const origTrim = sug.originalText.trim().toLowerCase();
+          if (Array.isArray(updatedSections.experience)) {
+            updatedSections.experience = updatedSections.experience.map(exp => {
+              if (!replaced && Array.isArray(exp.bullets)) {
+                const bIdx = exp.bullets.findIndex(b => typeof b === 'string' && b.trim().toLowerCase() === origTrim);
+                if (bIdx !== -1) {
+                  const newBullets = [...exp.bullets];
+                  newBullets[bIdx] = sug.proposedText;
+                  replaced = true;
+                  return { ...exp, bullets: newBullets };
+                }
+              }
+              return exp;
+            });
           }
-          return exp;
-        });
+
+          if (!replaced && Array.isArray(updatedSections.projects)) {
+            updatedSections.projects = updatedSections.projects.map(proj => {
+              if (!replaced && Array.isArray(proj.bullets)) {
+                const bIdx = proj.bullets.findIndex(b => typeof b === 'string' && b.trim().toLowerCase() === origTrim);
+                if (bIdx !== -1) {
+                  const newBullets = [...proj.bullets];
+                  newBullets[bIdx] = sug.proposedText;
+                  replaced = true;
+                  return { ...proj, bullets: newBullets };
+                }
+              }
+              return proj;
+            });
+          }
+        }
+
+        if (!replaced) {
+          if (isProject && Array.isArray(updatedSections.projects)) {
+            updatedSections.projects = updatedSections.projects.map((proj, idx) => {
+              if (proj.id === sug.sectionId || idx === (targetExpIdx - (updatedSections.experience?.length || 0))) {
+                const newBullets = [...(proj.bullets || [])];
+                newBullets[targetBulletIdx] = sug.proposedText;
+                return { ...proj, bullets: newBullets };
+              }
+              return proj;
+            });
+          } else if (Array.isArray(updatedSections.experience)) {
+            updatedSections.experience = updatedSections.experience.map((exp, idx) => {
+              if (exp.id === sug.sectionId || idx === targetExpIdx) {
+                const newBullets = [...(exp.bullets || [])];
+                newBullets[targetBulletIdx] = sug.proposedText;
+                return { ...exp, bullets: newBullets };
+              }
+              return exp;
+            });
+          }
+        }
 
         updatedResume = {
           ...updatedResume,
-          sections: { ...updatedResume.sections, experience: updatedExp }
+          sections: updatedSections
         };
       }
     }
@@ -421,7 +581,7 @@ export default function CandidateResumePage() {
   const handleRejectSuggestion = async (suggestionId) => {
     if (!analysis) return;
     try {
-      const res = await rejectResumeSuggestion(analysis.analysisId, suggestionId);
+      const res = await rejectResumeSuggestion(analysis.analysisId, suggestionId, analysis);
       if (res.success) {
         setAnalysis(res.updatedAnalysis);
         triggerToast('Suggestion dismissed.');
@@ -435,7 +595,7 @@ export default function CandidateResumePage() {
   const handleUndoSuggestion = async (suggestionId) => {
     if (!analysis) return;
     try {
-      const res = await undoResumeSuggestion(analysis.analysisId, suggestionId);
+      const res = await undoResumeSuggestion(analysis.analysisId, suggestionId, analysis);
       if (res.success) {
         setAnalysis(res.updatedAnalysis);
         triggerToast('Suggestion reset.');
@@ -569,15 +729,22 @@ export default function CandidateResumePage() {
           }, 1200);
         }
 
-        // Re-analyze newly uploaded resume specifically
-        setIsAnalyzing(true);
-        startResumeAnalysis({
-          resumeVersionId: res.resume.versionId || res.resume.id,
-          jobId: targetJob?.id || 'job_techflow_01'
-        }).then(analysisRes => {
-          if (analysisRes.success) setAnalysis(analysisRes.analysis);
+        // Re-analyze newly uploaded resume specifically if role or job is present
+        if (targetJob?.id || pastedJd.trim()) {
+          setIsAnalyzing(true);
+          startResumeAnalysis({
+            resumeVersionId: res.resume.versionId || res.resume.id,
+            resumeData: res.resume,
+            targetRole: pastedJd.trim() || targetJob?.title || 'Software Developer',
+            jobId: targetJob?.id || null
+          }).then(analysisRes => {
+            if (analysisRes.success) setAnalysis(analysisRes.analysis);
+            setIsAnalyzing(false);
+          });
+        } else {
+          setAnalysis(null);
           setIsAnalyzing(false);
-        });
+        }
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -592,20 +759,73 @@ export default function CandidateResumePage() {
     if (!currentResume) return;
 
     try {
-      if (currentResume.id) {
-        try {
-          await setCandidateDefaultResume(currentResume.id);
-        } catch {
-          // non-critical default resume setting
+      let resumeIdToUse = currentResume.id || currentResume.versionId;
+
+      triggerToast('Generating tailored resume for your application...');
+      try {
+        const acceptedSuggestions = (analysis?.suggestions || []).filter(s => s.status === 'ACCEPTED');
+        const replacements = acceptedSuggestions.map(s => ({
+          original_text: s.originalText || '',
+          new_text: s.proposedText || ''
+        }));
+
+        const rawRole = (pastedJd.trim() || analysis?.targetRole || analysis?.jobTitle || targetJob?.title || '').trim();
+        const cleanRole = rawRole.slice(0, 30).replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        const cleanBase = (currentResume.fileName || currentResume.title || 'Resume.pdf').replace(/^(Tailored_|Job_)+/gi, '');
+        const fileName = cleanRole ? `${cleanRole}_${cleanBase}` : `Tailored_${cleanBase}`;
+
+        const savedRes = await saveTailoredResumeToBackend(
+          null,
+          fileName,
+          targetJob?.id || jobIdParam,
+          replacements,
+          currentResume.id || currentResume.versionId,
+          rawRole
+        );
+
+        if (savedRes && savedRes.resume) {
+          resumeIdToUse = savedRes.resume.id;
+          triggerToast('Tailored resume created & saved with your improvements!');
+
+          const rawPath = savedRes.resume.file_path || '';
+          const fullUrl = rawPath ? (
+            rawPath.startsWith('http') || rawPath.startsWith('data:')
+              ? rawPath
+              : `${API_BASE_URL}${rawPath.startsWith('/') ? '' : '/'}${rawPath}`
+          ) : null;
+
+          const tailoredRecord = {
+            id: String(savedRes.resume.id),
+            versionId: String(savedRes.resume.id),
+            title: savedRes.resume.file_name,
+            fileName: savedRes.resume.file_name,
+            isBase: false,
+            isDefault: true,
+            updatedAt: savedRes.resume.created_at || new Date().toISOString(),
+            fileDataUrl: fullUrl,
+            fileUrl: fullUrl,
+            sections: currentResume.sections
+          };
+
+          setResumes(prev => [tailoredRecord, ...prev.filter(r => r.id !== tailoredRecord.id).map(r => ({ ...r, isDefault: false }))]);
+          setCurrentResume(tailoredRecord);
+          sessionStorage.setItem('active_apply_resume_id', String(savedRes.resume.id));
         }
+      } catch (saveTailoredErr) {
+        console.warn('Could not auto-save tailored PDF to backend, continuing with active resume:', saveTailoredErr);
       }
 
+      sessionStorage.setItem('active_apply_resume_id', String(resumeIdToUse));
+
       if (jobIdParam) {
-        triggerToast('Active resume selected for application!');
-        navigate(`/candidate/jobs/${jobIdParam}/apply?resumeId=${currentResume.id || currentResume.versionId}`);
+        triggerToast('Active tailored resume selected! Opening application...');
+        navigate(`/candidate/jobs/${jobIdParam}/apply?resumeId=${resumeIdToUse}`);
+      } else if (targetJob?.id) {
+        triggerToast('Active tailored resume selected! Opening application...');
+        navigate(`/candidate/jobs/${targetJob.id}/apply?resumeId=${resumeIdToUse}`);
       } else {
-        triggerToast('Resume selected! Choose a job position to apply.');
-        navigate('/candidate/jobs');
+        triggerToast('Tailored resume ready! Choose a job to apply.');
+        navigate(`/candidate/jobs?resumeId=${resumeIdToUse}`);
       }
     } catch (err) {
       console.error('Error applying with resume:', err);
@@ -626,7 +846,27 @@ export default function CandidateResumePage() {
 
   const firstName = profile?.firstName || 'Candidate';
   const userAvatar = profile?.avatarUrl;
-  const currentSuggestion = analysis?.suggestions?.[activeSuggestionIndex] || analysis?.suggestions?.[0];
+
+  const BATCH_SIZE = 5;
+  const allSuggestions = analysis?.suggestions || [];
+  const totalBatches = Math.max(1, Math.ceil(allSuggestions.length / BATCH_SIZE));
+  const safeBatch = Math.min(currentBatch, totalBatches - 1);
+  const currentBatchSuggestions = allSuggestions.slice(safeBatch * BATCH_SIZE, (safeBatch + 1) * BATCH_SIZE);
+  const currentSuggestion = currentBatchSuggestions[activeSuggestionIndex] || currentBatchSuggestions[0] || null;
+
+  const handleCycleNextBatch = () => {
+    if (!allSuggestions || allSuggestions.length <= BATCH_SIZE) {
+      handleRunAnalysis();
+      return;
+    }
+    const nextBatch = (safeBatch + 1) % totalBatches;
+    setCurrentBatch(nextBatch);
+    setActiveSuggestionIndex(0);
+    setIsEditingSuggestion(false);
+    const startNum = nextBatch * BATCH_SIZE + 1;
+    const endNum = Math.min((nextBatch + 1) * BATCH_SIZE, allSuggestions.length);
+    triggerToast(`Loaded next 5 suggestions (Batch ${nextBatch + 1} of ${totalBatches}: Bullets ${startNum}–${endNum})`);
+  };
 
   return (
     <CandidateLayout>
@@ -881,7 +1121,7 @@ export default function CandidateResumePage() {
                 </div>
               </div>
 
-              {/* DOCUMENT PREVIEW SHEET */}
+              {/* DOCUMENT PREVIEW SHEET (CLEAN PDF VIEWER) */}
               {!currentResume ? (
                 <div className="bg-white shadow-md border border-slate-200/80 p-12 rounded-2xl text-center space-y-4 max-w-2xl mx-auto">
                   <FileText className="h-12 w-12 text-slate-300 mx-auto" />
@@ -900,7 +1140,7 @@ export default function CandidateResumePage() {
                     <span>Upload Resume</span>
                   </button>
                 </div>
-              ) : currentResume.fileUrl || currentResume.fileDataUrl ? (
+              ) : (
                 <div className="bg-white shadow-md border border-slate-200/80 rounded-2xl overflow-hidden max-w-2xl mx-auto space-y-0">
                   {/* Document Header Bar */}
                   <div className="bg-slate-100 border-b border-slate-200 px-4 py-3 flex items-center justify-between text-xs font-bold text-slate-800">
@@ -909,22 +1149,24 @@ export default function CandidateResumePage() {
                       <span className="truncate">{currentResume.title || currentResume.fileName}</span>
                       {currentResume.isDefault && (
                         <span className="bg-indigo-100 text-[#3B00FF] text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
-                          Default
+                          Original Uploaded Resume
                         </span>
                       )}
                     </div>
-                    <a
-                      href={currentResume.fileUrl || currentResume.fileDataUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#3B00FF] hover:underline font-black text-xs shrink-0 flex items-center gap-1"
-                    >
-                      <span>Open Original PDF</span>
-                      <span>↗</span>
-                    </a>
+                    {Boolean(currentResume.fileUrl || currentResume.fileDataUrl) && (
+                      <a
+                        href={currentResume.fileUrl || currentResume.fileDataUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#3B00FF] hover:underline font-black text-xs shrink-0 flex items-center gap-1"
+                      >
+                        <span>Open Original PDF</span>
+                        <span>↗</span>
+                      </a>
+                    )}
                   </div>
 
-                  {/* Embedded PDF/Image Document Viewer (Renders EXACT uploaded PDF layout, fonts, text) */}
+                  {/* Embedded PDF/Image Document Viewer */}
                   {((currentResume.fileUrl || currentResume.fileDataUrl || '').match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i) || (currentResume.fileName || '').match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
                     <div className="w-full bg-white relative overflow-hidden flex justify-center">
                       <img 
@@ -936,12 +1178,12 @@ export default function CandidateResumePage() {
                   ) : (
                     <div className="w-full aspect-[1/1.414] sm:aspect-auto sm:h-[820px] bg-white relative overflow-hidden">
                       <object
-                        data={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0&view=FitH`}
+                        data={`${currentResume.fileUrl || currentResume.fileDataUrl || ''}#toolbar=0&navpanes=0&view=FitH`}
                         type="application/pdf"
                         className="w-full h-full border-0 block"
                       >
                         <iframe
-                          src={`${currentResume.fileUrl || currentResume.fileDataUrl}#toolbar=0&navpanes=0&view=FitH`}
+                          src={`${currentResume.fileUrl || currentResume.fileDataUrl || ''}#toolbar=0&navpanes=0&view=FitH`}
                           title={currentResume.title || currentResume.fileName}
                           className="w-full h-full border-0 block"
                         >
@@ -961,51 +1203,6 @@ export default function CandidateResumePage() {
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="bg-white shadow-md border border-slate-200/80 p-6 sm:p-10 rounded-2xl space-y-6 text-slate-800 font-sans text-xs leading-relaxed max-w-2xl mx-auto overflow-x-hidden">
-                  
-                  {/* Dynamic Resume Header */}
-                  <div className="text-center space-y-1 border-b border-slate-200 pb-5">
-                    <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-widest text-slate-900 uppercase">
-                      {currentResume.candidateName || currentResume.title || 'RESUME'}
-                    </h1>
-                    <p className="text-[11px] font-semibold text-slate-500">
-                      {currentResume.contactInfo || ''}
-                    </p>
-                  </div>
-
-                  {/* Section: PROFESSIONAL EXPERIENCE */}
-                  {currentResume.sections?.experience && (
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black tracking-wider text-[#3B00FF] uppercase border-b border-indigo-100 pb-1">
-                        PROFESSIONAL EXPERIENCE
-                      </h3>
-
-                      {currentResume.sections.experience.map((exp) => (
-                        <div key={exp.id || exp.roleTitle} className="space-y-1.5">
-                          <div className="flex items-center justify-between font-bold text-slate-900">
-                            <span className="text-sm font-black">{exp.roleTitle}</span>
-                            <span className="text-[11px] text-slate-500 font-semibold">{exp.period}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs font-bold text-indigo-700 italic">
-                            <span>{exp.companyName}</span>
-                            <span className="text-slate-400 not-italic font-normal">{exp.location}</span>
-                          </div>
-
-                          <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-xs font-normal pl-1 pt-1">
-                            {exp.bullets?.map((bullet, idx) => (
-                              <li key={idx} className="leading-relaxed">
-                                <span>{bullet}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
               )}
 
             </div>
@@ -1015,7 +1212,13 @@ export default function CandidateResumePage() {
               
               {/* TOP PURPLE BANNER: AI Resume (make it Easy) */}
               <div 
-                onClick={handleRunAnalysis}
+                onClick={() => {
+                  if (!analysis && !pastedJd.trim() && !targetJob?.title) {
+                    triggerToast('Please select or specify a target role below.');
+                  } else {
+                    handleRunAnalysis();
+                  }
+                }}
                 className="bg-gradient-to-r from-[#3B00FF] to-[#2E00C7] text-white p-4 sm:p-4.5 rounded-2xl flex items-center justify-between shadow-md cursor-pointer hover:shadow-lg transition-all group"
               >
                 <div className="space-y-0.5">
@@ -1047,9 +1250,25 @@ export default function CandidateResumePage() {
                     </h3>
                   </div>
 
-                  <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-3 py-1 rounded-full border border-indigo-100 truncate max-w-[180px]">
-                    Context: {currentResume ? (targetJob?.companyName || analysis?.companyName || 'Target Role') + ' Role' : 'No Resume'}
-                  </span>
+                  {analysis ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold px-3 py-1 rounded-full border border-indigo-100 truncate max-w-[180px]">
+                        Target: {analysis.jobTitle || targetJob?.title || 'Target Role'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAnalysis(null)}
+                        className="text-[10px] font-extrabold text-[#3B00FF] hover:underline px-1 py-0.5 cursor-pointer"
+                        title="Change target role"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="bg-slate-100 text-slate-600 text-[10px] font-extrabold px-3 py-1 rounded-full border border-slate-200">
+                      Specify Role First
+                    </span>
+                  )}
                 </div>
 
                 {/* MATCH SCORE BOX */}
@@ -1098,6 +1317,83 @@ export default function CandidateResumePage() {
                       </p>
                     </div>
                   </div>
+                ) : !analysis ? (
+                  /* SPECIFY TARGET ROLE PANEL (When no role has been specified yet) */
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/40 border border-indigo-150 space-y-4 shadow-2xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-indigo-900">
+                        <div className="p-1.5 rounded-lg bg-[#3B00FF]/10 text-[#3B00FF]">
+                          <Target className="h-4.5 w-4.5" />
+                        </div>
+                        <h4 className="text-sm font-black text-slate-900">Specify Target Role to Generate AI Suggestions</h4>
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed pl-8">
+                        AI tailors your resume bullets specifically for your desired job title and ATS screening. Select a common role or type your custom role below to begin:
+                      </p>
+                    </div>
+
+                    {/* Quick Popular Roles */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                        Quick Select Target Role:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          'Software Developer',
+                          'Frontend Developer',
+                          'Full Stack Developer',
+                          'Python Developer',
+                          'React Developer',
+                          'Java Developer',
+                          'Backend Developer'
+                        ].map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => {
+                              setPastedJd(role);
+                              handleRunAnalysis(role);
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 hover:border-[#3B00FF] transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                          >
+                            + {role}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Role / Job Description Input */}
+                    <div className="space-y-2 pt-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                        Or Type Target Role / Paste Job Description:
+                      </span>
+                      <div className="relative">
+                        <textarea
+                          rows={2}
+                          placeholder="e.g. Software Developer, Frontend Developer, or paste Job Description..."
+                          value={pastedJd}
+                          onChange={(e) => setPastedJd(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && pastedJd.trim()) {
+                              e.preventDefault();
+                              handleRunAnalysis(pastedJd.trim());
+                            }
+                          }}
+                          className="w-full p-3 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#3B00FF] focus:ring-1 focus:ring-[#3B00FF] resize-none bg-white placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRunAnalysis(pastedJd.trim())}
+                        disabled={!pastedJd.trim() || isAnalyzing}
+                        className="w-full py-2.5 px-4 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-98"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        <span>Generate AI Suggestions</span>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex items-center gap-4">
                     {/* Score SVG Circle Indicator */}
@@ -1132,35 +1428,78 @@ export default function CandidateResumePage() {
                           MATCH SCORE
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                          {analysis?.scoreLabel || 'Pending'}
+                          {analysis?.scoreLabel || 'Strong'}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-slate-500 leading-snug">
-                        {analysis?.scoreFeedback || 'Resume ready. Paste a job description to analyze target role compatibility.'}
+                        {analysis?.scoreFeedback || `Suggestions tailored to ${analysis.jobTitle || 'target role'}.`}
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* ACTIVE SUGGESTION SECTION */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-black text-indigo-900/60 uppercase tracking-wider block">
-                    ACTIVE SUGGESTION
-                  </span>
+                {/* ACTIVE SUGGESTIONS & TARGET ROLE (Shown when analysis is active) */}
+                {analysis && (
+                  <>
+                    <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black text-indigo-900/70 uppercase tracking-wider block">
+                        SUGGESTION {currentBatchSuggestions.length ? activeSuggestionIndex + 1 : 0} OF {currentBatchSuggestions.length}
+                      </span>
+                      {totalBatches > 1 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-indigo-100/90 text-[#3B00FF] text-[9px] font-black uppercase tracking-wider">
+                          Batch {safeBatch + 1}/{totalBatches}
+                        </span>
+                      )}
+                    </div>
+
+                    {currentBatchSuggestions.length > 1 && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveSuggestionIndex(prev => Math.max(0, prev - 1));
+                            setIsEditingSuggestion(false);
+                          }}
+                          disabled={activeSuggestionIndex === 0}
+                          className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-bold disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all"
+                          title="Previous suggestion in this batch"
+                        >
+                          ← Prev
+                        </button>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {activeSuggestionIndex + 1}/{currentBatchSuggestions.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveSuggestionIndex(prev => Math.min(currentBatchSuggestions.length - 1, prev + 1));
+                            setIsEditingSuggestion(false);
+                          }}
+                          disabled={activeSuggestionIndex >= currentBatchSuggestions.length - 1}
+                          className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-[11px] font-bold disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all"
+                          title="Next suggestion in this batch"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   {!currentResume ? (
                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-bold text-slate-500">
                       Upload your resume to view AI optimization suggestions.
                     </div>
                   ) : currentSuggestion ? (
-                    <div className="border border-indigo-200 bg-indigo-50/30 p-4 rounded-2xl space-y-3 font-sans">
+                    <div className="border border-indigo-200 bg-indigo-50/30 p-4 rounded-2xl space-y-3 font-sans shadow-xs">
                       
                       {/* Original Text */}
                       <div className="space-y-1">
                         <span className="text-[11px] font-bold text-slate-500 block">
-                          Original text:
+                          Original text from your resume:
                         </span>
-                        <p className="text-xs font-medium text-slate-700 italic bg-white/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">
+                        <p className="text-xs font-medium text-slate-700 italic bg-white/90 p-2.5 rounded-xl border border-slate-200/80 leading-relaxed">
                           "{currentSuggestion.originalText}"
                         </p>
                       </div>
@@ -1170,7 +1509,7 @@ export default function CandidateResumePage() {
                         <div className="flex items-center justify-between text-[#3B00FF]">
                           <div className="flex items-center gap-1.5">
                             <Sparkles className="h-3.5 w-3.5" />
-                            <span className="text-xs font-black">Suggested Improvement:</span>
+                            <span className="text-xs font-black">AI Tailored Improvement:</span>
                           </div>
 
                           <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
@@ -1184,36 +1523,61 @@ export default function CandidateResumePage() {
                             rows={3}
                             value={editedText}
                             onChange={(e) => setEditedText(e.target.value)}
-                            className="w-full p-2.5 rounded-xl border border-[#3B00FF] text-xs font-bold text-slate-900 focus:outline-none bg-white"
+                            className="w-full p-2.5 rounded-xl border border-[#3B00FF] text-xs font-bold text-slate-900 focus:outline-none bg-white shadow-inner"
                           />
                         ) : (
-                          <div className="bg-indigo-50/80 p-3 rounded-xl border border-indigo-100 text-xs font-bold text-slate-800 leading-snug">
+                          <div className="bg-indigo-50/90 p-3 rounded-xl border border-indigo-200 text-xs font-bold text-slate-800 leading-snug">
                             "{currentSuggestion.proposedText}"
                           </div>
+                        )}
+
+                        {currentSuggestion.reason && (
+                          <p className="text-[10px] font-medium text-slate-500 italic pt-0.5">
+                            💡 {currentSuggestion.reason}
+                          </p>
                         )}
                       </div>
 
                       {/* Action Controls */}
                       <div className="flex items-center gap-2 pt-2">
                         {currentSuggestion.status === 'ACCEPTED' ? (
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                              <Check className="h-4 w-4" /> Applied to Draft
+                          <div className="flex items-center justify-between w-full bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                            <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                              <Check className="h-4 w-4" /> Applied to Live Canvas
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleUndoSuggestion(currentSuggestion.id)}
-                              className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                            >
-                              Undo
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleUndoSuggestion(currentSuggestion.id)}
+                                className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                              >
+                                Undo
+                              </button>
+                              {currentBatchSuggestions.length > 1 && activeSuggestionIndex < currentBatchSuggestions.length - 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveSuggestionIndex(prev => prev + 1)}
+                                  className="px-3 py-1 rounded-lg bg-[#3B00FF] text-white text-xs font-bold hover:bg-[#3000D6] cursor-pointer shadow-xs"
+                                >
+                                  Next Suggestion →
+                                </button>
+                              ) : totalBatches > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={handleCycleNextBatch}
+                                  className="px-3 py-1 rounded-lg bg-[#3B00FF] text-white text-xs font-bold hover:bg-[#3000D6] cursor-pointer shadow-xs"
+                                >
+                                  Next 5 Suggestions →
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         ) : (
                           <>
                             <button
                               type="button"
                               onClick={() => handleApplySuggestion(currentSuggestion)}
-                              className="flex-1 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black transition-colors shadow-xs cursor-pointer text-center"
+                              className="flex-1 py-2.5 rounded-xl bg-[#3B00FF] hover:bg-[#3000D6] text-white text-xs font-black transition-colors shadow-sm cursor-pointer text-center"
                             >
                               {isEditingSuggestion ? 'Save & Apply' : 'Apply Change'}
                             </button>
@@ -1232,11 +1596,11 @@ export default function CandidateResumePage() {
 
                             <button
                               type="button"
-                              onClick={() => handleRunAnalysis()}
-                              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-                              title="Regenerate suggestion"
+                              onClick={handleCycleNextBatch}
+                              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer group relative"
+                              title={totalBatches > 1 ? `Load next 5 suggestions (Batch ${((safeBatch + 1) % totalBatches) + 1} of ${totalBatches})` : "Next suggestion / cycle"}
                             >
-                              <RotateCcw className="h-4 w-4" />
+                              <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-180 duration-300" />
                             </button>
 
                             <button
@@ -1251,6 +1615,19 @@ export default function CandidateResumePage() {
                         )}
                       </div>
 
+                      {/* Quick Apply All Button */}
+                      {currentBatchSuggestions && currentBatchSuggestions.some(s => s.status !== 'ACCEPTED') && (
+                        <div className="pt-1 border-t border-indigo-100/60">
+                          <button
+                            type="button"
+                            onClick={handleApplyAllSuggestions}
+                            className="w-full py-1.5 text-center text-[11px] font-bold text-[#3B00FF] hover:text-[#2E00C7] hover:underline cursor-pointer"
+                          >
+                            ⚡ Apply all {currentBatchSuggestions.filter(s => s.status !== 'ACCEPTED').length} pending suggestions in this batch
+                          </button>
+                        </div>
+                      )}
+
                     </div>
                   ) : (
                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-bold text-slate-500">
@@ -1260,50 +1637,65 @@ export default function CandidateResumePage() {
 
                 </div>
 
-                {/* TARGET ROLE / JOB DESCRIPTION TARGETING */}
-                <div className="space-y-2 pt-2 border-t border-slate-150">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-                    TARGET ROLE
-                  </span>
-
-                  <div className="relative">
-                    <textarea
-                      rows={2}
-                      disabled={!currentResume}
-                      placeholder={currentResume ? "Paste Job Description here..." : "Upload a resume first to paste job description..."}
-                      value={pastedJd}
-                      onChange={(e) => setPastedJd(e.target.value)}
-                      className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#3B00FF] resize-none bg-slate-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={handleRunAnalysis}
-                      disabled={isAnalyzing || !currentResume}
-                      className="absolute right-2.5 bottom-3.5 p-1.5 rounded-lg bg-[#3B00FF] text-white hover:bg-[#3000D6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Analyze Job Description"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Missing Keywords Chips */}
-                  {analysis?.missingKeywords && analysis.missingKeywords.length > 0 && (
-                    <div className="flex items-center gap-2 pt-1 text-xs">
-                      <span className="text-slate-400 font-extrabold text-[11px]">Missing:</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {analysis.missingKeywords.map((kw, i) => (
-                          <span
-                            key={i}
-                            className="px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-600 text-[10px] font-extrabold border border-rose-150"
-                          >
-                            {kw}
+                    {/* TARGET ROLE / JOB DESCRIPTION TARGETING */}
+                    <div className="space-y-2 pt-2 border-t border-slate-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                          TARGET ROLE / JOB DESCRIPTION
+                        </span>
+                        {analysis?.jobTitle && (
+                          <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                            Active: {analysis.jobTitle}
                           </span>
-                        ))}
+                        )}
                       </div>
+
+                      <div className="relative">
+                        <textarea
+                          rows={2}
+                          disabled={!currentResume}
+                          placeholder="Enter new role or paste Job Description to re-target..."
+                          value={pastedJd}
+                          onChange={(e) => setPastedJd(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && pastedJd.trim()) {
+                              e.preventDefault();
+                              handleRunAnalysis(pastedJd.trim());
+                            }
+                          }}
+                          className="w-full p-3 pr-10 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#3B00FF] resize-none bg-slate-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => handleRunAnalysis(pastedJd.trim())}
+                          disabled={isAnalyzing || !currentResume || !pastedJd.trim()}
+                          className="absolute right-2.5 bottom-3.5 p-1.5 rounded-lg bg-[#3B00FF] text-white hover:bg-[#3000D6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Analyze Job Description"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Missing Keywords Chips */}
+                      {analysis?.missingKeywords && analysis.missingKeywords.length > 0 && (
+                        <div className="flex items-center gap-2 pt-1 text-xs">
+                          <span className="text-slate-400 font-extrabold text-[11px]">Missing:</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {analysis.missingKeywords.map((kw, i) => (
+                              <span
+                                key={i}
+                                className="px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-600 text-[10px] font-extrabold border border-rose-150"
+                              >
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
 
                 {/* FINAL ACTION BUTTON */}
                 <div className="pt-2">

@@ -28,7 +28,7 @@ export default function OverviewMetricCard({ title, value, pctChange, icon, colo
   const selectedColor = colorMap[color] || colorMap.teal;
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs transition-all duration-200 hover:shadow-md hover:border-slate-200/60">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs transition-all duration-200 hover:shadow-md hover:border-slate-300">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <span className="text-sm font-black text-slate-600 uppercase tracking-wider">{title}</span>

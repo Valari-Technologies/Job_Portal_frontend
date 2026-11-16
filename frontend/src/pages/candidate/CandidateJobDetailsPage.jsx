@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
@@ -20,6 +20,7 @@ import {
 export default function CandidateJobDetailsPage() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [job, setJob] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -87,8 +88,10 @@ export default function CandidateJobDetailsPage() {
 
     setIsApplying(true);
     try {
+      const activeResumeId = searchParams.get('resumeId') || sessionStorage.getItem('active_apply_resume_id');
       const res = await applyCandidateJob(job.id, {
         jobTitle: job.title,
+        resumeId: activeResumeId ? Number(activeResumeId) : undefined,
         company: job.company || job.companyName,
         companyName: job.company || job.companyName,
         location: job.location,

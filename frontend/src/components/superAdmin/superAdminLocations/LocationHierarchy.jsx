@@ -112,7 +112,7 @@ export default function LocationHierarchy({
   };
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs">
+    <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       {/* Breadcrumb Navigation Header */}
       {searchTerm.trim() === '' && (
         <div className="flex flex-wrap items-center gap-1.5 px-6 py-3.5 bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-600">

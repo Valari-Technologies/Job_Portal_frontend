@@ -167,7 +167,7 @@ export default function SuperAdminHeader({
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-150 bg-white px-6 py-3 shadow-xs font-sans">
+    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 shadow-xs font-sans">
       {/* Sidebar Toggle for Mobile */}
       <div className="flex items-center gap-4">
         <button 
@@ -180,10 +180,7 @@ export default function SuperAdminHeader({
           </svg>
         </button>
 
-        {/* Breadcrumbs */}
-        <div className="hidden sm:block">
-          <SuperAdminBreadcrumbs pathname={location.pathname} />
-        </div>
+        {/* Breadcrumbs removed for clean header matching Admins view */}
       </div>
 
       {/* Header Actions */}

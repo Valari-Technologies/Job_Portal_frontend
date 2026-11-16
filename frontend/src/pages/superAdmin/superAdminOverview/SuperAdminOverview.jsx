@@ -261,20 +261,25 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Title & header meta actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Platform overview</h1>
-          <p className="text-base font-bold text-slate-500 mt-1">Monitor marketplace health, moderation queues and activity across Tamil Nadu.</p>
+      <div className="flex flex-col gap-3.5 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Platform overview</h1>
+          <p className="text-xs sm:text-base font-medium text-slate-500 mt-0.5 sm:mt-1">
+            Monitor marketplace health, moderation queues and activity across Tamil Nadu.
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-bold text-slate-650 bg-slate-100 rounded-lg px-3.5 py-1.5 border border-slate-200">
-            Last updated: Today, {lastUpdated}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+          <span className="inline-flex items-center rounded-xl bg-slate-100 px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-600 whitespace-nowrap">
+            <span className="hidden sm:inline">Last updated: Today, </span>
+            <span className="sm:hidden inline">Updated: </span>
+            {lastUpdated}
           </span>
           <button 
+            type="button"
             onClick={handleExportCSV}
-            className="flex items-center gap-2.5 rounded-xl bg-teal-600 px-4.5 py-2.5 text-base font-bold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-teal-600 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-teal-700 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Export report</span>
@@ -348,7 +353,7 @@ export default function SuperAdminOverview({ globalDetailsRecord, setGlobalDetai
       </div>
 
       {/* Grid: Job Activity, Top Districts, Recent Activity */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch scroll-mt-8">
         <JobActivityCard 
           jobActivity={jobActivity} 
           onViewJobReview={() => handleOpenQueue('jobsPendingReview', 'Jobs pending review')}

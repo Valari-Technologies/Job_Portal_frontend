@@ -199,8 +199,10 @@ export default function CandidateJobsPage() {
   const handleQuickApplyConfirm = async (jobOrId) => {
     const jobObj = (typeof jobOrId === 'object' && jobOrId !== null) ? jobOrId : selectedJobForApply;
     const jobId = jobObj?.id || jobOrId;
+    const activeResumeId = searchParams.get('resumeId') || sessionStorage.getItem('active_apply_resume_id');
     const payload = {
       jobId,
+      resumeId: activeResumeId ? Number(activeResumeId) : undefined,
       jobTitle: jobObj?.title,
       company: jobObj?.company || jobObj?.companyName,
       companyName: jobObj?.company || jobObj?.companyName,

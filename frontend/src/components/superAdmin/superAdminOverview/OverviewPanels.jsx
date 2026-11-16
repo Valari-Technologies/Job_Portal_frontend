@@ -226,7 +226,7 @@ export function ActionRequiredCard({ queues, onOpenQueue }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
       <h3 className="text-xl font-bold text-slate-900 mb-6">Action required</h3>
       <div className="divide-y divide-slate-100">
         {items.map((item, idx) => (
@@ -284,23 +284,24 @@ export function JobActivityCard({ jobActivity, onViewJobReview }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs flex flex-col justify-between h-full">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-slate-900">Job activity</h3>
           <button 
+            type="button"
             onClick={onViewJobReview}
-            className="text-base font-bold text-teal-600 hover:text-teal-700 hover:underline"
+            className="text-base font-bold text-teal-600 hover:text-teal-700 hover:underline cursor-pointer"
           >
             View job review
           </button>
         </div>
-        <div className="space-y-4.5">
+        <div className="space-y-4 min-h-[140px] flex flex-col justify-around">
           {statusRows.map((row, idx) => (
             <div key={idx} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm font-bold">
                 <span className="text-slate-650">{row.label}</span>
-                <span className="text-slate-800">{row.count?.toLocaleString()}</span>
+                <span className="text-slate-800">{row.count?.toLocaleString() ?? 0}</span>
               </div>
               <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div 
@@ -314,7 +315,7 @@ export function JobActivityCard({ jobActivity, onViewJobReview }) {
       </div>
       <div className="border-t border-slate-100 pt-4.5 mt-6 flex items-center justify-between text-base font-extrabold text-slate-800">
         <span>Total jobs</span>
-        <span>{jobActivity.total?.toLocaleString()}</span>
+        <span>{jobActivity.total?.toLocaleString() ?? 0}</span>
       </div>
     </div>
   );
@@ -324,26 +325,29 @@ export function JobActivityCard({ jobActivity, onViewJobReview }) {
  * TopHiringDistrictsCard - Percentage shares by region (with custom View All districts popover)
  */
 export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
+  const totalLiveJobs = districts.reduce((acc, curr) => acc + (curr.count || 0), 0);
+
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs flex flex-col justify-between h-full">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-slate-900">Top hiring districts</h3>
           <button 
+            type="button"
             onClick={onViewAllDistricts}
-            className="text-base font-bold text-teal-600 hover:text-teal-700 hover:underline"
+            className="text-base font-bold text-teal-600 hover:text-teal-700 hover:underline cursor-pointer"
           >
             View all
           </button>
         </div>
-        <div className="flex items-center justify-between text-xs font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 pb-2.5 mb-3.5">
+        <div className="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2.5 mb-3.5">
           <span>District</span>
           <div className="flex items-center gap-6 sm:gap-12">
             <span>Live jobs</span>
             <span className="w-12 sm:w-16 text-right">Share</span>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3.5 min-h-[140px] max-h-[225px] overflow-y-auto pr-1">
           {districts.length > 0 ? (
             districts.map((d, idx) => (
               <div key={idx} className="flex items-center justify-between text-sm font-semibold">
@@ -369,7 +373,7 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
       </div>
       <div className="border-t border-slate-100 pt-4.5 mt-6 flex items-center justify-between text-base font-extrabold text-slate-800">
         <span>Total live jobs</span>
-        <span>{districts.reduce((acc, curr) => acc + (curr.count || 0), 0).toLocaleString()}</span>
+        <span>{totalLiveJobs.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -384,8 +388,8 @@ export function RecentActivityCard({ activities, onOpenRecord }) {
     const t = String(type).toUpperCase();
     if (t.includes('REPORT') || t.includes('FAIL') || t.includes('REJECT')) {
       return (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700 border border-red-150 shrink-0">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700 border border-red-200 shrink-0">
+          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
@@ -393,8 +397,8 @@ export function RecentActivityCard({ activities, onOpenRecord }) {
     }
     if (t.includes('VERIF') || t.includes('PENDING')) {
       return (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-150 shrink-0">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-200 shrink-0">
+          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
           </svg>
         </div>
@@ -402,8 +406,8 @@ export function RecentActivityCard({ activities, onOpenRecord }) {
     }
     if (t.includes('JOB') || t.includes('APPROV') || t.includes('CREATE')) {
       return (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-150 shrink-0">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
@@ -411,16 +415,16 @@ export function RecentActivityCard({ activities, onOpenRecord }) {
     }
     if (t.includes('LOGIN') || t.includes('USER') || t.includes('PROFILE')) {
       return (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-150 shrink-0">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </div>
       );
     }
     return (
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-50 text-teal-700 border border-teal-150 shrink-0">
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-50 text-teal-700 border border-teal-200 shrink-0">
+        <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
@@ -428,34 +432,40 @@ export function RecentActivityCard({ activities, onOpenRecord }) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-slate-900">Recent activity</h3>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live stream</span>
-      </div>
-      <div className="space-y-4">
-        {activities.length > 0 ? (
-          activities.map((act) => (
-            <div 
-              key={act.id} 
-              onClick={() => onOpenRecord({ type: act.type, title: act.message, details: act.details })}
-              className="flex items-center justify-between py-2 hover:bg-slate-50/50 cursor-pointer rounded-xl p-2.5 transition-colors border border-transparent hover:border-slate-150"
-            >
-              <div className="flex items-center gap-3.5">
-                {getActivityIcon(act.type)}
-                <div>
-                  <p className="text-base font-extrabold text-slate-800 leading-snug">{act.message}</p>
-                  <span className="text-sm font-bold text-slate-450 mt-1.5 block">{act.time}</span>
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-slate-900">Recent activity</h3>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live stream</span>
+        </div>
+        <div className="space-y-2.5 max-h-[225px] overflow-y-auto pr-1">
+          {activities.length > 0 ? (
+            activities.map((act) => (
+              <div 
+                key={act.id} 
+                onClick={() => onOpenRecord({ type: act.type, title: act.message, details: act.details })}
+                className="flex items-center justify-between py-2 px-2 hover:bg-slate-50/70 cursor-pointer rounded-xl transition-colors border border-transparent hover:border-slate-200"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {getActivityIcon(act.type)}
+                  <div className="min-w-0">
+                    <p className="text-sm font-extrabold text-slate-800 leading-snug truncate">{act.message}</p>
+                    <span className="text-xs font-bold text-slate-400 mt-0.5 block">{act.time}</span>
+                  </div>
                 </div>
+                <svg className="h-4 w-4 text-slate-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
-              <svg className="h-4.5 w-4.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-slate-400 font-medium py-6 text-center">No recent activity recorded.</p>
-        )}
+            ))
+          ) : (
+            <p className="text-sm text-slate-400 font-medium py-6 text-center">No recent activity recorded.</p>
+          )}
+        </div>
+      </div>
+      <div className="border-t border-slate-100 pt-4.5 mt-6 flex items-center justify-between text-base font-extrabold text-slate-800">
+        <span>Activity feed</span>
+        <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100">{activities.length} recent</span>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import CandidateLayout from '../../components/candidate/layout/CandidateLayout';
 import ResumeRequiredModal from '../../components/candidate/jobs/ResumeRequiredModal';
 import ProfileCompletionRequiredModal from '../../components/candidate/jobs/ProfileCompletionRequiredModal';
@@ -27,6 +27,9 @@ export default function CandidateQuickApplyPage() {
   const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
   const [profileCompletion, setProfileCompletion] = useState(40);
 
+  const [searchParams] = useSearchParams();
+  const urlResumeId = searchParams.get('resumeId') || sessionStorage.getItem('active_apply_resume_id');
+
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -47,8 +50,12 @@ export default function CandidateQuickApplyPage() {
         }
 
         setResumes(resumeList || []);
-        if (resumeList && resumeList.length > 0) {
-          setSelectedResumeId(resumeList[0].id);
+        const preferredResumeId = urlResumeId || sessionStorage.getItem('active_apply_resume_id');
+        if (preferredResumeId && resumeList?.some(r => String(r.id) === String(preferredResumeId))) {
+          setSelectedResumeId(preferredResumeId);
+        } else if (resumeList && resumeList.length > 0) {
+          const defaultRes = resumeList.find(r => r.isDefault || r.isPrimary) || resumeList[0];
+          setSelectedResumeId(defaultRes.id);
         }
       } catch (err) {
         console.error('Failed to load application data:', err);
@@ -60,7 +67,7 @@ export default function CandidateQuickApplyPage() {
 
     loadData();
     return () => { isMounted = false; };
-  }, [jobId]);
+  }, [jobId, urlResumeId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

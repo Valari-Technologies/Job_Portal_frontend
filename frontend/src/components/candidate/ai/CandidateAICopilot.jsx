@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, X, Send, Bot, User, CheckCircle2, 
   Building2, MapPin, Briefcase, ChevronRight, 
-  RotateCcw, ArrowRight, AlertCircle, Loader2
+  RotateCcw, ArrowRight, AlertCircle, Loader2,
+  ArrowLeft
 } from 'lucide-react';
 import { sendAICopilotMessage } from '../../../services/candidate/candidateAiCopilotService';
 
@@ -28,7 +29,7 @@ export default function CandidateAICopilot() {
       {
         id: 'initial_welcome',
         sender: 'ai',
-        text: "👋 Hi! I'm your **AI Career Copilot**. I can find jobs that match your skills, submit applications for you on command, and track your applications.",
+        text: "👋 Hi! I'm **Nexiv**, your AI Career Copilot. I can find jobs that match your skills, submit applications for you on command, and track your applications.",
         quickActions: [
           "Recommend jobs matching my skills",
           "Track my applications",
@@ -53,6 +54,17 @@ export default function CandidateAICopilot() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isTyping, isOpen]);
+
+  // Lock body scroll on mobile when full screen copilot is open
+  useEffect(() => {
+    if (isOpen && window.innerWidth < 640) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   const handleSendMessage = async (customText = null, action = null, targetJobId = null) => {
     const textToSend = customText || inputMessage.trim();
@@ -146,38 +158,49 @@ export default function CandidateAICopilot() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans">
-      
+    <>
       {/* --- FLOATING TRIGGER BUTTON (FAB) --- */}
       {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="group relative flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#3B00FF] to-indigo-700 px-5 py-3.5 text-white shadow-xl shadow-indigo-500/25 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/40 cursor-pointer"
-          aria-label="Open AI Career Copilot"
-        >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          <Sparkles className="h-5 w-5 text-amber-300 animate-pulse" />
-          <span className="font-black text-sm tracking-wide">AI Copilot</span>
-        </button>
+        <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40 sm:z-50 font-sans pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="group relative flex items-center gap-2 rounded-full bg-gradient-to-r from-[#3B00FF] to-indigo-700 px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-xl shadow-indigo-500/30 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+            aria-label="Open Nexiv"
+          >
+            <span className="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-emerald-500"></span>
+            </span>
+            <span className="font-black text-xs sm:text-sm tracking-wide">Nexiv</span>
+          </button>
+        </div>
       )}
 
-      {/* --- CHAT MODAL WINDOW --- */}
+      {/* --- CHAT MODAL / FULL-SCREEN WINDOW --- */}
       {isOpen && (
-        <div className="flex h-[580px] w-[380px] sm:w-[420px] flex-col rounded-3xl bg-white shadow-3xl border border-slate-200 overflow-hidden animate-scaleUp">
+        <div className="fixed inset-0 z-50 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col h-[100dvh] sm:h-[590px] w-full sm:w-[420px] bg-white sm:rounded-3xl sm:shadow-3xl sm:border sm:border-slate-200 overflow-hidden font-sans animate-scaleUp">
           
           {/* HEADER */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-[#3B00FF] to-indigo-800 px-5 py-4 text-white shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between bg-gradient-to-r from-[#3B00FF] to-indigo-800 px-4 py-3.5 sm:px-5 sm:py-4 text-white shrink-0">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              {/* Mobile Back Button */}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="sm:hidden p-1.5 -ml-1 text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                title="Back to portal"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs border border-white/20">
                 <Sparkles className="h-5 w-5 text-amber-300" />
               </div>
               <div>
                 <h3 className="text-sm font-black tracking-tight leading-tight flex items-center gap-2">
-                  AI Career Copilot
+                  Nexiv
                   <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300 border border-emerald-400/30">
                     Live
                   </span>
@@ -261,7 +284,7 @@ export default function CandidateAICopilot() {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 text-[10px] text-slate-500 font-semibold">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 font-semibold flex-wrap">
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3 text-slate-400" />
                               {job.location}
@@ -270,6 +293,15 @@ export default function CandidateAICopilot() {
                               <Briefcase className="h-3 w-3 text-slate-400" />
                               {job.work_mode}
                             </span>
+                            {job.resume_required === false ? (
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                                ⚡ Resume Not Required
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded">
+                                📄 Resume Required
+                              </span>
+                            )}
                           </div>
 
                           {/* Skill Tags */}
@@ -335,7 +367,7 @@ export default function CandidateAICopilot() {
                               {app.status}
                             </span>
                             {app.applied_via === 'AI_COPILOT' && (
-                              <span title="Submitted by AI Copilot" className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                              <span title="Submitted by Nexiv" className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
                                 ✨ AI
                               </span>
                             )}
@@ -364,7 +396,13 @@ export default function CandidateAICopilot() {
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => handleSendMessage(actionText)}
+                          onClick={() => {
+                            if (actionText.toLowerCase().includes('upload resume')) {
+                              navigate('/candidate/resume');
+                            } else {
+                              handleSendMessage(actionText);
+                            }
+                          }}
                           className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-[11px] font-bold text-[#3B00FF] hover:bg-indigo-50 transition-colors cursor-pointer shadow-2xs"
                         >
                           {actionText}
@@ -428,7 +466,7 @@ export default function CandidateAICopilot() {
           </div>
 
           {/* INPUT BAR */}
-          <div className="border-t border-slate-200 bg-white p-3 shrink-0">
+          <div className="border-t border-slate-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-3 shrink-0">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -458,7 +496,7 @@ export default function CandidateAICopilot() {
         </div>
       )}
 
-    </div>
+    </>
   );
 }
 

@@ -130,19 +130,19 @@ export default function SuperAdminSkills({ onToast }) {
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Page Header */}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-slate-150 pb-5">
-        <div>
-          <h1 className="text-3xl font-black text-slate-805 tracking-tight">Skills management</h1>
-          <p className="text-base font-bold text-slate-500 mt-1.5">
+      <div className="flex flex-col gap-4 lg:gap-6 xl:flex-row xl:items-center xl:justify-between border-b border-slate-200 pb-5">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Skills management</h1>
+          <p className="text-sm font-bold text-slate-500 mt-1">
             Keep skills searchable, clear and relevant.
           </p>
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto flex-wrap">
-          <div className="relative w-full sm:w-auto flex-1 sm:flex-none">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg className="h-4.5 w-4.5 text-slate-450" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="relative flex-1 sm:flex-initial sm:w-56 min-w-[170px]">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
@@ -151,15 +151,15 @@ export default function SuperAdminSkills({ onToast }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search skills..."
-              className="w-full sm:w-56 rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-teal-500 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-2xs focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
 
-          <div className="relative w-full sm:w-auto">
+          <div className="relative shrink-0">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
+              className="rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer shadow-2xs shrink-0"
             >
               <option value="all">All status</option>
               <option value="active">Active</option>
@@ -167,11 +167,11 @@ export default function SuperAdminSkills({ onToast }) {
             </select>
           </div>
 
-          <div className="relative w-full sm:w-auto">
+          <div className="relative shrink-0">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer"
+              className="rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer shadow-2xs shrink-0 max-w-[180px]"
             >
               <option value="all">All categories</option>
               <option value="uncategorized">Uncategorized</option>
@@ -184,11 +184,12 @@ export default function SuperAdminSkills({ onToast }) {
           </div>
 
           <button
-            onClick={() => navigate('/super-admin/skills/create')}
+            type="button"
+            onClick={handleOpenAddModal}
             aria-label="Add skill"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer min-h-[42px]"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-teal-600 px-3.5 sm:px-4.5 py-2.5 text-xs sm:text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer shrink-0 whitespace-nowrap min-h-[42px]"
           >
-            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
             </svg>
             <span>Add skill</span>
@@ -197,9 +198,9 @@ export default function SuperAdminSkills({ onToast }) {
       </div>
 
       {/* Grid container layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Left Side Table */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6 min-w-0">
           <SkillsTable 
             skills={skills}
             selectedSkill={selectedSkill}
