@@ -53,6 +53,8 @@ export function SignOutProvider({ children }) {
         removeAuthItem('candidate_auth_user');
         removeAuthItem('candidate_auth_role');
         removeAuthItem('auth_user');
+        sessionStorage.removeItem('candidate_ai_copilot_messages');
+        localStorage.removeItem('candidate_ai_copilot_messages');
         navigate('/login', { replace: true, state: { role: 'candidate' } });
       } else if (portalType === 'recruiter' || portalType === 'employer') {
         clearRoleAuthTokens('HR');

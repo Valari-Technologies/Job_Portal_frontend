@@ -1,12 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Sparkles, X, Send, Bot, User, CheckCircle2, 
+  X, Send, Bot, User, CheckCircle2, 
   Building2, MapPin, Briefcase, ChevronRight, 
   RotateCcw, ArrowRight, AlertCircle, Loader2,
   ArrowLeft
 } from 'lucide-react';
 import { sendAICopilotMessage } from '../../../services/candidate/candidateAiCopilotService';
+
+const INITIAL_WELCOME_MESSAGES = [
+  {
+    id: 'initial_welcome',
+    sender: 'ai',
+    text: "👋 Hi! I'm **Nexiv**, your AI Career Copilot. I can find jobs that match your skills, submit applications for you on command, and track your applications.",
+    quickActions: [
+      "Recommend jobs matching my skills",
+      "Track my applications",
+      "Jobs in Tamil Nadu"
+    ]
+  }
+];
 
 export default function CandidateAICopilot() {
   const navigate = useNavigate();
@@ -18,35 +31,18 @@ export default function CandidateAICopilot() {
   // Pending confirmation state for safety
   const [pendingConfirmJob, setPendingConfirmJob] = useState(null);
 
-  const [messages, setMessages] = useState(() => {
-    const saved = sessionStorage.getItem('candidate_ai_copilot_messages');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (_) {}
-    }
-    return [
-      {
-        id: 'initial_welcome',
-        sender: 'ai',
-        text: "👋 Hi! I'm **Nexiv**, your AI Career Copilot. I can find jobs that match your skills, submit applications for you on command, and track your applications.",
-        quickActions: [
-          "Recommend jobs matching my skills",
-          "Track my applications",
-          "Jobs in Tamil Nadu"
-        ]
-      }
-    ];
-  });
+  // In-memory messages state (starts fresh on login / visit / leave)
+  const [messages, setMessages] = useState(INITIAL_WELCOME_MESSAGES);
 
   const messagesEndRef = useRef(null);
 
-  // Sync with session storage
+  // Clear any legacy persisted chat from previous sessions
   useEffect(() => {
     try {
-      sessionStorage.setItem('candidate_ai_copilot_messages', JSON.stringify(messages.slice(-25)));
+      sessionStorage.removeItem('candidate_ai_copilot_messages');
+      localStorage.removeItem('candidate_ai_copilot_messages');
     } catch (_) {}
-  }, [messages]);
+  }, []);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -142,18 +138,7 @@ export default function CandidateAICopilot() {
   };
 
   const handleClearChat = () => {
-    const resetWelcome = [
-      {
-        id: 'welcome_reset',
-        sender: 'ai',
-        text: "Chat cleared! How can I help with your job search today?",
-        quickActions: [
-          "Recommend jobs matching my skills",
-          "Track my applications"
-        ]
-      }
-    ];
-    setMessages(resetWelcome);
+    setMessages(INITIAL_WELCOME_MESSAGES);
     setPendingConfirmJob(null);
   };
 
@@ -195,9 +180,6 @@ export default function CandidateAICopilot() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-xs border border-white/20">
-                <Sparkles className="h-5 w-5 text-amber-300" />
-              </div>
               <div>
                 <h3 className="text-sm font-black tracking-tight leading-tight flex items-center gap-2">
                   Nexiv
@@ -340,8 +322,7 @@ export default function CandidateAICopilot() {
                                 onClick={() => handleApplyClick(job)}
                                 className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-[#3B00FF] to-indigo-600 px-3 py-1.5 text-[11px] font-black text-white hover:opacity-90 transition-opacity cursor-pointer shadow-xs disabled:opacity-50"
                               >
-                                <Sparkles className="h-3 w-3 text-amber-300" />
-                                {applyingJobId === job.id ? 'Applying...' : 'Apply with AI'}
+                                {applyingJobId === job.id ? 'Applying...' : 'Apply with Nexiv'}
                               </button>
                             )}
                           </div>
@@ -399,6 +380,8 @@ export default function CandidateAICopilot() {
                           onClick={() => {
                             if (actionText.toLowerCase().includes('upload resume')) {
                               navigate('/candidate/resume');
+                            } else if (actionText.toLowerCase().includes('profile')) {
+                              navigate('/candidate/profile');
                             } else {
                               handleSendMessage(actionText);
                             }

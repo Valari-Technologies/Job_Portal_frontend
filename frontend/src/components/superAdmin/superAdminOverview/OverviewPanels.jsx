@@ -342,26 +342,32 @@ export function TopHiringDistrictsCard({ districts, onViewAllDistricts }) {
         </div>
         <div className="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2.5 mb-3.5">
           <span>District</span>
-          <div className="flex items-center gap-6 sm:gap-12">
-            <span>Live jobs</span>
-            <span className="w-12 sm:w-16 text-right">Share</span>
+          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+            <span className="w-16 text-right">Live jobs</span>
+            <span className="w-20 sm:w-28 text-right">Share</span>
           </div>
         </div>
-        <div className="space-y-3.5 min-h-[140px] max-h-[225px] overflow-y-auto pr-1">
+        <div className="space-y-3">
           {districts.length > 0 ? (
-            districts.map((d, idx) => (
+            districts.slice(0, 5).map((d, idx) => (
               <div key={idx} className="flex items-center justify-between text-sm font-semibold">
-                <span className="text-slate-850 font-bold">{d.district}</span>
-                <div className="flex items-center gap-3 sm:gap-6">
-                  <span className="text-slate-900 font-extrabold">{(d.count ?? 0).toLocaleString()}</span>
+                <span className="text-slate-850 font-bold truncate pr-2" title={d.district}>
+                  {d.district}
+                </span>
+                <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                  <span className="text-slate-900 font-extrabold w-16 text-right">
+                    {(d.count ?? 0).toLocaleString()}
+                  </span>
                   <div className="flex items-center gap-2 w-20 sm:w-28">
                     <div className="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
                       <div 
-                        className="h-full bg-teal-600 rounded-full" 
+                        className="h-full bg-teal-600 rounded-full transition-all duration-500" 
                         style={{ width: d.share || '0%' }}
                       />
                     </div>
-                    <span className="text-xs font-extrabold text-slate-500 w-8 text-right">{d.share || '0%'}</span>
+                    <span className="text-xs font-extrabold text-slate-500 w-8 text-right shrink-0">
+                      {d.share || '0%'}
+                    </span>
                   </div>
                 </div>
               </div>
