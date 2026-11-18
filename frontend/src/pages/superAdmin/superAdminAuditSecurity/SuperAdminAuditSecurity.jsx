@@ -4,13 +4,12 @@ import SecurityStatusPanel from '../../../components/superAdmin/superAdminAuditS
 
 export default function SuperAdminAuditSecurity() {
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Page Header */}
-      <div className="border-b border-slate-150 pb-5">
-        <h1 className="text-3xl font-black text-slate-805 tracking-tight">Audit & security</h1>
-        <p className="text-base font-bold text-slate-500 mt-1.5">
-          Monitor sensitive platform activity, system access, and security controls.
-        </p>
+    <div className="space-y-6 font-sans animate-fadeIn">
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Audit & security</h1>
+        </div>
       </div>
 
       {/* Grid container layout */}

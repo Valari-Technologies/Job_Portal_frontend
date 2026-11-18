@@ -212,21 +212,18 @@ export default function SuperAdminNotifications() {
   const unreadCount = notifArray.filter(n => !n.is_read).length;
 
   return (
-    <div className="space-y-8 font-sans animate-fadeIn max-w-5xl mx-auto">
-      {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-150 pb-5">
+    <div className="space-y-6 font-sans animate-fadeIn">
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">TN Jobz Notifications</h1>
-          <p className="text-sm font-semibold text-slate-500 mt-1">
-            Review platform, moderation, account, and security updates.
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Notifications</h1>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setShowBroadcastModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer shadow-2xs min-h-[44px]"
+            className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer shadow-2xs min-h-[44px]"
           >
             <Send className="h-4 w-4 text-teal-400" />
             <span>Broadcast Notice</span>
@@ -236,7 +233,7 @@ export default function SuperAdminNotifications() {
             <button
               type="button"
               onClick={markAllAsRead}
-              className="px-4 py-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer min-h-[44px]"
+              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer min-h-[44px]"
             >
               <CheckCheck className="h-4 w-4" />
               <span>Mark all as read</span>
@@ -247,7 +244,7 @@ export default function SuperAdminNotifications() {
             <button
               type="button"
               onClick={() => setShowClearConfirmModal(true)}
-              className="px-3.5 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer min-h-[44px]"
+              className="w-full sm:w-auto justify-center px-3.5 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer min-h-[44px]"
               title="Clear all notifications"
             >
               <Trash2 className="h-4 w-4" />

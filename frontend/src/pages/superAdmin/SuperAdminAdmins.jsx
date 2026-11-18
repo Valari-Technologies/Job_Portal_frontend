@@ -48,17 +48,14 @@ export default function SuperAdminAdmins() {
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Header and Title section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Admins</h1>
-          <p className="text-sm font-medium text-slate-450 mt-1">
-            Create and manage Admin accounts responsible for Recruiter accounts.
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Admins</h1>
         </div>
         <button
           onClick={() => navigate('/super-admin/admins/create')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-teal-700 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-100 min-h-[44px] cursor-pointer"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-colors cursor-pointer whitespace-nowrap"
         >
           <Plus className="h-4.5 w-4.5" />
           <span>Create Admin</span>

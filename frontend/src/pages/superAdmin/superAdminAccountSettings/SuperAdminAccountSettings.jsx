@@ -178,9 +178,6 @@ export default function SuperAdminAccountSettings() {
       {/* Page Title Header */}
       <div className="border-b border-slate-150 pb-5">
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">Account Settings</h1>
-        <p className="text-sm font-semibold text-slate-500 mt-1">
-          Manage security, notification preferences, system defaults, and active sessions.
-        </p>
       </div>
 
       {/* Toast Feedback */}

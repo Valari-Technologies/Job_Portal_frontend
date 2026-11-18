@@ -114,14 +114,13 @@ export default function SuperAdminJobReview() {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header title */}
+    <div className="space-y-6 font-sans animate-fadeIn">
+      {/* Header bar */}
       {!selectedJob && (
-        <div className="border-b border-slate-150 pb-5">
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Job review</h1>
-          <p className="text-base font-bold text-slate-500 mt-1.5">
-            Review job submissions before publication.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Job review</h1>
+          </div>
         </div>
       )}
 

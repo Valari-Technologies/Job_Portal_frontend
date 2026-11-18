@@ -405,7 +405,7 @@ export default function CandidateAICopilot() {
                 </div>
                 <div className="flex items-center gap-1 rounded-2xl bg-white border border-slate-200 px-3 py-2 text-xs">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-[#3B00FF]" />
-                  <span className="font-bold text-slate-500">AI is thinking...</span>
+                  <span className="font-bold text-slate-500">Nexiv is thinking...</span>
                 </div>
               </div>
             )}
@@ -417,7 +417,7 @@ export default function CandidateAICopilot() {
                   <AlertCircle className="h-4 w-4 text-[#3B00FF] shrink-0 mt-0.5" />
                   <div>
                     <h5 className="text-xs font-black text-slate-900">
-                      Confirm AI Job Application
+                      Confirm Job Application
                     </h5>
                     <p className="text-[11px] font-medium text-slate-600 mt-0.5">
                       Apply to <strong className="font-bold text-slate-900">{pendingConfirmJob.title}</strong> at <strong className="font-bold text-slate-900">{pendingConfirmJob.company}</strong> using your uploaded profile resume?
@@ -459,7 +459,7 @@ export default function CandidateAICopilot() {
             >
               <input
                 type="text"
-                placeholder="Ask AI to find or apply for jobs..."
+                placeholder="Ask Nexiv to find or apply for jobs..."
                 value={inputMessage}
                 disabled={isTyping}
                 onChange={(e) => setInputMessage(e.target.value)}

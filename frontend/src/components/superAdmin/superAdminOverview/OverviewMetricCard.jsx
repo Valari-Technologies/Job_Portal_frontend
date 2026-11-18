@@ -40,21 +40,6 @@ export default function OverviewMetricCard({ title, value, pctChange, icon, colo
           {icon}
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-1.5">
-        <span className={`flex items-center text-sm font-extrabold ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
-          {isPositive ? (
-            <svg className="mr-0.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          ) : (
-            <svg className="mr-0.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          )}
-          {pctChange}
-        </span>
-        <span className="text-sm font-bold text-slate-500">this month</span>
-      </div>
     </div>
   );
 }

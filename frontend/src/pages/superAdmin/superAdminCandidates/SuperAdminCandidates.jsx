@@ -147,66 +147,69 @@ export default function SuperAdminCandidates({ onToast }) {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 lg:gap-6 xl:flex-row xl:items-center xl:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Candidate management</h1>
-          <p className="text-sm font-bold text-slate-500 mt-1">
-            Manage candidate accounts, profile quality and activity across the platform.
-          </p>
+    <div className="space-y-6 font-sans animate-fadeIn">
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+            Candidate management
+          </h1>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 shrink-0">
-          {/* Header Search input */}
-          <div className="relative flex-1 sm:flex-initial sm:w-60 lg:w-64 min-w-[200px]">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
               <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
               type="text"
-              placeholder="Search name, mobile or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-2xs focus:border-teal-500 focus:outline-none transition-colors"
+              placeholder="Search name, mobile or ID..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9.5 pr-4 text-xs font-bold text-slate-800 placeholder-slate-400 shadow-2xs focus:border-teal-500 focus:outline-none transition-colors"
             />
           </div>
 
-          <button
-            type="button"
-            onClick={handleFiltersToggle}
-            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors shrink-0 cursor-pointer"
-          >
-            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            <span>Filters</span>
-          </button>
+          {/* Action buttons row */}
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleFiltersToggle}
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2.5 text-xs font-extrabold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span>Filters</span>
+            </button>
 
-          <button
-            type="button"
-            disabled
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-400 shadow-2xs cursor-not-allowed shrink-0"
-          >
-            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>Export</span>
-          </button>
+            <button
+              type="button"
+              disabled
+              onClick={handleExportCSV}
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 text-xs font-bold text-slate-400 shadow-2xs cursor-not-allowed"
+            >
+              <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Export</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/super-admin/candidates/create')}
-            aria-label="Add candidate"
-            className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-teal-600 px-3.5 sm:px-4.5 py-2.5 text-xs sm:text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors shrink-0 whitespace-nowrap cursor-pointer"
-          >
-            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add candidate</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => navigate('/super-admin/candidates/create')}
+              aria-label="Add candidate"
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl bg-teal-600 px-3.5 sm:px-4.5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add candidate</span>
+            </button>
+          </div>
         </div>
       </div>
 

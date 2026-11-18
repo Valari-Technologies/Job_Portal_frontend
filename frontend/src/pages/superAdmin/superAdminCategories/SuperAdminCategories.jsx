@@ -122,7 +122,7 @@ export default function SuperAdminCategories({ onToast }) {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 font-sans animate-fadeIn">
       {/* Toast Feedback Alert Banner */}
       {toastFeedback && (
         <div className={`p-4 rounded-xl border flex items-center justify-between text-xs font-bold animate-fadeIn shadow-sm ${
@@ -133,21 +133,18 @@ export default function SuperAdminCategories({ onToast }) {
         </div>
       )}
 
-      {/* Title Header */}
-      <div className="flex flex-col gap-4 lg:gap-6 xl:flex-row xl:items-center xl:justify-between border-b border-slate-200 pb-5">
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Job categories</h1>
-          <p className="text-sm font-bold text-slate-500 mt-1">
-            Organize jobs with a clear category hierarchy to improve discovery and matching.
-          </p>
+      {/* Header bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Job categories</h1>
         </div>
         
         {/* Actions Toolbar */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 shrink-0">
-          <div className="relative flex-1 sm:flex-initial sm:w-60 min-w-[180px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-60">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
               <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
@@ -155,33 +152,33 @@ export default function SuperAdminCategories({ onToast }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search categories..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 shadow-2xs focus:outline-none focus:border-teal-500 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9.5 pr-4 text-xs font-bold text-slate-800 placeholder-slate-400 shadow-2xs focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
 
-          <div className="relative shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer shadow-2xs shrink-0"
+              className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-teal-500 transition-colors cursor-pointer shadow-2xs"
             >
               <option value="all">All status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => navigate('/super-admin/categories/create')}
-            aria-label="Add category"
-            className="flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-teal-600 px-3.5 sm:px-4.5 py-2.5 text-xs sm:text-sm font-extrabold text-white hover:bg-teal-700 shadow-md shadow-teal-600/10 transition-colors cursor-pointer shrink-0 whitespace-nowrap min-h-[42px]"
-          >
-            <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add category</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => navigate('/super-admin/categories/create')}
+              aria-label="Add category"
+              className="flex-1 sm:flex-none justify-center flex items-center gap-2 rounded-xl bg-teal-600 px-4.5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add category</span>
+            </button>
+          </div>
         </div>
       </div>
 

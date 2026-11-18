@@ -184,9 +184,6 @@ export default function SuperAdminProfile() {
       {/* Page Heading */}
       <div className="border-b border-slate-150 pb-5">
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">My Profile</h1>
-        <p className="text-sm font-semibold text-slate-500 mt-1">
-          View and manage your Super Admin information.
-        </p>
       </div>
 
       {/* Success Notification Banner */}
