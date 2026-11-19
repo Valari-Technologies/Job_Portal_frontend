@@ -211,6 +211,9 @@ export default function SuperAdminHeader({
           </span>
           <input 
             type="text" 
+            id="super-admin-global-search"
+            name="globalSearch"
+            aria-label="Search candidates, employers"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowSearchDropdown(true)}

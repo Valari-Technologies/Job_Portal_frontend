@@ -149,6 +149,9 @@ export default function SuperAdminCategories({ onToast }) {
             </span>
             <input
               type="text"
+              id="categories-search-input"
+              name="categoriesSearch"
+              aria-label="Search categories"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search categories..."

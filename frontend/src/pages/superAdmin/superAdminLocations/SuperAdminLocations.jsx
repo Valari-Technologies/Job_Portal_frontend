@@ -53,6 +53,9 @@ export default function SuperAdminLocations() {
             </span>
             <input
               type="text"
+              id="locations-search-input"
+              name="locationsSearch"
+              aria-label="Search location"
               placeholder="Search location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

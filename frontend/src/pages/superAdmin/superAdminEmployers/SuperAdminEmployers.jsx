@@ -125,6 +125,9 @@ export default function SuperAdminEmployers() {
             </span>
             <input
               type="text"
+              id="employer-search-input"
+              name="employerSearch"
+              aria-label="Search employers by company or email"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search company / email"

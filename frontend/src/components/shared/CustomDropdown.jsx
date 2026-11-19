@@ -195,10 +195,10 @@ export default function CustomDropdown({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Hidden input for standard form submission if name/id provided */}
-      {id && (
+      {(name || id) && (
         <input
           type="hidden"
-          id={id}
+          id={id ? `${id}-hidden` : undefined}
           name={name || id}
           value={value ?? ''}
           required={required}
@@ -208,9 +208,12 @@ export default function CustomDropdown({
       {/* Dropdown Trigger Button */}
       <button
         type="button"
-        id={id ? `${id}-trigger` : undefined}
+        id={id || undefined}
+        name={name || (id ? `${id}-btn` : undefined)}
         disabled={disabled}
         onClick={handleToggle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`w-full flex items-center justify-between gap-2.5 ${roundedClass} border font-medium transition-all text-left cursor-pointer ${sizeClass} ${
           disabled
             ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
@@ -257,6 +260,9 @@ export default function CustomDropdown({
                 <input
                   ref={searchInputRef}
                   type="text"
+                  id={id ? `${id}-search` : undefined}
+                  name={id ? `${id}-search` : 'dropdown-search'}
+                  aria-label="Type to search options"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Type to search..."

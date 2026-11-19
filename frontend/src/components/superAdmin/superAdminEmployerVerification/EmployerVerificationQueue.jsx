@@ -74,6 +74,9 @@ export function EmployerVerificationQueue({
             </svg>
             <input
               type="text"
+              id="employer-verification-search"
+              name="verificationSearch"
+              aria-label="Search by company name, employer email, phone, location"
               placeholder="Search by company name, employer email, phone, location..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}

@@ -163,6 +163,9 @@ export default function SuperAdminSkills({ onToast }) {
             </span>
             <input
               type="text"
+              id="skills-search-input"
+              name="skillsSearch"
+              aria-label="Search skills"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search skills..."

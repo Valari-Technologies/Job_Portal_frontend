@@ -145,6 +145,9 @@ export default function SuperAdminReports() {
           </span>
           <input
             type="text"
+            id="reports-search-input"
+            name="reportsSearch"
+            aria-label="Search reports by job, company, reason, description"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search reports by job, company, reason, description..."
@@ -153,6 +156,9 @@ export default function SuperAdminReports() {
         </div>
 
         <select
+          id="reports-status-filter"
+          name="statusFilter"
+          aria-label="Filter reports by status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
@@ -166,6 +172,9 @@ export default function SuperAdminReports() {
         <div className="relative">
           <input
             type="text"
+            id="reports-location-filter"
+            name="locationFilter"
+            aria-label="Filter reports by location"
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             placeholder="Filter location..."

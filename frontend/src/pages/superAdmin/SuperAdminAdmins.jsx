@@ -125,6 +125,9 @@ export default function SuperAdminAdmins() {
         <Search className="h-4.5 w-4.5 text-slate-400 shrink-0" />
         <input 
           type="text"
+          id="admins-search-input"
+          name="adminsSearch"
+          aria-label="Search administrators"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search administrators by name, email, or status..."

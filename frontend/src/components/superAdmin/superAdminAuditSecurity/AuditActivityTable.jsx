@@ -93,6 +93,9 @@ export default function AuditActivityTable() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            id="audit-search-input"
+            name="auditSearch"
+            aria-label="Search description or email"
             placeholder="Search description, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

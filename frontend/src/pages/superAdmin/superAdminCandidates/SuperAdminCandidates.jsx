@@ -181,6 +181,9 @@ export default function SuperAdminCandidates({ onToast }) {
             </span>
             <input
               type="text"
+              id="candidate-search-input"
+              name="candidateSearch"
+              aria-label="Search candidates by name, mobile or ID"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name, mobile or ID..."

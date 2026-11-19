@@ -78,6 +78,9 @@ export function JobReviewQueue({
             </svg>
             <input
               type="text"
+              id="job-review-search"
+              name="jobReviewSearch"
+              aria-label="Search by job title, company name, skills"
               placeholder="Search by job title, company name, skills..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
