@@ -18,18 +18,21 @@ export default function SuperAdminLayout({
 
   // Find active nav key based on path
   const getActiveItem = () => {
-    if (location.pathname.startsWith('/super-admin/admins')) return 'admins';
-    if (location.pathname.startsWith('/super-admin/candidates')) return 'candidates';
-    if (location.pathname.startsWith('/super-admin/employers')) return 'employers';
-    if (location.pathname.startsWith('/super-admin/employer-verification')) return 'employer-verification';
-    if (location.pathname.startsWith('/super-admin/job-review')) return 'job-review';
-    if (location.pathname.startsWith('/super-admin/categories')) return 'categories';
-    if (location.pathname.startsWith('/super-admin/locations')) return 'locations';
-    if (location.pathname.startsWith('/super-admin/skills')) return 'skills';
-    if (location.pathname.startsWith('/super-admin/reports')) return 'reports';
-    if (location.pathname.startsWith('/super-admin/notifications')) return 'notifications';
-    if (location.pathname.startsWith('/super-admin/analytics')) return 'analytics';
-    if (location.pathname.startsWith('/super-admin/audit-security')) return 'audit';
+    const p = location.pathname.replace(/^\/super_admin/, '/super-admin');
+    if (p.startsWith('/super-admin/admins')) return 'admins';
+    if (p.startsWith('/super-admin/candidates')) return 'candidates';
+    if (p.startsWith('/super-admin/employers')) return 'employers';
+    if (p.startsWith('/super-admin/employer-verification')) return 'employer-verification';
+    if (p.startsWith('/super-admin/job-review')) return 'job-review';
+    if (p.startsWith('/super-admin/categories')) return 'categories';
+    if (p.startsWith('/super-admin/locations')) return 'locations';
+    if (p.startsWith('/super-admin/skills')) return 'skills';
+    if (p.startsWith('/super-admin/reports')) return 'reports';
+    if (p.startsWith('/super-admin/notifications')) return 'notifications';
+    if (p.startsWith('/super-admin/analytics')) return 'analytics';
+    if (p.startsWith('/super-admin/audit-security')) return 'audit';
+    if (p.startsWith('/super-admin/profile')) return 'profile';
+    if (p.startsWith('/super-admin/account-settings')) return 'account-settings';
     return 'overview';
   };
 

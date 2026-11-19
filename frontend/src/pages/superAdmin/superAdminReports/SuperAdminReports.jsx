@@ -217,9 +217,6 @@ export default function SuperAdminReports() {
               }}
               isLoading={isLoading}
             />
-            <div className="text-xs font-bold text-slate-500">
-              Showing {reports.length} of {summary.total_count || reports.length} reports
-            </div>
           </div>
 
           {/* Right Details Panel - Sticky with internal scroll */}

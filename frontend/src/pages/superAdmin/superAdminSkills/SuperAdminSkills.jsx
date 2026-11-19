@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SkillsTable from '../../../components/superAdmin/superAdminSkills/SkillsTable';
 import SkillDetailsPanel from '../../../components/superAdmin/superAdminSkills/SkillDetailsPanel';
 import SkillsReviewPanel from '../../../components/superAdmin/superAdminSkills/SkillsReviewPanel';
 import SkillModal from '../../../components/superAdmin/superAdminSkills/SkillModal';
+import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
 import { fetchSkills, updateSkillStatus, deleteSkill, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
 
 export default function SuperAdminSkills({ onToast }) {
@@ -20,6 +21,23 @@ export default function SuperAdminSkills({ onToast }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [skillToEdit, setSkillToEdit] = useState(null);
+
+  // Pagination config: 6 skills per page (fills table height matching right panel)
+  const PAGE_SIZE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(skills.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedSkills = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return skills.slice(start, start + PAGE_SIZE);
+  }, [skills, safeCurrentPage]);
 
   // Confirmation modal state
   const [confirmState, setConfirmState] = useState({
@@ -195,9 +213,9 @@ export default function SuperAdminSkills({ onToast }) {
       {/* Grid container layout */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Left Side Table */}
-        <div className="xl:col-span-2 space-y-6 min-w-0">
+        <div className="xl:col-span-2 space-y-4 min-w-0">
           <SkillsTable 
-            skills={skills}
+            skills={paginatedSkills}
             selectedSkill={selectedSkill}
             onSelectSkill={setSelectedSkill}
             onEditSkill={handleOpenEditModal}
@@ -208,9 +226,13 @@ export default function SuperAdminSkills({ onToast }) {
             onRetry={loadSkillsData}
             isFiltered={!!searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'}
           />
-          <div className="text-sm font-bold text-slate-500">
-            Showing {skills.length} skills
-          </div>
+          <SuperAdminPagination
+            currentPage={safeCurrentPage}
+            totalItems={skills.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemName="skills"
+          />
         </div>
 
         {/* Right Side details and reviews */}

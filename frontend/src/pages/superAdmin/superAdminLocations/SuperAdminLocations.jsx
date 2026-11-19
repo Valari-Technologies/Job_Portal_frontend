@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LocationHierarchy from '../../../components/superAdmin/superAdminLocations/LocationHierarchy';
 import LocationDetailsPanel from '../../../components/superAdmin/superAdminLocations/LocationDetailsPanel';
-import LocationInsights from '../../../components/superAdmin/superAdminLocations/LocationInsights';
 import { fetchLocations } from '../../../services/superAdmin/locationService';
 
 export default function SuperAdminLocations() {
@@ -101,9 +100,6 @@ export default function SuperAdminLocations() {
               searchTerm={searchTerm}
             />
           )}
-          <div className="text-sm font-bold text-slate-500">
-            Total configured locations: {locations.length}
-          </div>
         </div>
 
         {/* Right Side Details */}
@@ -114,9 +110,6 @@ export default function SuperAdminLocations() {
           />
         </div>
       </div>
-
-      {/* Bottom Insights row */}
-      <LocationInsights />
     </div>
   );
 }

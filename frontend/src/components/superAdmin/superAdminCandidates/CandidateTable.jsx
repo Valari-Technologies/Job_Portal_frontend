@@ -1,3 +1,63 @@
+import { useState, useEffect, useRef } from 'react';
+import { MoreVertical, Eye, Trash2 } from 'lucide-react';
+
+function CandidateActionMenu({ candidate, onSelectCandidate, onTriggerAction }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        aria-label="Actions menu"
+      >
+        <MoreVertical className="h-4.5 w-4.5" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              if (onSelectCandidate) onSelectCandidate(candidate);
+              if (onTriggerAction) onTriggerAction('VIEW', candidate);
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-teal-600 rounded-lg transition-colors cursor-pointer"
+          >
+            <Eye className="h-3.5 w-3.5 text-slate-400" />
+            <span>View profile</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              if (onTriggerAction) onTriggerAction('DELETE', candidate);
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CandidateTable({ 
   candidates = [], 
   selectedCandidate, 
@@ -66,16 +126,16 @@ export default function CandidateTable({
 
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
-              <th className="px-6 py-4">Candidate</th>
-              <th className="px-6 py-4">Location</th>
-              <th className="px-6 py-4">Profile completion</th>
-              <th className="px-6 py-4">Applications</th>
-              <th className="px-6 py-4">Account status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-4 sm:px-5 py-3.5">Candidate</th>
+              <th className="px-3 sm:px-4 py-3.5">Location</th>
+              <th className="px-3 sm:px-4 py-3.5">Profile completion</th>
+              <th className="px-3 sm:px-4 py-3.5">Applications</th>
+              <th className="px-3 sm:px-4 py-3.5">Account status</th>
+              <th className="px-4 sm:px-5 py-3.5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm font-bold text-slate-800">
@@ -98,35 +158,35 @@ export default function CandidateTable({
                   }`}
                 >
                   {/* Candidate Identity */}
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       {photo ? (
                         <img 
                           src={photo} 
                           alt={displayName} 
-                          className="h-10 w-10 rounded-full object-cover border border-black bg-white shrink-0" 
+                          className="h-9 w-9 rounded-full object-cover border border-black bg-white shrink-0" 
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-extrabold text-base shrink-0">
+                        <div className="h-9 w-9 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-extrabold text-sm shrink-0">
                           {initial}
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-extrabold text-slate-900 leading-snug truncate">{displayName}</p>
-                        <p className="text-xs text-slate-500 font-medium truncate">{c.email || c.phone_number || c.mobile_number || 'No email'}</p>
+                        <p className="font-extrabold text-slate-900 leading-snug truncate text-xs sm:text-sm">{displayName}</p>
+                        <p className="text-[11px] text-slate-500 font-medium truncate">{c.email || c.phone_number || c.mobile_number || 'No email'}</p>
                       </div>
                     </div>
                   </td>
 
                   {/* Location */}
-                  <td className="px-6 py-4 text-xs font-semibold text-slate-600 max-w-[180px] truncate">
+                  <td className="px-3 sm:px-4 py-3.5 text-xs font-semibold text-slate-600 max-w-[140px] truncate">
                     {locationStr}
                   </td>
 
                   {/* Profile Completion */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-16 bg-slate-100 rounded-full h-2 overflow-hidden shrink-0">
+                  <td className="px-3 sm:px-4 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-14 bg-slate-100 rounded-full h-1.5 overflow-hidden shrink-0">
                         <div 
                           className={`h-full rounded-full transition-all duration-300 ${
                             completion >= 80 ? 'bg-emerald-500' : completion >= 50 ? 'bg-teal-500' : 'bg-amber-500'
@@ -139,42 +199,26 @@ export default function CandidateTable({
                   </td>
 
                   {/* Applications Count */}
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-150 text-indigo-700 text-[11px] font-black">
-                      {appCount} {appCount === 1 ? 'Applied' : 'Applied'}
+                  <td className="px-3 sm:px-4 py-3.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-150 text-indigo-700 text-[10px] font-black">
+                      {appCount} Applied
                     </span>
                   </td>
 
                   {/* Account Status */}
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase border ${getStatusBadgeClass(statusStr)}`}>
+                  <td className="px-3 sm:px-4 py-3.5">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase border ${getStatusBadgeClass(statusStr)}`}>
                       {statusStr}
                     </span>
                   </td>
 
-                  {/* Actions */}
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onSelectCandidate) onSelectCandidate(c);
-                        if (onTriggerAction) onTriggerAction('VIEW', c);
-                      }}
-                      className="text-xs font-extrabold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer"
-                    >
-                      View profile
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onTriggerAction) onTriggerAction('DELETE', c);
-                      }}
-                      className="ml-4 text-xs font-extrabold text-red-600 hover:text-red-800 hover:underline cursor-pointer"
-                    >
-                      Delete
-                    </button>
+                  {/* Actions 3-dot Menu */}
+                  <td className="px-4 py-2.5 text-right whitespace-nowrap w-16">
+                    <CandidateActionMenu
+                      candidate={c}
+                      onSelectCandidate={onSelectCandidate}
+                      onTriggerAction={onTriggerAction}
+                    />
                   </td>
                 </tr>
               );

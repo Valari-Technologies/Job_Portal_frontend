@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { Edit2, Power, Trash2, ChevronRight, ChevronDown, FolderTree, Layers, MoreVertical } from 'lucide-react';
+import SuperAdminPagination from '../common/SuperAdminPagination';
 
 function ActionMenu({ item, onEdit, onToggleStatus, onDelete }) {
   const [open, setOpen] = useState(false);
@@ -75,6 +76,10 @@ export default function CategoryHierarchy({
   // Track expanded parent category IDs
   const [expandedParents, setExpandedParents] = useState(new Set());
 
+  // Pagination config: 6 categories per page (fills table height matching right panel)
+  const PAGE_SIZE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Auto-expand all when searching/filtering or when categories load
   useEffect(() => {
     if (isFiltered) {
@@ -85,6 +90,7 @@ export default function CategoryHierarchy({
       );
       setExpandedParents(allParentIds);
     }
+    setCurrentPage(1);
   }, [isFiltered, categories]);
 
   const toggleExpand = (parentId, e) => {
@@ -156,6 +162,16 @@ export default function CategoryHierarchy({
     c => (c.parent || c.parent_id || c.parent_name) && !rootIds.has(c.parent || c.parent_id)
   );
 
+  const totalTopItems = rootCategories.length + orphanChildren.length;
+  const totalPages = Math.max(1, Math.ceil(totalTopItems / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  // Paginate root categories
+  const paginatedRoots = rootCategories.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE
+  );
+
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       <div className="w-full overflow-x-auto no-scrollbar">
@@ -192,7 +208,7 @@ export default function CategoryHierarchy({
               </tr>
             ) : (
               <>
-                {rootCategories.map((parent) => {
+                {paginatedRoots.map((parent) => {
                   const subCategories = childrenMap[parent.id] || [];
                   const isExpanded = expandedParents.has(parent.id) || isFiltered;
                   const hasChildren = subCategories.length > 0;
@@ -390,6 +406,18 @@ export default function CategoryHierarchy({
           </tbody>
         </table>
       </div>
+
+      {totalTopItems > 0 && (
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+          <SuperAdminPagination
+            currentPage={safeCurrentPage}
+            totalItems={totalTopItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemName="categories"
+          />
+        </div>
+      )}
     </div>
   );
 }

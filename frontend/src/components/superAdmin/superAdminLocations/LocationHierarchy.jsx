@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import SuperAdminPagination from '../common/SuperAdminPagination';
 
 export default function LocationHierarchy({ 
   locations = [], 
@@ -58,6 +59,23 @@ export default function LocationHierarchy({
       return locations.filter(loc => getParentId(loc) === currentParent.id);
     }
   }, [locations, parentStack, currentParent, searchTerm]);
+
+  // Pagination config: 6 locations per page (fills table height matching right panel)
+  const PAGE_SIZE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page when drill-down stack or search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [parentStack, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(displayedLocations.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedLocations = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return displayedLocations.slice(start, start + PAGE_SIZE);
+  }, [displayedLocations, safeCurrentPage]);
 
   // Handle drill-down when clicking on a location row
   const handleRowClick = (loc) => {
@@ -195,7 +213,7 @@ export default function LocationHierarchy({
                 </td>
               </tr>
             ) : (
-              displayedLocations.map((loc) => {
+              paginatedLocations.map((loc) => {
                 const childCount = childCountMap[loc.id] || 0;
                 const isSelected = selectedLocation?.id === loc.id;
                 const nextLabel = getNextChildLabel(loc.location_type);
@@ -267,6 +285,18 @@ export default function LocationHierarchy({
           </tbody>
         </table>
       </div>
+
+      {displayedLocations.length > 0 && (
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+          <SuperAdminPagination
+            currentPage={safeCurrentPage}
+            totalItems={displayedLocations.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemName={!currentParent ? "states" : "locations"}
+          />
+        </div>
+      )}
     </div>
   );
 }

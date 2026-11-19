@@ -198,9 +198,6 @@ export default function SuperAdminCategories({ onToast }) {
             onRetry={loadCategoriesData}
             isFiltered={!!searchTerm || statusFilter !== 'all'}
           />
-          <div className="text-sm font-bold text-slate-500">
-            Showing {categories.length} categories
-          </div>
         </div>
 
         {/* Right side insights details */}

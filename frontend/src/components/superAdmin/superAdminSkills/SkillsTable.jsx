@@ -109,10 +109,10 @@ export default function SkillsTable({
         <table className="w-full text-left border-collapse min-w-[480px]">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
-              <th className="px-5 py-4 w-[38%]">Skill</th>
-              <th className="px-4 py-4 w-[30%]">Job Category</th>
-              <th className="px-4 py-4 w-[16%] text-center">Status</th>
-              <th className="px-5 py-4 w-[16%] text-right">Actions</th>
+              <th className="px-5 py-3 w-[38%]">Skill</th>
+              <th className="px-4 py-3 w-[30%]">Job Category</th>
+              <th className="px-4 py-3 w-[16%] text-center">Status</th>
+              <th className="px-5 py-3 text-right w-[16%]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -143,8 +143,8 @@ export default function SkillsTable({
                   onClick={() => onSelectSkill && onSelectSkill(s)}
                   className={`cursor-pointer transition-colors hover:bg-slate-50/60 ${selectedSkill?.id === s.id ? 'bg-teal-50/30' : ''}`}
                 >
-                  <td className="px-5 py-4 font-extrabold text-slate-850 text-sm truncate">{s.name}</td>
-                  <td className="px-4 py-4 text-xs font-bold text-slate-600">
+                  <td className="px-5 py-3 font-extrabold text-slate-850 text-sm truncate">{s.name}</td>
+                  <td className="px-4 py-3 text-xs font-bold text-slate-600">
                     {s.category_name ? (
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-slate-700 font-bold max-w-full truncate">
                         <span className="truncate">{s.category_name}</span>
@@ -155,7 +155,7 @@ export default function SkillsTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-center">
+                  <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
                       s.is_active 
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
@@ -164,7 +164,7 @@ export default function SkillsTable({
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-right">
+                  <td className="px-5 py-3 text-right">
                     <ActionMenu 
                       item={s}
                       onEdit={onEditSkill}

@@ -166,10 +166,24 @@ export default function SuperAdminHeader({
     else navigate('/super-admin/notifications');
   };
 
+  const canonicalPath = location.pathname
+    .replace(/^\/super_admin/, '/super-admin')
+    .replace(/^\/superadmin/, '/super-admin')
+    .replace(/\/+$/, '');
+
+  const isOverview = 
+    canonicalPath === '/super-admin/overview' || 
+    canonicalPath === '/super-admin' || 
+    canonicalPath === '/dashboard';
+
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 shadow-xs font-sans">
+    <header className={`sticky top-0 z-40 border-b border-slate-200 bg-white font-sans ${
+      isOverview 
+        ? 'flex items-center justify-between px-6 py-3 shadow-xs' 
+        : 'flex lg:hidden items-center justify-between px-4 py-2.5 shadow-xs'
+    }`}>
       {/* Sidebar Toggle for Mobile */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button 
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 lg:hidden focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer"
@@ -180,11 +194,14 @@ export default function SuperAdminHeader({
           </svg>
         </button>
 
-        {/* Breadcrumbs removed for clean header matching Admins view */}
+        {!isOverview && (
+          <span className="text-sm font-black text-slate-800 lg:hidden">TN Jobz</span>
+        )}
       </div>
 
-      {/* Header Actions */}
-      <div className="flex items-center gap-4">
+      {/* Header Actions - Only shown on Overview page */}
+      {isOverview && (
+        <div className="flex items-center gap-4">
         {/* Search Bar Input */}
         <div className="relative hidden w-64 md:block">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -449,6 +466,7 @@ export default function SuperAdminHeader({
           )}
         </div>
       </div>
+    )}
 
       {/* Super Admin Location Selector Modal (Flow 3: All-India LGD Catalog) */}
       <SuperAdminLocationModal

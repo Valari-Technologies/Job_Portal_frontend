@@ -1,7 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, UserCheck, AlertCircle, RefreshCw, MoreVertical, Eye } from 'lucide-react';
 import { fetchAdminsService } from '../../services/superAdmin/superAdminService';
+import SuperAdminPagination from '../../components/superAdmin/common/SuperAdminPagination';
+
+function AdminActionMenu({ admin }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        aria-label="Actions menu"
+      >
+        <MoreVertical className="h-4.5 w-4.5" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-36 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-teal-600 rounded-lg transition-colors cursor-pointer"
+          >
+            <Eye className="h-3.5 w-3.5 text-slate-400" />
+            <span>View details</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SuperAdminAdmins() {
   const navigate = useNavigate();
@@ -9,6 +51,22 @@ export default function SuperAdminAdmins() {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination config: 6 admins per page
+  const PAGE_SIZE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(admins.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedAdmins = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return admins.slice(start, start + PAGE_SIZE);
+  }, [admins, safeCurrentPage]);
 
   const loadAdmins = useCallback((query = '') => {
     setLoading(true);
@@ -113,20 +171,21 @@ export default function SuperAdminAdmins() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Created Date</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-wider">Created By</th>
+                  <th className="px-5 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Created Date</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider">Created By</th>
+                  <th className="px-4 py-3.5 text-[11px] font-black text-slate-400 uppercase tracking-wider text-right w-16">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {admins.map((adm) => {
+                {paginatedAdmins.map((adm) => {
                   const displayName = adm.name || adm.full_name || adm.username || 'Admin';
                   const statusVal = adm.status || adm.account_status || 'ACTIVE';
                   const isStatusActive = statusVal.toUpperCase() === 'ACTIVE';
@@ -134,10 +193,10 @@ export default function SuperAdminAdmins() {
 
                   return (
                     <tr key={adm.id || adm.email} className="hover:bg-slate-50/40">
-                      <td className="px-6 py-4.5 text-xs font-bold text-slate-900">{displayName}</td>
-                      <td className="px-6 py-4.5 text-xs font-bold text-slate-500">{adm.email}</td>
-                      <td className="px-6 py-4.5 text-xs font-bold text-slate-600">{adm.role || 'ADMIN'}</td>
-                      <td className="px-6 py-4.5">
+                      <td className="px-5 py-3.5 text-xs font-bold text-slate-900">{displayName}</td>
+                      <td className="px-4 py-3.5 text-xs font-bold text-slate-500">{adm.email}</td>
+                      <td className="px-4 py-3.5 text-xs font-bold text-slate-600">{adm.role || 'ADMIN'}</td>
+                      <td className="px-4 py-3.5">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
                           isStatusActive
                             ? 'border border-green-200 bg-green-50 text-green-700'
@@ -146,13 +205,28 @@ export default function SuperAdminAdmins() {
                           {statusVal}
                         </span>
                       </td>
-                      <td className="px-6 py-4.5 text-xs font-semibold text-slate-500">{formatDate(adm.created_at)}</td>
-                      <td className="px-6 py-4.5 text-xs font-semibold text-slate-500">{createdByName}</td>
+                      <td className="px-4 py-3.5 text-xs font-semibold text-slate-500">{formatDate(adm.created_at)}</td>
+                      <td className="px-4 py-3.5 text-xs font-semibold text-slate-500">{createdByName}</td>
+                      <td className="px-4 py-2 text-right whitespace-nowrap w-16">
+                        <AdminActionMenu admin={adm} />
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {admins.length > 0 && (
+          <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+            <SuperAdminPagination
+              currentPage={safeCurrentPage}
+              totalItems={admins.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              itemName="admins"
+            />
           </div>
         )}
       </div>

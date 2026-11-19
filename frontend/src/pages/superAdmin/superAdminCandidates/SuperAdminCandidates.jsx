@@ -9,6 +9,7 @@ import CandidateFilters from '../../../components/superAdmin/superAdminCandidate
 import CandidateTable from '../../../components/superAdmin/superAdminCandidates/CandidateTable';
 import CandidateSidePanel from '../../../components/superAdmin/superAdminCandidates/CandidateSidePanel';
 import CandidateModal from '../../../components/superAdmin/superAdminCandidates/CandidateModal';
+import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
 
 export default function SuperAdminCandidates({ onToast }) {
   const navigate = useNavigate();
@@ -65,10 +66,27 @@ export default function SuperAdminCandidates({ onToast }) {
     });
   }, [candidates, profileStatus]);
 
-  // The preview card always points at a candidate that is still in the visible list
+  // Pagination config: 8 candidate details per page (extends table to perfectly fill space matching right panel)
+  const PAGE_SIZE = 8;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedState, selectedDistrict, profileStatus, accountStatus]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleCandidates.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedCandidates = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return visibleCandidates.slice(start, start + PAGE_SIZE);
+  }, [visibleCandidates, safeCurrentPage]);
+
+  // The preview card always points at a candidate that is still in the visible list (preferably on current page)
   const selectedCandidate = useMemo(
-    () => visibleCandidates.find((c) => c.id === pickedCandidate?.id) || visibleCandidates[0] || null,
-    [visibleCandidates, pickedCandidate]
+    () => paginatedCandidates.find((c) => c.id === pickedCandidate?.id) || paginatedCandidates[0] || visibleCandidates[0] || null,
+    [paginatedCandidates, pickedCandidate, visibleCandidates]
   );
 
   useEffect(() => {
@@ -79,9 +97,6 @@ export default function SuperAdminCandidates({ onToast }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState('VIEW_PROFILE');
   const [panelTitle, setPanelTitle] = useState('Candidate Workspace');
-
-  // Pagination config
-  const [pageSize, setPageSize] = useState(10);
 
   // Focus Filters card trigger
   const handleFiltersToggle = () => {
@@ -177,17 +192,6 @@ export default function SuperAdminCandidates({ onToast }) {
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               type="button"
-              onClick={handleFiltersToggle}
-              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2.5 text-xs font-extrabold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              <span>Filters</span>
-            </button>
-
-            <button
-              type="button"
               disabled
               onClick={handleExportCSV}
               className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 text-xs font-bold text-slate-400 shadow-2xs cursor-not-allowed"
@@ -228,28 +232,22 @@ export default function SuperAdminCandidates({ onToast }) {
       {/* Workspace Grids layout */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left main table wrapper */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <CandidateTable
-            candidates={visibleCandidates}
+            candidates={paginatedCandidates}
             selectedCandidate={selectedCandidate}
             onSelectCandidate={handleSelectCandidate}
             onTriggerAction={handleTriggerAction}
           />
 
           {/* Pagination bar */}
-          <div className="flex items-center justify-between text-sm font-bold text-slate-500">
-            <span>Showing {visibleCandidates.length > 0 ? 1 : 0} to {visibleCandidates.length} of {visibleCandidates.length} candidates</span>
-            <div className="flex items-center gap-3">
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:outline-none"
-              >
-                <option value="10">10 per page</option>
-                <option value="20">20 per page</option>
-              </select>
-            </div>
-          </div>
+          <SuperAdminPagination
+            currentPage={safeCurrentPage}
+            totalItems={visibleCandidates.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemName="candidates"
+          />
         </div>
 
         {/* Right side analytics indicators cards */}
