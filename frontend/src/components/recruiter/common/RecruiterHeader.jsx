@@ -1,14 +1,24 @@
-import { useState } from 'react';
-import { Search, Bell, Settings, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Bell, Settings, User, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useRecruiterUser } from '../../../context/RecruiterUserContext';
 import RecruiterNotificationPanel from './RecruiterNotificationPanel';
 import RecruiterAccountMenu from './RecruiterAccountMenu';
+import { checkRecruiterPlanStatus } from '../../../services/recruiter/recruiterCommerceService';
 
 export default function RecruiterHeader() {
   const { profile, unreadCount } = useRecruiterUser();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [planStatus, setPlanStatus] = useState(() => checkRecruiterPlanStatus());
+
+  useEffect(() => {
+    const handleCommerceUpdate = () => {
+      setPlanStatus(checkRecruiterPlanStatus());
+    };
+    window.addEventListener('recruiter_commerce_updated', handleCommerceUpdate);
+    return () => window.removeEventListener('recruiter_commerce_updated', handleCommerceUpdate);
+  }, []);
 
   const { fullName } = profile.identity || {};
   const { profilePhotoUrl } = profile.recruiterProfile || {};
@@ -26,7 +36,25 @@ export default function RecruiterHeader() {
       </div>
 
       {/* Header Actions */}
-      <div className="flex items-center gap-4 relative">
+      <div className="flex items-center gap-3.5 relative">
+        {/* Live Plan & Credits Widget */}
+        <Link
+          to="/recruiter/payments"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all text-xs group shadow-2xs"
+          title="Click to view Plan & Credits in Payments"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-slate-800">
+            <span className={`flex h-2 w-2 rounded-full ${planStatus.isExpired ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} />
+            <Zap className="h-3.5 w-3.5 text-amber-500" />
+            <span className="font-black text-indigo-600">{planStatus.availableCredits}</span>
+            <span className="text-slate-500 font-semibold hidden xl:inline">Credits</span>
+          </div>
+          <span className="text-slate-300">|</span>
+          <span className="text-[11px] font-bold text-slate-600 group-hover:text-indigo-600 truncate max-w-[130px]">
+            {planStatus.planName}
+          </span>
+        </Link>
+
         {/* Notification Bell */}
         <div className="relative">
           <button 

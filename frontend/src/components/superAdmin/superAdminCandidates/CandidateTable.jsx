@@ -73,15 +73,16 @@ export default function CandidateTable({
   };
 
   const formatLocation = (c) => {
-    if (!c) return 'Tamil Nadu';
+    if (!c) return 'Not specified';
     if (typeof c.location === 'string' && c.location) return c.location;
+    if (c.location?.full_path) return c.location.full_path;
     if (c.location?.name) return c.location.name;
     if (c.location?.city && c.location?.state) return `${c.location.city}, ${c.location.state}`;
     if (c.location?.state) return c.location.state;
     if (c.city && c.state) return `${c.city}, ${c.state}`;
     if (c.state) return c.state;
     if (c.city) return c.city;
-    return 'Tamil Nadu';
+    return 'Not specified';
   };
 
   if (!candidates || candidates.length === 0) {
@@ -125,11 +126,11 @@ export default function CandidateTable({
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
-      <div className="overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans min-h-[380px]">
+      <div className="overflow-x-auto scroll-smooth">
+        <table className="w-full min-w-[760px] text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider sticky top-0 z-10">
               <th className="px-4 sm:px-5 py-3.5">Candidate</th>
               <th className="px-3 sm:px-4 py-3.5">Location</th>
               <th className="px-3 sm:px-4 py-3.5">Profile completion</th>

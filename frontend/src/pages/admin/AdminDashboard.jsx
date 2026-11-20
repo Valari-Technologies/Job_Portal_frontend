@@ -1,23 +1,70 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminMetricCard from '../../components/admin/adminDashboard/AdminMetricCard';
 import AdminRecentActivity from '../../components/admin/adminDashboard/AdminRecentActivity';
 import AdminQuickActions from '../../components/admin/adminDashboard/AdminQuickActions';
 import { getAdminDashboardData } from '../../services/admin/adminDashboardService';
+import { getAdminRecruiters } from '../../services/admin/adminRecruitersService';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
-  useEffect(() => {
+  const fetchDashboard = () => {
     getAdminDashboardData().then((res) => {
       setData(res);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchDashboard();
   }, []);
 
+  const handleExportReport = async () => {
+    try {
+      const recruitersData = await getAdminRecruiters();
+      const list = recruitersData?.results || [];
+      if (!list.length) {
+        alert("No recruiters available to export yet.");
+        return;
+      }
+      const headers = ["ID", "Full Name", "Company Name", "Email", "Phone", "Designation", "Industry", "Account Status"];
+      const rows = list.map(r => [
+        `"${r.id}"`,
+        `"${(r.full_name || '').replace(/"/g, '""')}"`,
+        `"${(r.company_name || '').replace(/"/g, '""')}"`,
+        `"${(r.email || '').replace(/"/g, '""')}"`,
+        `"${(r.phone || '').replace(/"/g, '""')}"`,
+        `"${(r.designation || '').replace(/"/g, '""')}"`,
+        `"${(r.industry || '').replace(/"/g, '""')}"`,
+        `"${(r.account_status || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `recruiters_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export report error:", err);
+      alert("Failed to export report.");
+    }
+  };
+
   const handleQuickAction = (actionId) => {
-    // Keep it safe UI actions only, no fake mock success state overrides.
-    console.log(`Action trigger initiated: ${actionId}`);
+    if (actionId === 'create_recruiter') {
+      navigate('/admin/create-recruiter');
+    } else if (actionId === 'view_recruiters') {
+      navigate('/admin/recruiters');
+    } else if (actionId === 'export_report') {
+      handleExportReport();
+    }
   };
 
   if (loading || !data) {
@@ -34,35 +81,32 @@ export default function AdminDashboard() {
     <div className="space-y-6 md:space-y-8 animate-fadeIn font-sans pb-8">
       
       {/* Dashboard Title Heading */}
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">Dashboard</h1>
+        <button
+          onClick={() => {
+            setLoading(true);
+            fetchDashboard();
+          }}
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+        >
+          ↻ Refresh
+        </button>
       </div>
 
-      {/* 4 Metric cards Grid rows */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {/* 3 Metric cards Grid rows (Total, Active, Suspended) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
         <AdminMetricCard 
           title="Total Recruiters" 
           value={recruiter_metrics.total_recruiters.toLocaleString()} 
-          changeText={recruiter_metrics.total_change_percent} 
-          isNegative={false}
-        />
-        <AdminMetricCard 
-          title="Pending Activations" 
-          value={recruiter_metrics.pending_activations.toLocaleString()} 
-          changeText={recruiter_metrics.pending_change_percent} 
-          isNegative={false}
         />
         <AdminMetricCard 
           title="Active Recruiters" 
           value={recruiter_metrics.active_recruiters.toLocaleString()} 
-          changeText={recruiter_metrics.active_change_percent} 
-          isNegative={false}
         />
         <AdminMetricCard 
           title="Suspended" 
           value={recruiter_metrics.suspended_recruiters.toLocaleString()} 
-          changeText={recruiter_metrics.suspended_change_percent} 
-          isNegative={true}
         />
       </div>
 

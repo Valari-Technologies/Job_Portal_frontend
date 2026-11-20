@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Plus, Edit, X, Upload, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, X, Upload, CheckCircle2 } from 'lucide-react';
 import { getAdminRecruiters, updateAdminRecruiter } from '../../services/admin/adminRecruitersService';
 
 function fileToDataUrl(file) {
@@ -123,8 +123,15 @@ export default function AdminRecruiters() {
     );
   }
 
-  const { status_counts, results, pagination } = data;
-  const hasData = results && results.length > 0;
+  const { status_counts, results } = data;
+  const filteredResults = (results || []).filter(rec => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'active') return rec.account_status === 'Active';
+    if (activeTab === 'inactive') return rec.account_status === 'Inactive';
+    if (activeTab === 'suspended') return rec.account_status === 'Suspended';
+    return true;
+  });
+  const hasData = (results && results.length > 0);
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fadeIn font-sans pb-8">
@@ -137,12 +144,8 @@ export default function AdminRecruiters() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 rounded-xl border border-slate-200 px-4.5 py-2.5 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer min-h-[44px]">
-            <Filter className="h-4 w-4 text-slate-600" />
-            <span>Filters</span>
-          </button>
           <button 
-            onClick={() => navigate('/admin/recruiters/create')}
+            onClick={() => navigate('/admin/create-recruiter')}
             className="flex items-center gap-2 rounded-xl bg-[#4A1DDF] hover:bg-[#3B15CA] px-4.5 py-2.5 text-sm font-bold text-white transition-colors cursor-pointer min-h-[44px] shadow-sm"
           >
             <Plus className="h-4 w-4" />
@@ -154,10 +157,10 @@ export default function AdminRecruiters() {
       {/* Table Panel Card container */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         
-        {/* Status Tabs if backend has data */}
+        {/* Status Tabs (Pending Activation deleted as requested) */}
         {status_counts && hasData && (
           <div className="border-b border-slate-150 flex items-center overflow-x-auto px-6 py-2.5 gap-6">
-            {['all', 'pending_activation', 'active', 'inactive', 'suspended'].map((tab) => {
+            {['all', 'active', 'inactive', 'suspended'].map((tab) => {
               const label = tab === 'all' ? 'All' : tab.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
               const count = status_counts[tab];
               const isActive = activeTab === tab;
@@ -198,19 +201,19 @@ export default function AdminRecruiters() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {!hasData ? (
+              {filteredResults.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-20 text-center">
                     <div className="max-w-md mx-auto space-y-2 px-6">
-                      <h4 className="text-lg font-bold text-slate-900">No recruiters yet</h4>
+                      <h4 className="text-lg font-bold text-slate-900">No recruiters found</h4>
                       <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                        Employer accounts created by you will appear here after backend data is available.
+                        No employer accounts matching the current status tab.
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                results.map((rec) => (
+                filteredResults.map((rec) => (
                   <tr key={rec.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4 text-sm font-bold text-slate-900">
                       <div className="flex items-center gap-3">
@@ -261,11 +264,11 @@ export default function AdminRecruiters() {
           </table>
         </div>
 
-        {/* Pagination section if backend has data */}
-        {pagination && hasData && (
+        {/* Showing entries count */}
+        {filteredResults.length > 0 && (
           <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-600">
-              Showing {((pagination.page - 1) * pagination.page_size) + 1} to {Math.min(pagination.page * pagination.page_size, pagination.total_count)} of {pagination.total_count} entries
+              Showing 1 to {filteredResults.length} of {filteredResults.length} {filteredResults.length === 1 ? 'entry' : 'entries'}
             </span>
           </div>
         )}

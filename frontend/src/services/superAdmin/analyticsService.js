@@ -103,7 +103,7 @@ function getFallbackAnalyticsData(range = '30', state = 'all') {
       pending_count: 10,
       direct_publish_rate: "0%",
       approval_rate: "33.3%",
-      avg_review_hours: "10 in queue"
+      avg_review_hours: "10"
     },
     trends: [
       { date: "Week 1", applications: 6, candidates: 3, jobs: 2 },

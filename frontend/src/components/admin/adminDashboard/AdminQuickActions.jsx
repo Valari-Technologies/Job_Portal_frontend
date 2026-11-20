@@ -1,4 +1,4 @@
-import { UserPlus, Mail, Users, Download } from 'lucide-react';
+import { UserPlus, Users, Download } from 'lucide-react';
 
 export default function AdminQuickActions({ onActionClick }) {
   const actions = [
@@ -7,12 +7,6 @@ export default function AdminQuickActions({ onActionClick }) {
       title: 'Create Recruiter',
       subtitle: 'Add a new recruiter',
       icon: <UserPlus className="h-5 w-5 text-indigo-600" />
-    },
-    {
-      id: 'resend_activation',
-      title: 'Resend Activation',
-      subtitle: 'Resend activation email',
-      icon: <Mail className="h-5 w-5 text-indigo-600" />
     },
     {
       id: 'view_recruiters',

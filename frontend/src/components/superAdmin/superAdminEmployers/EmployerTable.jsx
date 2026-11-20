@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreVertical, Eye } from 'lucide-react';
+import { MoreVertical, Eye, ShieldCheck } from 'lucide-react';
 
-function EmployerActionMenu({ employer, onSelectEmployer }) {
+function EmployerActionMenu({ employer, onSelectEmployer, onUpdateTrustLevel }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -15,6 +15,8 @@ function EmployerActionMenu({ employer, onSelectEmployer }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isTrusted = employer.trust_level === 'TRUSTED' || employer.trust_level === 'HIGH';
+
   return (
     <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
       <button
@@ -27,7 +29,7 @@ function EmployerActionMenu({ employer, onSelectEmployer }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
+        <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
           <button
             type="button"
             onClick={() => {
@@ -39,13 +41,36 @@ function EmployerActionMenu({ employer, onSelectEmployer }) {
             <Eye className="h-3.5 w-3.5 text-slate-400" />
             <span>View details</span>
           </button>
+
+          {onUpdateTrustLevel && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onUpdateTrustLevel(employer.id, isTrusted ? 'BASIC' : 'TRUSTED');
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                isTrusted
+                  ? 'text-rose-600 hover:bg-rose-50'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>{isTrusted ? 'Revoke Trusted' : 'Mark as Trusted'}</span>
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export default function EmployerTable({ employers = [], onSelectEmployer, selectedEmployer }) {
+export default function EmployerTable({ 
+  employers = [], 
+  onSelectEmployer, 
+  selectedEmployer,
+  onUpdateTrustLevel 
+}) {
   if (!employers || employers.length === 0) {
     return (
       <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
@@ -87,11 +112,11 @@ export default function EmployerTable({ employers = [], onSelectEmployer, select
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans">
-      <div className="overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full bg-white rounded-2xl border border-slate-150 overflow-hidden shadow-2xs font-sans min-h-[380px]">
+      <div className="overflow-x-auto scroll-smooth">
+        <table className="w-full min-w-[760px] text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider sticky top-0 z-10">
               <th className="px-4 sm:px-5 py-3">Employer</th>
               <th className="px-3 sm:px-4 py-3">Location</th>
               <th className="px-3 sm:px-4 py-3">Verification</th>
@@ -151,10 +176,23 @@ export default function EmployerTable({ employers = [], onSelectEmployer, select
                       {emp.verification_status || 'PENDING'}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 sm:py-3">
-                    <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-600 text-[9px] font-extrabold uppercase">
-                      {emp.trust_level || 'NEW'}
-                    </span>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={emp.trust_level || 'NEW'}
+                      onChange={(e) => onUpdateTrustLevel && onUpdateTrustLevel(emp.id, e.target.value)}
+                      className={`text-[10px] font-extrabold rounded-lg px-2 py-1 border transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-teal-500 uppercase ${
+                        (emp.trust_level === 'TRUSTED' || emp.trust_level === 'HIGH')
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-black'
+                          : emp.trust_level === 'BASIC'
+                          ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          : 'bg-slate-100 border-slate-200 text-slate-600'
+                      }`}
+                      aria-label="Change Trust Level"
+                    >
+                      <option value="NEW">NEW</option>
+                      <option value="BASIC">BASIC</option>
+                      <option value="TRUSTED">TRUSTED</option>
+                    </select>
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs font-medium text-slate-600">
                     {emp.designation || 'HR Manager'}
@@ -163,6 +201,7 @@ export default function EmployerTable({ employers = [], onSelectEmployer, select
                     <EmployerActionMenu 
                       employer={emp}
                       onSelectEmployer={onSelectEmployer}
+                      onUpdateTrustLevel={onUpdateTrustLevel}
                     />
                   </td>
                 </tr>

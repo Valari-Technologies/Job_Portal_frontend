@@ -1,15 +1,17 @@
-import { Building2, Mail, Phone, Globe, MapPin, Calendar, User } from 'lucide-react';
+import { Building2, Mail, Phone, Globe, MapPin, Calendar, User, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 export default function EmployerSidePanel({ 
   isOpen, 
   onClose, 
   panelType, 
   panelTitle,
-  selectedEmployer 
+  selectedEmployer,
+  onUpdateTrustLevel 
 }) {
   if (!isOpen) return null;
 
   const emp = selectedEmployer;
+  const isTrusted = emp && (emp.trust_level === 'TRUSTED' || emp.trust_level === 'HIGH');
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end font-sans">
@@ -78,7 +80,13 @@ export default function EmployerSidePanel({
 
                 <div className="rounded-xl border border-slate-150 bg-slate-50/70 p-3 text-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Trust Level</span>
-                  <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 text-[10px] font-extrabold uppercase">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                    isTrusted
+                      ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 font-black'
+                      : emp.trust_level === 'BASIC'
+                      ? 'bg-blue-50 border border-blue-200 text-blue-700'
+                      : 'bg-slate-100 border border-slate-200 text-slate-600'
+                  }`}>
                     {emp.trust_level || 'NEW'}
                   </span>
                 </div>
@@ -193,6 +201,52 @@ export default function EmployerSidePanel({
                   Registered on: {emp.created_at ? new Date(emp.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recently'}
                 </span>
                 <span>User ID: #{emp.id}</span>
+              </div>
+
+              {/* Trust Status & Quick Action Card (At the bottom) */}
+              <div className="rounded-2xl border border-slate-150 bg-gradient-to-br from-teal-50/40 via-white to-emerald-50/30 p-4.5 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className={`h-4.5 w-4.5 ${isTrusted ? 'text-emerald-600' : 'text-slate-400'}`} />
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Trust Management</h4>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {isTrusted 
+                          ? 'Trusted employer: jobs bypass manual review and auto-publish directly.'
+                          : 'Standard employer: jobs require review before publishing.'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                    isTrusted 
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                      : 'bg-slate-100 text-slate-700 border border-slate-200'
+                  }`}>
+                    {emp.trust_level || 'NEW'}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-center gap-2">
+                  {isTrusted ? (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateTrustLevel && onUpdateTrustLevel(emp.id, 'BASIC')}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-xs font-extrabold text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <ShieldAlert className="h-4 w-4" />
+                      <span>Revoke Trusted Status (Set to Basic)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateTrustLevel && onUpdateTrustLevel(emp.id, 'TRUSTED')}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 px-4 text-xs font-extrabold text-white hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Mark as Trusted Employer</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </>
           ) : (

@@ -448,7 +448,7 @@ export default function CandidateProfilePage() {
   const fullName = profile?.fullName || contextProfile?.fullName || 'Candidate';
   const headline = profile?.headline ?? '';
   const location = profile?.location ?? '';
-  const completionPct = profile?.completionPercentage ?? 20;
+  const completionPct = profile?.completionPercentage ?? 0;
 
   return (
     <CandidateLayout>

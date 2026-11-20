@@ -66,8 +66,8 @@ export default function SuperAdminCandidates({ onToast }) {
     });
   }, [candidates, profileStatus]);
 
-  // Pagination config: 8 candidate details per page (extends table to perfectly fill space matching right panel)
-  const PAGE_SIZE = 8;
+  // Pagination config: 6 candidate details per page
+  const PAGE_SIZE = 6;
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset to page 1 whenever filters change
@@ -233,9 +233,9 @@ export default function SuperAdminCandidates({ onToast }) {
       />
 
       {/* Workspace Grids layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left main table wrapper */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+        {/* Left main table wrapper - Fixed in place */}
+        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start">
           <CandidateTable
             candidates={paginatedCandidates}
             selectedCandidate={selectedCandidate}
@@ -253,72 +253,97 @@ export default function SuperAdminCandidates({ onToast }) {
           />
         </div>
 
-        {/* Right side analytics indicators cards */}
-        <div className="space-y-6">
+        {/* Right side analytics indicators cards - Independently scrollable */}
+        <div className="space-y-6 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1.5 scrollbar-thin">
           {/* Needs Attention Card */}
           <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
             <h3 className="text-xl font-bold text-slate-900 mb-6">Needs attention</h3>
             <div className="space-y-4.5">
-              {/* Row Incomplete */}
-              <div className="flex items-center justify-between cursor-pointer py-1">
+              {/* Row Incomplete - Toggle filter for incomplete profiles */}
+              <div 
+                onClick={() => setProfileStatus(prev => prev === 'Incomplete' ? 'All' : 'Incomplete')}
+                className={`flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl transition-all group ${
+                  profileStatus === 'Incomplete'
+                    ? 'bg-orange-50 border border-orange-300 shadow-2xs'
+                    : 'hover:bg-orange-50/60'
+                }`}
+                title={profileStatus === 'Incomplete' ? 'Click to show all candidates' : 'Click to filter by incomplete profiles'}
+              >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800 leading-snug">Incomplete profiles</h4>
-                    <p className="text-xs text-slate-450">Profiles below 60% completion</p>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-sm font-bold text-slate-850 group-hover:text-orange-750 transition-colors">Incomplete profiles</h4>
+                      {profileStatus === 'Incomplete' && (
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-orange-200 text-orange-900">
+                          Active Filter
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-450">
+                      {profileStatus === 'Incomplete' ? 'Showing <60% complete (click to reset)' : 'Profiles below 60% completion'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">
                     {visibleCandidates.filter(c => Number(c.profile_completion || 0) < 60).length}
                   </span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`h-4.5 w-4.5 transition-transform ${profileStatus === 'Incomplete' ? 'text-orange-600 rotate-90' : 'text-slate-350 group-hover:translate-x-0.5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
 
-              {/* Row Duplicate */}
-              <div className="flex items-center justify-between cursor-pointer py-1">
+              {/* Row Duplicate - Navigate to Audit & Security */}
+              <div 
+                onClick={() => navigate('/super-admin/audit-security')}
+                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-indigo-50/60 transition-colors group"
+                title="Open Audit & Security to inspect duplicate accounts"
+              >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-750 border border-indigo-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-750 border border-indigo-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800 leading-snug">Duplicate checks</h4>
-                    <p className="text-xs text-slate-450">Potential duplicate accounts</p>
+                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-indigo-750 transition-colors">Duplicate checks</h4>
+                    <p className="text-[11px] text-slate-450">Inspect potential duplicate accounts</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">0</span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
 
-              {/* Row Reported */}
-              <div className="flex items-center justify-between cursor-pointer py-1">
+              {/* Row Reported - Navigate to Reports Management */}
+              <div 
+                onClick={() => navigate('/super-admin/reports')}
+                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-red-50/60 transition-colors group"
+                title="Open Reports to inspect flagged accounts"
+              >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-750 border border-red-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-750 border border-red-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800 leading-snug">Reported accounts</h4>
-                    <p className="text-xs text-slate-450">Accounts reported by users</p>
+                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-red-750 transition-colors">Reported accounts</h4>
+                    <p className="text-[11px] text-slate-450">Review accounts reported by users</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">0</span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -355,7 +380,7 @@ export default function SuperAdminCandidates({ onToast }) {
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-400">Location</span>
                   <span className="font-extrabold text-slate-800 truncate max-w-[180px]">
-                    {selectedCandidate.location?.full_path || selectedCandidate.location?.name || selectedCandidate.location?.city || selectedCandidate.city || selectedCandidate.location?.state || selectedCandidate.state || 'Tamil Nadu'}
+                    {selectedCandidate.location?.full_path || selectedCandidate.location?.name || selectedCandidate.location?.city || selectedCandidate.city || selectedCandidate.location?.state || selectedCandidate.state || 'Not specified'}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">

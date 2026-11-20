@@ -105,8 +105,14 @@ export function RecruiterUserProvider({ children }) {
     };
     initialize();
 
+    const handleNotifUpdate = () => {
+      loadNotifications();
+    };
+    window.addEventListener('recruiter_notifications_updated', handleNotifUpdate);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('recruiter_notifications_updated', handleNotifUpdate);
     };
   }, []);
 

@@ -1,11 +1,12 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, ArrowRight } from 'lucide-react';
+import { Plus, X, ArrowRight, Zap, AlertCircle } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
 import { getActiveIndustries, getSpecializationsByIndustry } from '../../../../services/candidate/candidateOnboardingService';
 import { fetchActivePublicSkills } from '../../../../services/superAdmin/categorySkillService';
 import { INDIA_STATES, getDistrictsForState } from '../../../../data/indiaLocations';
 import CustomDropdown from '../../../shared/CustomDropdown';
+import { checkRecruiterPlanStatus } from '../../../../services/recruiter/recruiterCommerceService';
 
 export default function JobDetailsForm() {
   const navigate = useNavigate();
@@ -255,6 +256,8 @@ export default function JobDetailsForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const planStatus = useMemo(() => checkRecruiterPlanStatus(), []);
+
   const handleNext = (e) => {
     e.preventDefault();
     if (!validate()) {
@@ -265,14 +268,65 @@ export default function JobDetailsForm() {
       return;
     }
 
-    // Save validated state into Wizard context and proceed to Step 2
+    // Save validated state into Wizard context
     setJobDetails(formState);
-    navigate('/recruiter/jobs/create/plan');
+
+    // Smart Routing:
+    // If HR already has an active plan with available credits, skip the plan selection screen
+    // and proceed directly to Review & Publish!
+    if (planStatus.canPostJob) {
+      navigate('/recruiter/jobs/create/checkout');
+    } else {
+      navigate('/recruiter/jobs/create/plan');
+    }
   };
 
   return (
     <form onSubmit={handleNext} className="space-y-8 bg-white rounded-2xl border border-slate-150 p-6 sm:p-8 shadow-xs">
       
+      {/* Smart Active Plan & Credits Status Banner */}
+      {planStatus.canPostJob ? (
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 rounded-2xl p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Zap className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black uppercase text-emerald-800 tracking-wider">
+                  Active Plan: {planStatus.planName}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[11px]">
+                  {planStatus.availableCredits} Credits Available
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-slate-600 mt-1">
+                Publishing this job will use <strong className="text-slate-900">1 credit</strong>. Plan valid until <strong className="text-slate-900">{planStatus.validUntil}</strong> ({planStatus.daysRemaining} days remaining).
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-black text-emerald-700 bg-white/90 border border-emerald-200/80 px-3 py-1.5 rounded-xl shrink-0">
+            ✓ 1-Click Posting Enabled
+          </span>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4.5 flex items-start sm:items-center gap-3.5 shadow-2xs">
+          <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="text-xs">
+            <span className="font-extrabold text-amber-900 block text-sm">
+              {planStatus.isExpired ? 'Active Plan Expired' : 'Zero Job Credits Available'}
+            </span>
+            <p className="text-amber-700 font-medium mt-0.5">
+              {planStatus.isExpired 
+                ? `Your ${planStatus.planName} expired on ${planStatus.validUntil}. You will be guided to select or renew a plan upon continuing.` 
+                : `You have used all ${planStatus.totalAllowance} credits on your plan. You will be guided to choose a plan to replenish credits.`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 1. JOB BASICS */}
       <div className="space-y-5">
         <h2 className="text-xs font-black text-indigo-600 uppercase tracking-wider border-b border-slate-100 pb-2">

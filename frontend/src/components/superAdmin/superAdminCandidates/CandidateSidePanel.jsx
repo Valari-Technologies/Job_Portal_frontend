@@ -42,7 +42,7 @@ export default function CandidateSidePanel({
         city: formCity || 'Chennai'
       },
       preferred_job_type: formJobType,
-      skills: ['HTML', 'CSS', 'JavaScript'],
+      skills: [],
       created_at: new Date().toISOString()
     };
     onActionSubmit('ADD_SAVE', newCand);
@@ -273,12 +273,12 @@ export default function CandidateSidePanel({
                         <div className="space-y-1 col-span-2">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Location</span>
                           <span className="font-bold text-slate-800">
-                            {candidate.location?.full_path || candidate.location?.name || [candidate.location?.city || candidate.city, candidate.location?.district || candidate.district, candidate.location?.state || candidate.state || 'Tamil Nadu'].filter(Boolean).join(', ')}
+                            {candidate.location?.full_path || candidate.location?.name || [candidate.location?.city || candidate.city, candidate.location?.district || candidate.district, candidate.location?.state || candidate.state].filter(Boolean).join(', ') || 'Not specified'}
                           </span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Job Preference</span>
-                          <span className="font-bold text-slate-800">{candidate.preferred_job_type || candidate.job_preference || 'Full-time'}</span>
+                          <span className="font-bold text-slate-800">{candidate.preferred_job_type || candidate.job_preference || 'Not specified'}</span>
                         </div>
                         <div className="space-y-1">
                           <span className="text-xs font-black text-slate-500 uppercase block tracking-wider">Registered on</span>
@@ -289,13 +289,17 @@ export default function CandidateSidePanel({
                       {/* Skills */}
                       <div className="space-y-2">
                         <h4 className="text-sm font-black text-slate-700 uppercase tracking-wider">Skills</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {(candidate.skills || ['HTML', 'CSS', 'JavaScript', 'SQL']).map(skill => (
-                            <span key={skill} className="rounded-xl border border-slate-150 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-700">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
+                        {Array.isArray(candidate.skills) && candidate.skills.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {candidate.skills.map(skill => (
+                              <span key={skill} className="rounded-xl border border-slate-150 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-700">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold text-slate-400 italic">No skills added yet</p>
+                        )}
                       </div>
                     </div>
                   )}

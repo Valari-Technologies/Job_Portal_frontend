@@ -172,6 +172,24 @@ export async function fetchEmployersService(params = {}) {
   }
 }
 
+export async function updateEmployerTrustService(employerId, trustLevel) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/employers/${employerId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trust_level: trustLevel })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, message: data.detail || data.message || "Failed to update employer trust level." };
+    }
+    return { success: true, employer: data.employer || data };
+  } catch (error) {
+    console.error("updateEmployerTrustService error:", error);
+    return { success: false, message: "Network error occurred while updating trust level." };
+  }
+}
+
 export async function deleteCandidateService(userId) {
   try {
     const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/candidates/${userId}/`, {

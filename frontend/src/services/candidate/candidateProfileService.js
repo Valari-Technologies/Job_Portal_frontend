@@ -43,7 +43,7 @@ export function getInitialProfileForCurrentUser() {
     location: '',
     summary: '',
     avatarUrl,
-    completionPercentage: 20,
+    completionPercentage: 0,
     experiences: [],
     education: [],
     skills: [],

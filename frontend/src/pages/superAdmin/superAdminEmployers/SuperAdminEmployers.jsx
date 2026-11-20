@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchEmployersService } from '../../../services/superAdmin/superAdminService';
+import { fetchEmployersService, updateEmployerTrustService } from '../../../services/superAdmin/superAdminService';
 import { getActionQueues } from '../superAdminOverview/superAdminOverviewService';
 import { useNavigate } from 'react-router-dom';
 import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/EmployerFilters';
@@ -29,8 +29,8 @@ export default function SuperAdminEmployers() {
   const [panelType, setPanelType] = useState('EMPTY_PROFILE');
   const [panelTitle, setPanelTitle] = useState('');
 
-  // Pagination config: 7 employers per page (tight, clean fit without extra space)
-  const PAGE_SIZE = 7;
+  // Pagination config: 6 employers per page
+  const PAGE_SIZE = 6;
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset to page 1 whenever filters or search change
@@ -105,6 +105,24 @@ export default function SuperAdminEmployers() {
     setPanelOpen(true);
   };
 
+  const handleUpdateTrustLevel = async (employerId, newTrustLevel) => {
+    // Optimistically update local state for immediate UI feedback
+    setEmployers((prev) =>
+      prev.map((emp) =>
+        emp.id === employerId ? { ...emp, trust_level: newTrustLevel } : emp
+      )
+    );
+    setSelectedEmployer((prev) =>
+      prev && prev.id === employerId ? { ...prev, trust_level: newTrustLevel } : prev
+    );
+
+    const res = await updateEmployerTrustService(employerId, newTrustLevel);
+    if (!res.success) {
+      console.error(res.message);
+      loadEmployers();
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Header bar */}
@@ -176,8 +194,8 @@ export default function SuperAdminEmployers() {
 
       {/* Main Layout Content */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-        {/* Table column */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Table column - Fixed in place */}
+        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start">
           {isLoading ? (
             <div className="w-full bg-white rounded-2xl border border-slate-150 p-12 text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent align-[-0.125em]"></div>
@@ -188,6 +206,7 @@ export default function SuperAdminEmployers() {
               employers={paginatedEmployers} 
               onSelectEmployer={handleSelectEmployer} 
               selectedEmployer={selectedEmployer}
+              onUpdateTrustLevel={handleUpdateTrustLevel}
             />
           )}
 
@@ -200,80 +219,99 @@ export default function SuperAdminEmployers() {
           />
         </div>
 
-        {/* Right side analytics column */}
-        <div className="space-y-4">
+        {/* Right side analytics column - Independently scrollable */}
+        <div className="space-y-4 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1.5 scrollbar-thin">
           {/* Employer signals */}
           <div className="rounded-2xl border border-slate-150 bg-white p-5 shadow-2xs">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Employer signals</h3>
             <div className="space-y-3.5">
-              {/* Row verification */}
+              {/* Row verification - Navigate to dedicated verification queue */}
               <div 
-                onClick={() => handleOpenSignal('SIGNAL_PENDING', 'Pending employer verifications')}
-                className="flex items-center justify-between cursor-pointer py-1"
+                onClick={() => navigate('/super-admin/employer-verification')}
+                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-orange-50/60 transition-colors group"
+                title="Open Employer Verification Queue"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-850">Pending verification</h4>
+                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-orange-750 transition-colors">Pending verification</h4>
+                    <p className="text-[11px] text-slate-400">Review company verification docs</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">
                     {employers.filter(e => e.verification_status === 'PENDING').length}
                   </span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
 
-              {/* Row job approval */}
+              {/* Row job approval - Navigate to dedicated job review queue */}
               <div 
-                onClick={() => handleOpenSignal('SIGNAL_JOBS', 'Jobs waiting for approval')}
-                className="flex items-center justify-between cursor-pointer py-1"
+                onClick={() => navigate('/super-admin/job-review')}
+                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-blue-50/60 transition-colors group"
+                title="Open Job Review Queue"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-850">Job approval queue</h4>
+                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-blue-750 transition-colors">Job approval queue</h4>
+                    <p className="text-[11px] text-slate-400">Review jobs submitted by employers</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">{pendingJobsCount}</span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
 
-              {/* Row trusted */}
+              {/* Row trusted - Quick Filter table by Trusted Employers */}
               <div 
-                onClick={() => handleOpenSignal('SIGNAL_TRUSTED', 'Trusted employers')}
-                className="flex items-center justify-between cursor-pointer py-1"
+                onClick={() => setTrustLevel((prev) => prev === 'Trusted employer' ? 'All' : 'Trusted employer')}
+                className={`flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl transition-all group ${
+                  trustLevel === 'Trusted employer' 
+                    ? 'bg-emerald-50 border border-emerald-300 shadow-2xs' 
+                    : 'hover:bg-emerald-50/60'
+                }`}
+                title={trustLevel === 'Trusted employer' ? 'Click to show all employers' : 'Click to filter table by Trusted Employers'}
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:scale-105 transition-transform">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-850">Trusted employers</h4>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-sm font-bold text-slate-850 group-hover:text-emerald-750 transition-colors">Trusted employers</h4>
+                      {trustLevel === 'Trusted employer' && (
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-900">
+                          Active Filter
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {trustLevel === 'Trusted employer' ? 'Showing trusted (click to reset)' : 'Filter table by trusted employers'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-extrabold text-slate-800">
                     {employers.filter(e => e.trust_level === 'TRUSTED' || e.trust_level === 'HIGH').length}
                   </span>
-                  <svg className="h-4.5 w-4.5 text-slate-350" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`h-4.5 w-4.5 transition-transform ${trustLevel === 'Trusted employer' ? 'text-emerald-600 rotate-90' : 'text-slate-350 group-hover:translate-x-0.5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -370,6 +408,7 @@ export default function SuperAdminEmployers() {
         panelType={panelType}
         panelTitle={panelTitle}
         selectedEmployer={selectedEmployer}
+        onUpdateTrustLevel={handleUpdateTrustLevel}
       />
     </div>
   );

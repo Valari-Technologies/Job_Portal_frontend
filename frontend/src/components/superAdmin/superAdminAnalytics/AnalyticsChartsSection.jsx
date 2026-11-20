@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -40,6 +41,12 @@ export default function AnalyticsChartsSection({
   employerTrust = {} 
 }) {
   const [activeSeries, setActiveSeries] = useState('ALL');
+  const [regionalPage, setRegionalPage] = useState(1);
+  const REGIONAL_PAGE_SIZE = 6;
+  const totalRegionalPages = Math.max(1, Math.ceil((districts || []).length / REGIONAL_PAGE_SIZE));
+  const currentRegionalPage = Math.min(regionalPage, totalRegionalPages);
+  const regionalStartIndex = (currentRegionalPage - 1) * REGIONAL_PAGE_SIZE;
+  const paginatedDistricts = (districts || []).slice(regionalStartIndex, regionalStartIndex + REGIONAL_PAGE_SIZE);
 
   return (
     <div className="space-y-8 font-sans">
@@ -326,77 +333,118 @@ export default function AnalyticsChartsSection({
       </div>
 
       {/* 3. Geographic Distribution & Categories Breakdown */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-stretch">
         {/* Geographic Location Distribution */}
-        <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Regional talent & hiring distribution</h3>
-              <p className="text-xs font-bold text-slate-500 mt-0.5">Live distribution across registered states & districts</p>
+        <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Regional talent & hiring distribution</h3>
+                <p className="text-xs font-bold text-slate-500 mt-0.5">Live distribution across registered states & districts</p>
+              </div>
+              <span className="text-xs font-black text-teal-650 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-150">
+                State / District
+              </span>
             </div>
-            <span className="text-xs font-black text-teal-650 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-150">
-              State / District
-            </span>
-          </div>
 
-          <div className="divide-y divide-slate-100">
-            {(districts || []).map((d, idx) => (
-              <div key={idx} className="py-3 flex items-center justify-between hover:bg-slate-50/60 px-2 rounded-xl transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-black">
-                    #{idx + 1}
+            <div className="divide-y divide-slate-100 mt-1">
+              {paginatedDistricts.map((d, idx) => (
+                <div key={idx} className="py-2.5 flex items-center justify-between hover:bg-slate-50/60 px-2 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-black">
+                      #{regionalStartIndex + idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-800">{d.district}</h4>
+                      <p className="text-[11px] font-medium text-slate-450">{d.state}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-slate-800">{d.district}</h4>
-                    <p className="text-[11px] font-medium text-slate-450">{d.state}</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-5 text-xs font-bold">
-                  <div className="text-right">
+                  <div className="text-right text-xs font-bold">
                     <span className="text-slate-900 font-extrabold block">{d.jobs} jobs</span>
                     <span className="text-slate-450 text-[11px]">{d.candidates} candidates • {d.employers || 0} employers</span>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-black text-emerald-700 border border-emerald-200">
-                    {d.growth}
-                  </span>
                 </div>
+              ))}
+              {paginatedDistricts.length === 0 && (
+                <div className="py-8 text-center text-xs font-bold text-slate-400">
+                  No regional distribution data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3.5 mt-4">
+            <span className="text-xs font-bold text-slate-500">
+              Showing <span className="font-extrabold text-slate-800">{districts?.length > 0 ? regionalStartIndex + 1 : 0}</span>-
+              <span className="font-extrabold text-slate-800">{Math.min(regionalStartIndex + REGIONAL_PAGE_SIZE, districts?.length || 0)}</span> of{' '}
+              <span className="font-extrabold text-slate-800">{districts?.length || 0}</span> regions
+            </span>
+
+            {totalRegionalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setRegionalPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentRegionalPage === 1}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <span className="px-2.5 py-1 rounded-md bg-slate-100 text-xs font-black text-slate-700">
+                  Page {currentRegionalPage} of {totalRegionalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setRegionalPage((prev) => Math.min(prev + 1, totalRegionalPages))}
+                  disabled={currentRegionalPage >= totalRegionalPages}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  title="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
         {/* Sectors & Job Categories Breakdown */}
-        <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Sectors & job categories</h3>
-              <p className="text-xs font-bold text-slate-500 mt-0.5">Live demand index across active catalog categories</p>
-            </div>
-            <span className="text-xs font-black text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
-              Catalog View
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {(categories || []).map((c, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-extrabold">
-                  <span className="text-slate-800">{c.name}</span>
-                  <span className="text-slate-500 font-bold">{c.jobs} jobs • {c.share}%</span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.max(c.share, c.jobs > 0 ? 8 : 0)}%`, backgroundColor: c.color }}
-                  />
-                </div>
+        <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs flex flex-col justify-between h-full">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Sectors & job categories</h3>
+                <p className="text-xs font-bold text-slate-500 mt-0.5">Live demand index across active catalog categories</p>
               </div>
-            ))}
+              <span className="text-xs font-black text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                Catalog View
+              </span>
+            </div>
+
+            <div className="space-y-4 mt-4">
+              {(categories || []).map((c, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-extrabold">
+                    <span className="text-slate-800">{c.name}</span>
+                    <span className="text-slate-500 font-bold">{c.jobs} jobs • {c.share}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(c.share, c.jobs > 0 ? 8 : 0)}%`, backgroundColor: c.color }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Work Modes distribution row */}
-          <div className="border-t border-slate-100 pt-4">
+          <div className="border-t border-slate-100 pt-4 mt-6">
             <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2.5">
               Workplace modality distribution
             </h4>
@@ -423,9 +471,6 @@ export default function AnalyticsChartsSection({
               Progressive trust tiers determining moderation and auto-publishing compliance
             </p>
           </div>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-            Platform Governance
-          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -456,7 +501,7 @@ export default function AnalyticsChartsSection({
           <div className="rounded-xl border border-slate-150 p-4 bg-slate-50/30">
             <span className="text-[11px] font-black uppercase text-slate-450 block">Moderation queue</span>
             <span className="text-2xl font-black text-slate-800 mt-1 block">
-              {employerTrust?.avg_review_hours || '0 in queue'}
+              {employerTrust?.pending_count ?? (typeof employerTrust?.avg_review_hours === 'string' ? employerTrust.avg_review_hours.replace(/\s*in queue/i, '') : (employerTrust?.avg_review_hours || 0))}
             </span>
             <p className="text-xs font-medium text-slate-500 mt-1">Pending review approvals</p>
           </div>

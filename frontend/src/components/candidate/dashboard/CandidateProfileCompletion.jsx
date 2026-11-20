@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 export default function CandidateProfileCompletion() {
   const { profile } = useCandidateUser();
-  const percentage = Math.min(100, Math.max(0, profile?.completionPercentage ?? 20));
+  const percentage = Math.min(100, Math.max(0, profile?.completionPercentage ?? 0));
 
   return (
     <div className="rounded-3xl border border-indigo-150 bg-[#EEF2FF] p-5 sm:p-6 shadow-xs font-sans space-y-4">
