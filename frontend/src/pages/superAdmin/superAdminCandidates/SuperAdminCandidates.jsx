@@ -370,6 +370,11 @@ export default function SuperAdminCandidates({ onToast }) {
                   <h4 className="text-base font-extrabold text-slate-900 truncate">
                     {selectedCandidate.full_name || `${selectedCandidate.first_name || ''} ${selectedCandidate.last_name || ''}`.trim() || 'Candidate'}
                   </h4>
+                  {selectedCandidate.headline && (
+                    <p className="text-xs font-bold text-teal-700 truncate">
+                      {selectedCandidate.headline}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500 font-medium truncate">
                     {selectedCandidate.email || selectedCandidate.phone_number || selectedCandidate.mobile_number || 'No contact email'}
                   </p>
