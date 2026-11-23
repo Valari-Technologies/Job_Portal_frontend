@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchEmployersService, updateEmployerTrustService } from '../../../services/superAdmin/superAdminService';
+import { fetchEmployersService, updateEmployerTrustService, deleteEmployerService } from '../../../services/superAdmin/superAdminService';
 import { getActionQueues } from '../superAdminOverview/superAdminOverviewService';
 import { useNavigate } from 'react-router-dom';
 import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/EmployerFilters';
@@ -7,7 +7,7 @@ import EmployerTable from '../../../components/superAdmin/superAdminEmployers/Em
 import EmployerSidePanel from '../../../components/superAdmin/superAdminEmployers/EmployerSidePanel';
 import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
 
-export default function SuperAdminEmployers() {
+export default function SuperAdminEmployers({ onToast = () => {} }) {
   const navigate = useNavigate();
   const [employers, setEmployers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +23,10 @@ export default function SuperAdminEmployers() {
 
   // Selected Employer for detail panel
   const [selectedEmployer, setSelectedEmployer] = useState(null);
+
+  // Delete employer target
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Side Drawer details trigger
   const [panelOpen, setPanelOpen] = useState(false);
@@ -123,8 +127,25 @@ export default function SuperAdminEmployers() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
+    const res = await deleteEmployerService(deleteTarget.id);
+    setIsDeleting(false);
+    if (!res.success) {
+      onToast(res.message);
+      return;
+    }
+    setEmployers((prev) => prev.filter((e) => e.id !== deleteTarget.id));
+    if (selectedEmployer && selectedEmployer.id === deleteTarget.id) {
+      setSelectedEmployer(null);
+    }
+    onToast(`Employer ${deleteTarget.company_name || deleteTarget.full_name || deleteTarget.email} deleted successfully.`);
+    setDeleteTarget(null);
+  };
+
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 font-sans animate-fadeIn">
       {/* Header bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -193,9 +214,9 @@ export default function SuperAdminEmployers() {
       />
 
       {/* Main Layout Content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-        {/* Table column - Fixed in place */}
-        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3 items-stretch">
+        {/* Table column */}
+        <div className="lg:col-span-2 flex flex-col justify-between gap-3.5">
           {isLoading ? (
             <div className="w-full bg-white rounded-2xl border border-slate-150 p-12 text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent align-[-0.125em]"></div>
@@ -207,6 +228,7 @@ export default function SuperAdminEmployers() {
               onSelectEmployer={handleSelectEmployer} 
               selectedEmployer={selectedEmployer}
               onUpdateTrustLevel={handleUpdateTrustLevel}
+              onDeleteEmployer={(emp) => setDeleteTarget(emp)}
             />
           )}
 
@@ -219,31 +241,31 @@ export default function SuperAdminEmployers() {
           />
         </div>
 
-        {/* Right side analytics column - Independently scrollable */}
-        <div className="space-y-4 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1.5 scrollbar-thin">
+        {/* Right side analytics column - Perfectly aligned to finish with table pagination */}
+        <div className="flex flex-col gap-3.5 h-full">
           {/* Employer signals */}
-          <div className="rounded-2xl border border-slate-150 bg-white p-5 shadow-2xs">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Employer signals</h3>
-            <div className="space-y-3.5">
+          <div className="flex-1 rounded-2xl border border-slate-150 bg-white p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+            <h3 className="text-base font-extrabold text-slate-900 mb-2">Employer signals</h3>
+            <div className="space-y-2.5 flex-1 flex flex-col justify-around">
               {/* Row verification - Navigate to dedicated verification queue */}
               <div 
                 onClick={() => navigate('/super-admin/employer-verification')}
                 className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-orange-50/60 transition-colors group"
                 title="Open Employer Verification Queue"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100 group-hover:scale-105 transition-transform shrink-0">
+                    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-orange-750 transition-colors">Pending verification</h4>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-850 group-hover:text-orange-750 transition-colors">Pending verification</h4>
                     <p className="text-[11px] text-slate-400">Review company verification docs</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">
+                  <span className="text-sm sm:text-base font-extrabold text-slate-800">
                     {employers.filter(e => e.verification_status === 'PENDING').length}
                   </span>
                   <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,19 +280,19 @@ export default function SuperAdminEmployers() {
                 className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-blue-50/60 transition-colors group"
                 title="Open Job Review Queue"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-blue-50 text-blue-700 border border-blue-100 group-hover:scale-105 transition-transform shrink-0">
+                    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-blue-750 transition-colors">Job approval queue</h4>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-850 group-hover:text-blue-750 transition-colors">Job approval queue</h4>
                     <p className="text-[11px] text-slate-400">Review jobs submitted by employers</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">{pendingJobsCount}</span>
+                  <span className="text-sm sm:text-base font-extrabold text-slate-800">{pendingJobsCount}</span>
                   <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
@@ -287,28 +309,28 @@ export default function SuperAdminEmployers() {
                 }`}
                 title={trustLevel === 'Trusted employer' ? 'Click to show all employers' : 'Click to filter table by Trusted Employers'}
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:scale-105 transition-transform shrink-0">
+                    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-sm font-bold text-slate-850 group-hover:text-emerald-750 transition-colors">Trusted employers</h4>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-850 group-hover:text-emerald-750 transition-colors">Trusted employers</h4>
                       {trustLevel === 'Trusted employer' && (
                         <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-900">
-                          Active Filter
+                          Active
                         </span>
                       )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      {trustLevel === 'Trusted employer' ? 'Showing trusted (click to reset)' : 'Filter table by trusted employers'}
+                      {trustLevel === 'Trusted employer' ? 'Showing trusted' : 'Filter table by trusted employers'}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">
+                  <span className="text-sm sm:text-base font-extrabold text-slate-800">
                     {employers.filter(e => e.trust_level === 'TRUSTED' || e.trust_level === 'HIGH').length}
                   </span>
                   <svg className={`h-4.5 w-4.5 transition-transform ${trustLevel === 'Trusted employer' ? 'text-emerald-600 rotate-90' : 'text-slate-350 group-hover:translate-x-0.5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,83 +343,66 @@ export default function SuperAdminEmployers() {
 
           {/* Selected Employer preview card */}
           {selectedEmployer ? (
-            <div className="rounded-2xl border border-slate-150 bg-white p-5 shadow-2xs space-y-3.5">
-              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-3">
-                {selectedEmployer.company_logo ? (
-                  <img src={selectedEmployer.company_logo} alt="" className="h-11 w-11 rounded-full object-cover border-2 border-black bg-white shrink-0" />
-                ) : (
-                  <div className="h-11 w-11 rounded-full bg-white border-2 border-black text-slate-900 font-extrabold text-base flex items-center justify-center shrink-0">
-                    {(selectedEmployer.company_name || selectedEmployer.full_name || 'E').charAt(0).toUpperCase()}
+            <div className="flex-1 rounded-2xl border border-slate-150 bg-white p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3.5 border-b border-slate-100 pb-2.5">
+                  {selectedEmployer.company_logo ? (
+                    <img src={selectedEmployer.company_logo} alt="" className="h-11 w-11 rounded-full object-cover border-2 border-black bg-white shrink-0" />
+                  ) : (
+                    <div className="h-11 w-11 rounded-full bg-white border-2 border-black text-slate-900 font-extrabold text-base flex items-center justify-center shrink-0">
+                      {(selectedEmployer.company_name || selectedEmployer.full_name || 'E').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-base font-extrabold text-slate-900 truncate">{selectedEmployer.company_name || selectedEmployer.full_name}</h4>
+                    <p className="text-xs text-slate-500 font-medium truncate">{selectedEmployer.company_email || selectedEmployer.email}</p>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-base font-extrabold text-slate-900 truncate">{selectedEmployer.company_name || selectedEmployer.full_name}</h4>
-                  <p className="text-xs text-slate-500 font-medium truncate">{selectedEmployer.company_email || selectedEmployer.email}</p>
                 </div>
-              </div>
 
-              <div className="space-y-2 text-xs font-semibold text-slate-700">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Designation</span>
-                  <span className="font-extrabold text-slate-800">{selectedEmployer.designation || 'HR Manager'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Location</span>
-                  <span className="font-extrabold text-slate-800 truncate max-w-[180px]">{selectedEmployer.location?.full_path || selectedEmployer.location?.name || selectedEmployer.company_address || 'All Locations'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Verification</span>
-                  <span className="font-extrabold uppercase text-amber-700">{selectedEmployer.verification_status || 'PENDING'}</span>
+                <div className="space-y-1.5 pt-2.5 text-xs font-semibold text-slate-700">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-medium">Designation</span>
+                    <span className="font-extrabold text-slate-800">{selectedEmployer.designation || 'HR Manager'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-medium">Location</span>
+                    <span className="font-extrabold text-slate-800 truncate max-w-[180px]">{selectedEmployer.location?.full_path || selectedEmployer.location?.name || selectedEmployer.company_address || 'All Locations'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-medium">Verification</span>
+                    <span className="font-extrabold uppercase text-amber-700">{selectedEmployer.verification_status || 'PENDING'}</span>
+                  </div>
                 </div>
               </div>
 
               <button 
                 onClick={() => handleSelectEmployer(selectedEmployer)}
-                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs py-2.5 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
+                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs sm:text-sm py-2.5 shadow-md shadow-teal-600/10 transition-colors cursor-pointer mt-2.5"
               >
                 View full profile
               </button>
             </div>
           ) : (
-            <div className="rounded-2xl border border-slate-150 bg-white p-5 shadow-2xs text-center py-10 space-y-3.5">
-              <div className="h-11 w-11 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex-1 rounded-2xl border border-slate-150 bg-white p-4 sm:p-5 shadow-2xs text-center flex flex-col justify-center items-center space-y-2.5">
+              <div className="h-10 w-10 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 00-2 2h10" />
                 </svg>
               </div>
               <div className="space-y-1">
-                <h4 className="text-base font-extrabold text-slate-800">No employer selected</h4>
-                <p className="text-xs font-bold text-slate-500">
-                  Select an employer from the list to view verification, trust and job activity.
+                <h4 className="text-sm font-extrabold text-slate-800">No employer selected</h4>
+                <p className="text-xs font-bold text-slate-500 max-w-[200px]">
+                  Select an employer from the list to view details.
                 </p>
               </div>
               <button 
                 disabled 
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-400 cursor-not-allowed"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-slate-400 cursor-not-allowed mt-2"
               >
                 View full profile
               </button>
             </div>
           )}
-
-          {/* Recent Approved Jobs Card */}
-          <div className="rounded-2xl border border-slate-150 bg-white p-5 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 className="text-base font-extrabold text-slate-800">Recent approved jobs</h3>
-              <button 
-                disabled 
-                className="text-xs font-bold text-slate-400 cursor-not-allowed"
-              >
-                View all jobs
-              </button>
-            </div>
-            <div className="py-4 text-center space-y-1">
-              <h4 className="text-sm font-extrabold text-slate-750">No approved jobs yet</h4>
-              <p className="text-xs text-slate-500 leading-normal">
-                Approved employer jobs will appear here after employer verification and job moderation.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -410,6 +415,37 @@ export default function SuperAdminEmployers() {
         selectedEmployer={selectedEmployer}
         onUpdateTrustLevel={handleUpdateTrustLevel}
       />
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => !isDeleting && setDeleteTarget(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl font-sans" role="alertdialog" aria-modal="true" aria-labelledby="delete-employer-title">
+            <h3 id="delete-employer-title" className="text-lg font-extrabold text-slate-900">Delete employer?</h3>
+            <p className="mt-2 text-sm font-semibold text-slate-600">
+              {deleteTarget.company_name || deleteTarget.full_name || deleteTarget.email} will be removed from the platform and their account access will be revoked. This action cannot be undone.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-red-700 cursor-pointer disabled:opacity-60"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

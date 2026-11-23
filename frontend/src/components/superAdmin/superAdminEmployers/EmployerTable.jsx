@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreVertical, Eye, ShieldCheck } from 'lucide-react';
+import { MoreVertical, Eye, Trash2 } from 'lucide-react';
 
-function EmployerActionMenu({ employer, onSelectEmployer, onUpdateTrustLevel }) {
+function EmployerActionMenu({ employer, onSelectEmployer, onDeleteEmployer }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -15,8 +15,6 @@ function EmployerActionMenu({ employer, onSelectEmployer, onUpdateTrustLevel }) 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isTrusted = employer.trust_level === 'TRUSTED' || employer.trust_level === 'HIGH';
-
   return (
     <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
       <button
@@ -29,7 +27,7 @@ function EmployerActionMenu({ employer, onSelectEmployer, onUpdateTrustLevel }) 
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
+        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
           <button
             type="button"
             onClick={() => {
@@ -42,23 +40,17 @@ function EmployerActionMenu({ employer, onSelectEmployer, onUpdateTrustLevel }) 
             <span>View details</span>
           </button>
 
-          {onUpdateTrustLevel && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onUpdateTrustLevel(employer.id, isTrusted ? 'BASIC' : 'TRUSTED');
-              }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                isTrusted
-                  ? 'text-rose-600 hover:bg-rose-50'
-                  : 'text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>{isTrusted ? 'Revoke Trusted' : 'Mark as Trusted'}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              if (onDeleteEmployer) onDeleteEmployer(employer);
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+            <span>Delete</span>
+          </button>
         </div>
       )}
     </div>
@@ -69,7 +61,8 @@ export default function EmployerTable({
   employers = [], 
   onSelectEmployer, 
   selectedEmployer,
-  onUpdateTrustLevel 
+  onUpdateTrustLevel,
+  onDeleteEmployer
 }) {
   if (!employers || employers.length === 0) {
     return (
@@ -201,7 +194,7 @@ export default function EmployerTable({
                     <EmployerActionMenu 
                       employer={emp}
                       onSelectEmployer={onSelectEmployer}
-                      onUpdateTrustLevel={onUpdateTrustLevel}
+                      onDeleteEmployer={onDeleteEmployer}
                     />
                   </td>
                 </tr>

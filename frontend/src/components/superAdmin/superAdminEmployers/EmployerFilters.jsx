@@ -26,8 +26,8 @@ export default function EmployerFilters({
   }, [selectedState]);
 
   return (
-    <div className="rounded-2xl border border-slate-150 bg-white p-4 sm:p-6 shadow-2xs font-sans">
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="rounded-2xl border border-slate-150 bg-white p-3.5 sm:p-4.5 shadow-2xs font-sans">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {/* State */}
         <div className="space-y-2">
           <label htmlFor="state-filter" className="text-xs font-bold text-slate-500 uppercase tracking-wider block">

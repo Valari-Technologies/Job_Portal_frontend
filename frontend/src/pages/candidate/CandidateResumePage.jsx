@@ -389,8 +389,14 @@ export default function CandidateResumePage() {
         let updatedSections = { ...(currentResume.sections || {}) };
         let replaced = false;
 
+        // 0. Handle Professional Summary
+        if (suggestion.sectionType === 'summary' || suggestion.sectionId === 'summary') {
+          updatedSections.summary = textToApply;
+          replaced = true;
+        }
+
         // 1. Precise match by original bullet text
-        if (suggestion.originalText) {
+        if (!replaced && suggestion.originalText) {
           const origTrim = suggestion.originalText.trim().toLowerCase();
           if (Array.isArray(updatedSections.experience)) {
             updatedSections.experience = updatedSections.experience.map(exp => {
@@ -506,7 +512,13 @@ export default function CandidateResumePage() {
         let updatedSections = { ...(updatedResume.sections || {}) };
         let replaced = false;
 
-        if (sug.originalText) {
+        // 0. Handle Professional Summary
+        if (sug.sectionType === 'summary' || sug.sectionId === 'summary') {
+          updatedSections.summary = sug.proposedText;
+          replaced = true;
+        }
+
+        if (!replaced && sug.originalText) {
           const origTrim = sug.originalText.trim().toLowerCase();
           if (Array.isArray(updatedSections.experience)) {
             updatedSections.experience = updatedSections.experience.map(exp => {
@@ -1494,6 +1506,30 @@ export default function CandidateResumePage() {
                   ) : currentSuggestion ? (
                     <div className="border border-indigo-200 bg-indigo-50/30 p-4 rounded-2xl space-y-3 font-sans shadow-xs">
                       
+                      {/* Section Badge & Metric Chip */}
+                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-indigo-150/70">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                            currentSuggestion.sectionType === 'summary'
+                              ? 'bg-purple-100 text-purple-800 border-purple-200'
+                              : currentSuggestion.sectionType === 'project'
+                              ? 'bg-teal-100 text-teal-800 border-teal-200'
+                              : 'bg-blue-100 text-blue-800 border-blue-200'
+                          }`}>
+                            {currentSuggestion.sectionTitle || (currentSuggestion.sectionType === 'summary' ? 'Professional Summary' : 'Experience')}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400">
+                            #{safeBatch * BATCH_SIZE + activeSuggestionIndex + 1} of {allSuggestions.length}
+                          </span>
+                        </div>
+
+                        {currentSuggestion.metric && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                            📈 {currentSuggestion.metric}
+                          </span>
+                        )}
+                      </div>
+
                       {/* Original Text */}
                       <div className="space-y-1">
                         <span className="text-[11px] font-bold text-slate-500 block">
@@ -1512,10 +1548,23 @@ export default function CandidateResumePage() {
                             <span className="text-xs font-black">AI Tailored Improvement:</span>
                           </div>
 
-                          <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            Add this only if true
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {currentSuggestion.metric ? (
+                              <>
+                                <span className="text-[10px] text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-150">
+                                  ✓ Quantified Metrics
+                                </span>
+                                <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Add only if true
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-indigo-700 font-extrabold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-150">
+                                ✓ Full-Length ATS Rewrite
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {isEditingSuggestion ? (

@@ -190,6 +190,21 @@ export async function updateEmployerTrustService(employerId, trustLevel) {
   }
 }
 
+export async function deleteEmployerService(employerId) {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/employers/${employerId}/`, {
+      method: 'DELETE',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, message: data.detail || data.message || 'Failed to delete employer.' };
+    }
+    return { success: true, data };
+  } catch {
+    return { success: false, message: 'Network error. Please check server connection.' };
+  }
+}
+
 export async function deleteCandidateService(userId) {
   try {
     const response = await fetchWithAuth(`${API_BASE_URL}/accounts/admin/candidates/${userId}/`, {

@@ -111,6 +111,9 @@ export default function SuperAdminCandidates({ onToast }) {
 
   const handleSelectCandidate = (cand) => {
     setSelectedCandidate(cand);
+    setPanelType('VIEW_PROFILE');
+    setPanelTitle('Candidate Profile Workspace');
+    setPanelOpen(true);
   };
 
   // Moderation / Creation triggers
@@ -162,7 +165,7 @@ export default function SuperAdminCandidates({ onToast }) {
   };
 
   return (
-    <div className="space-y-6 font-sans animate-fadeIn">
+    <div className="space-y-4 font-sans animate-fadeIn">
       {/* Header bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -232,205 +235,23 @@ export default function SuperAdminCandidates({ onToast }) {
         setAccountStatus={setAccountStatus}
       />
 
-      {/* Workspace Grids layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-        {/* Left main table wrapper - Fixed in place */}
-        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start">
-          <CandidateTable
-            candidates={paginatedCandidates}
-            selectedCandidate={selectedCandidate}
-            onSelectCandidate={handleSelectCandidate}
-            onTriggerAction={handleTriggerAction}
-          />
+      {/* Main Candidate Table & Pagination - Full Width Single-Page View */}
+      <div className="space-y-3.5">
+        <CandidateTable
+          candidates={paginatedCandidates}
+          selectedCandidate={selectedCandidate}
+          onSelectCandidate={handleSelectCandidate}
+          onTriggerAction={handleTriggerAction}
+        />
 
-          {/* Pagination bar */}
-          <SuperAdminPagination
-            currentPage={safeCurrentPage}
-            totalItems={visibleCandidates.length}
-            pageSize={PAGE_SIZE}
-            onPageChange={setCurrentPage}
-            itemName="candidates"
-          />
-        </div>
-
-        {/* Right side analytics indicators cards - Independently scrollable */}
-        <div className="space-y-6 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1.5 scrollbar-thin">
-          {/* Needs Attention Card */}
-          <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs">
-            <h3 className="text-xl font-bold text-slate-900 mb-6">Needs attention</h3>
-            <div className="space-y-4.5">
-              {/* Row Incomplete - Toggle filter for incomplete profiles */}
-              <div 
-                onClick={() => setProfileStatus(prev => prev === 'Incomplete' ? 'All' : 'Incomplete')}
-                className={`flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl transition-all group ${
-                  profileStatus === 'Incomplete'
-                    ? 'bg-orange-50 border border-orange-300 shadow-2xs'
-                    : 'hover:bg-orange-50/60'
-                }`}
-                title={profileStatus === 'Incomplete' ? 'Click to show all candidates' : 'Click to filter by incomplete profiles'}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-700 border border-orange-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-sm font-bold text-slate-850 group-hover:text-orange-750 transition-colors">Incomplete profiles</h4>
-                      {profileStatus === 'Incomplete' && (
-                        <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-orange-200 text-orange-900">
-                          Active Filter
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-450">
-                      {profileStatus === 'Incomplete' ? 'Showing <60% complete (click to reset)' : 'Profiles below 60% completion'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">
-                    {visibleCandidates.filter(c => Number(c.profile_completion || 0) < 60).length}
-                  </span>
-                  <svg className={`h-4.5 w-4.5 transition-transform ${profileStatus === 'Incomplete' ? 'text-orange-600 rotate-90' : 'text-slate-350 group-hover:translate-x-0.5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Row Duplicate - Navigate to Audit & Security */}
-              <div 
-                onClick={() => navigate('/super-admin/audit-security')}
-                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-indigo-50/60 transition-colors group"
-                title="Open Audit & Security to inspect duplicate accounts"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-750 border border-indigo-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-indigo-750 transition-colors">Duplicate checks</h4>
-                    <p className="text-[11px] text-slate-450">Inspect potential duplicate accounts</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
-                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Row Reported - Navigate to Reports Management */}
-              <div 
-                onClick={() => navigate('/super-admin/reports')}
-                className="flex items-center justify-between cursor-pointer py-1.5 px-2 -mx-2 rounded-xl hover:bg-red-50/60 transition-colors group"
-                title="Open Reports to inspect flagged accounts"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-750 border border-red-100 group-hover:scale-105 transition-transform">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-red-750 transition-colors">Reported accounts</h4>
-                    <p className="text-[11px] text-slate-450">Review accounts reported by users</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-extrabold text-slate-800">0</span>
-                  <svg className="h-4.5 w-4.5 text-slate-350 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Selected Candidate preview card */}
-          {selectedCandidate ? (
-            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs space-y-4">
-              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
-                {selectedCandidate.profile_photo || selectedCandidate.profile_picture ? (
-                  <img 
-                    src={selectedCandidate.profile_photo || selectedCandidate.profile_picture} 
-                    alt="" 
-                    className="h-12 w-12 rounded-full object-cover border-2 border-black bg-white shrink-0" 
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-white border-2 border-black text-slate-900 font-extrabold text-lg flex items-center justify-center shrink-0">
-                    {(selectedCandidate.full_name || selectedCandidate.first_name || 'C').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-base font-extrabold text-slate-900 truncate">
-                    {selectedCandidate.full_name || `${selectedCandidate.first_name || ''} ${selectedCandidate.last_name || ''}`.trim() || 'Candidate'}
-                  </h4>
-                  {selectedCandidate.headline && (
-                    <p className="text-xs font-bold text-teal-700 truncate">
-                      {selectedCandidate.headline}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-500 font-medium truncate">
-                    {selectedCandidate.email || selectedCandidate.phone_number || selectedCandidate.mobile_number || 'No contact email'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-xs font-semibold text-slate-700">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Location</span>
-                  <span className="font-extrabold text-slate-800 truncate max-w-[180px]">
-                    {selectedCandidate.location?.full_path || selectedCandidate.location?.name || selectedCandidate.location?.city || selectedCandidate.city || selectedCandidate.location?.state || selectedCandidate.state || 'Not specified'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Applications</span>
-                  <span className="font-extrabold text-slate-800">
-                    {selectedCandidate.applications ?? selectedCandidate.applications_count ?? 0} submitted
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Profile completion</span>
-                  <span className="font-extrabold text-teal-700">
-                    {selectedCandidate.profile_completion ?? 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400">Account status</span>
-                  <span className={`font-extrabold uppercase ${String(selectedCandidate.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {String(selectedCandidate.status || 'ACTIVE').toLowerCase().replace(/^./, (ch) => ch.toUpperCase())}
-                  </span>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => handleTriggerAction('VIEW', selectedCandidate)}
-                className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs py-3 shadow-md shadow-teal-600/10 transition-colors cursor-pointer"
-              >
-                View full profile
-              </button>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-150 bg-white p-6 shadow-2xs text-center py-12 space-y-4">
-              <div className="h-12 w-12 mx-auto flex items-center justify-center rounded-xl bg-slate-50 border border-slate-150 text-slate-400">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div className="space-y-1.5">
-                <h4 className="text-base font-extrabold text-slate-800">No candidate selected</h4>
-                <p className="text-xs text-slate-500 font-medium max-w-[200px] mx-auto">
-                  Select a candidate from the table list to preview details.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Pagination bar */}
+        <SuperAdminPagination
+          currentPage={safeCurrentPage}
+          totalItems={visibleCandidates.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemName="candidates"
+        />
       </div>
 
       {/* Side drawer Overlay panel */}

@@ -675,15 +675,32 @@ export async function startResumeAnalysis(payload) {
     return isGarbage ? fallbackText : bullet;
   }
 
-  // Extract all authentic bullets dynamically from experience and projects
-  const fallbackBullets = [];
+  // Extract all authentic items dynamically from top to bottom: summary -> experience -> projects
+  const fallbackItems = [];
+
+  const summaryText = targetResume.sections?.summary;
+  if (summaryText && typeof summaryText === 'string' && summaryText.trim().length > 15) {
+    fallbackItems.push({
+      sectionType: 'summary',
+      sectionId: 'summary',
+      sectionTitle: 'Professional Summary',
+      experienceIndex: 0,
+      bulletIndex: 0,
+      text: summaryText.trim(),
+      company: 'Professional Summary',
+      role: 'Summary'
+    });
+  }
+
   const expList = Array.isArray(targetResume.sections?.experience) ? targetResume.sections.experience : [];
   expList.forEach((exp, expIdx) => {
     (exp.bullets || []).forEach((b, bIdx) => {
       const clean = sanitizeResumeBullet(b, '');
       if (clean && clean.length > 5) {
-        fallbackBullets.push({
+        fallbackItems.push({
+          sectionType: 'experience',
           sectionId: exp.id || `exp_${expIdx + 1}`,
+          sectionTitle: `Experience: ${(exp.companyName || 'Company').split('|')[0].trim()}`,
           experienceIndex: expIdx,
           bulletIndex: bIdx,
           text: clean,
@@ -699,8 +716,10 @@ export async function startResumeAnalysis(payload) {
     (proj.bullets || []).forEach((b, bIdx) => {
       const clean = sanitizeResumeBullet(b, '');
       if (clean && clean.length > 5) {
-        fallbackBullets.push({
+        fallbackItems.push({
+          sectionType: 'project',
           sectionId: proj.id || `proj_${projIdx + 1}`,
+          sectionTitle: `Project: ${(proj.title || 'Project').split('-')[0].trim()}`,
           experienceIndex: expList.length + projIdx,
           bulletIndex: bIdx,
           text: clean,
@@ -711,9 +730,11 @@ export async function startResumeAnalysis(payload) {
     });
   });
 
-  if (fallbackBullets.length === 0) {
-    fallbackBullets.push({
+  if (fallbackItems.length === 0) {
+    fallbackItems.push({
+      sectionType: 'experience',
       sectionId: 'exp_01',
+      sectionTitle: 'Experience: Tech Company',
       experienceIndex: 0,
       bulletIndex: 0,
       text: 'Developed and maintained responsive full-stack web applications, payment integrations, and API workflows.',
@@ -723,35 +744,51 @@ export async function startResumeAnalysis(payload) {
   }
 
   const actionVerbs = ['Architected', 'Spearheaded', 'Engineered', 'Optimized', 'Streamlined', 'Delivered'];
-  const generatedSuggestions = fallbackBullets.map((b, idx) => {
+  const generatedSuggestions = fallbackItems.map((b, idx) => {
+    if (b.sectionType === 'summary') {
+      return {
+        id: `sug_${Date.now()}_0`,
+        sectionType: 'summary',
+        sectionId: 'summary',
+        sectionTitle: 'Professional Summary',
+        experienceIndex: 0,
+        bulletIndex: 0,
+        originalText: b.text,
+        proposedText: `Full-Stack ${jobTitle} with 2+ years of experience engineering high-performance web applications, boosting user engagement by 35% and maintaining 99.9% uptime. Delivered 10+ scalable REST APIs and full-stack modules across React.js, Django, and Spring Boot for 5,000+ active users.`,
+        metric: '+35% engagement • 99.9% uptime • 5,000+ users',
+        reason: `Adds concrete tenure, uptime SLA, user scale metrics, and targeted keywords to maximize ${jobTitle} ATS screening score.`,
+        status: 'PENDING'
+      };
+    }
+
     const verb = actionVerbs[idx % actionVerbs.length];
     let coreText = b.text.trim();
     coreText = coreText.replace(/^(developed|built|used|created|worked on|assisted in|contributed to|implemented|individually developed|supported)\s+/i, '');
     coreText = coreText.charAt(0).toLowerCase() + coreText.slice(1);
 
     const outcomes = [
-      `increasing execution velocity by ${25 + (idx % 4) * 5}%`,
-      `improving system response times by ${20 + (idx % 5) * 4}%`,
-      `cutting operational latency by ${22 + (idx % 3) * 6}%`,
-      `achieving a ${28 + (idx % 4) * 4}% measurable efficiency boost`
+      { text: `increasing execution velocity by ${25 + (idx % 4) * 5}% across 1,500+ active users`, metric: `+${25 + (idx % 4) * 5}% velocity • 1,500+ users` },
+      { text: `improving system response times by ${20 + (idx % 5) * 4}% across 10,000+ requests`, metric: `${20 + (idx % 5) * 4}% faster response • 10k requests` },
+      { text: `cutting operational latency by ${22 + (idx % 3) * 6}% and maintaining 99.9% uptime`, metric: `${22 + (idx % 3) * 6}% latency cut • 99.9% uptime` },
+      { text: `achieving a ${28 + (idx % 4) * 4}% measurable efficiency boost across 12 modules`, metric: `+${28 + (idx % 4) * 4}% efficiency • 12 modules` }
     ];
-    const outcome = outcomes[idx % outcomes.length];
+    const outcomeObj = outcomes[idx % outcomes.length];
 
     const words = coreText.replace(/\.+$/, '').split(/\s+/);
-    const shortPhrase = words.slice(0, 7).join(' ');
-    let proposed = `${verb} ${shortPhrase}, ${outcome}.`;
-    if (proposed.length > 115) {
-      proposed = `${verb} ${words.slice(0, 5).join(' ')}, ${outcome}.`;
-    }
+    const shortPhrase = words.slice(0, 6).join(' ');
+    let proposed = `${verb} ${shortPhrase}, ${outcomeObj.text}.`;
 
     return {
       id: `sug_${Date.now()}_${idx + 1}`,
+      sectionType: b.sectionType,
       sectionId: b.sectionId,
+      sectionTitle: b.sectionTitle,
       experienceIndex: b.experienceIndex,
       bulletIndex: b.bulletIndex,
       originalText: b.text,
       proposedText: proposed,
-      reason: `Elevates impact with action verb '${verb}' and quantifies outcome for ${jobTitle} ATS screening.`,
+      metric: outcomeObj.metric,
+      reason: `Elevates impact with action verb '${verb}' and quantifies outcome with concrete metrics for ${jobTitle} ATS screening.`,
       status: 'PENDING'
     };
   });
