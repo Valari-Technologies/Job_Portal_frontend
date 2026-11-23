@@ -178,11 +178,11 @@ export default function CategoryHierarchy({
         <table className="w-full text-left border-collapse min-w-[500px]">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-xs font-black text-slate-500 uppercase tracking-wider">
-              <th className="px-4 sm:px-5 py-4 w-[35%]">Category</th>
-              <th className="px-3 sm:px-4 py-4 w-[22%]">Hierarchy</th>
-              <th className="px-3 sm:px-4 py-4 w-[16%] text-center whitespace-nowrap">Sort order</th>
-              <th className="px-3 sm:px-4 py-4 w-[14%] text-center">Status</th>
-              <th className="px-4 sm:px-5 py-4 w-[13%] text-right">Actions</th>
+              <th className="px-4 sm:px-5 py-3 w-[35%]">Category</th>
+              <th className="px-3 sm:px-4 py-3 w-[22%]">Hierarchy</th>
+              <th className="px-3 sm:px-4 py-3 w-[16%] text-center whitespace-nowrap">Sort order</th>
+              <th className="px-3 sm:px-4 py-3 w-[14%] text-center">Status</th>
+              <th className="px-4 sm:px-5 py-3 w-[13%] text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -227,7 +227,7 @@ export default function CategoryHierarchy({
                         }`}
                       >
                         {/* Category Name & Expand Chevron */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
                             {hasChildren ? (
                               <button
@@ -258,19 +258,19 @@ export default function CategoryHierarchy({
                         </td>
 
                         {/* Hierarchy Badge */}
-                        <td className="px-4 py-4 text-xs font-bold">
+                        <td className="px-4 py-3 text-xs font-bold">
                           <span className="inline-block rounded-lg bg-teal-50 px-2.5 py-1 text-teal-700 font-extrabold border border-teal-100">
                             Top Level
                           </span>
                         </td>
 
                         {/* Sort Order */}
-                        <td className="px-4 py-4 text-sm font-extrabold text-slate-700 text-center">
+                        <td className="px-4 py-3 text-sm font-extrabold text-slate-700 text-center">
                           {parent.sort_order !== undefined ? parent.sort_order : 0}
                         </td>
 
                         {/* Status Badge */}
-                        <td className="px-4 py-4 text-center">
+                        <td className="px-4 py-3 text-center">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
                             parent.is_active 
                               ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
@@ -281,7 +281,7 @@ export default function CategoryHierarchy({
                         </td>
 
                         {/* 3-Dots Actions Menu */}
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-5 py-3 text-right">
                           <ActionMenu 
                             item={parent}
                             onEdit={onEditCategory}
@@ -303,7 +303,7 @@ export default function CategoryHierarchy({
                             }`}
                           >
                             {/* Indented Child Name */}
-                            <td className="px-5 py-3.5 pl-12">
+                            <td className="px-5 py-2.5 pl-12">
                               <div className="flex items-center gap-2">
                                 <span className="text-slate-300 font-mono text-xs">└─</span>
                                 <span className="font-bold text-slate-750 text-sm truncate">
@@ -313,7 +313,7 @@ export default function CategoryHierarchy({
                             </td>
 
                             {/* Hierarchy Path */}
-                            <td className="px-4 py-3.5 text-xs font-bold">
+                            <td className="px-4 py-2.5 text-xs font-bold">
                               <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600 font-semibold border border-slate-200/60 max-w-full truncate">
                                 <span className="truncate">{parent.name}</span>
                                 <span className="text-slate-400">→</span>
@@ -322,12 +322,12 @@ export default function CategoryHierarchy({
                             </td>
 
                             {/* Sort Order */}
-                            <td className="px-4 py-3.5 text-sm font-bold text-slate-600 text-center">
+                            <td className="px-4 py-2.5 text-sm font-bold text-slate-600 text-center">
                               {child.sort_order !== undefined ? child.sort_order : 0}
                             </td>
 
                             {/* Status */}
-                            <td className="px-4 py-3.5 text-center">
+                            <td className="px-4 py-2.5 text-center">
                               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
                                 child.is_active 
                                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
@@ -338,7 +338,7 @@ export default function CategoryHierarchy({
                             </td>
 
                             {/* 3-Dots Actions Menu */}
-                            <td className="px-5 py-3.5 text-right">
+                            <td className="px-5 py-2.5 text-right">
                               <ActionMenu 
                                 item={child}
                                 onEdit={onEditCategory}
@@ -364,10 +364,10 @@ export default function CategoryHierarchy({
                         isSelected ? 'bg-teal-50/40' : 'bg-white'
                       }`}
                     >
-                      <td className="px-5 py-4 font-extrabold text-slate-855 text-sm truncate">
+                      <td className="px-5 py-3 font-extrabold text-slate-855 text-sm truncate">
                         {child.name}
                       </td>
-                      <td className="px-4 py-4 text-xs font-bold text-slate-500">
+                      <td className="px-4 py-3 text-xs font-bold text-slate-500">
                         {child.parent_name ? (
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600 font-semibold">
                             <span>{child.parent_name}</span>
@@ -378,10 +378,10 @@ export default function CategoryHierarchy({
                           <span className="rounded-lg bg-teal-50 px-2.5 py-1 text-teal-700 font-extrabold">Sub Category</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm font-extrabold text-slate-700 text-center">
+                      <td className="px-4 py-3 text-sm font-extrabold text-slate-700 text-center">
                         {child.sort_order !== undefined ? child.sort_order : 0}
                       </td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
                           child.is_active 
                             ? 'border-emerald-200 bg-emerald-50 text-emerald-700' 
@@ -390,7 +390,7 @@ export default function CategoryHierarchy({
                           {child.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-5 py-3 text-right">
                         <ActionMenu 
                           item={child}
                           onEdit={onEditCategory}

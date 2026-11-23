@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SkillsTable from '../../../components/superAdmin/superAdminSkills/SkillsTable';
 import SkillDetailsPanel from '../../../components/superAdmin/superAdminSkills/SkillDetailsPanel';
-import SkillsReviewPanel from '../../../components/superAdmin/superAdminSkills/SkillsReviewPanel';
 import SkillModal from '../../../components/superAdmin/superAdminSkills/SkillModal';
 import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
 import { fetchSkills, updateSkillStatus, deleteSkill, fetchAllCategoriesForSelect } from '../../../services/superAdmin/categorySkillService';
@@ -146,9 +145,9 @@ export default function SuperAdminSkills({ onToast }) {
   };
 
   return (
-    <div className="space-y-6 font-sans animate-fadeIn">
+    <div className="space-y-4 font-sans animate-fadeIn">
       {/* Header bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Skills management</h1>
         </div>
@@ -214,7 +213,7 @@ export default function SuperAdminSkills({ onToast }) {
       </div>
 
       {/* Grid container layout */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-3 items-start">
         {/* Left Side Table */}
         <div className="xl:col-span-2 space-y-4 min-w-0">
           <SkillsTable 
@@ -238,15 +237,13 @@ export default function SuperAdminSkills({ onToast }) {
           />
         </div>
 
-        {/* Right Side details and reviews */}
-        <div className="space-y-6">
+        {/* Right Side details */}
+        <div>
           <SkillDetailsPanel 
             selectedSkill={selectedSkill}
             onEditSkill={handleOpenEditModal}
             onToggleStatus={handleToggleStatusClick}
           />
-          
-          <SkillsReviewPanel />
         </div>
       </div>
 

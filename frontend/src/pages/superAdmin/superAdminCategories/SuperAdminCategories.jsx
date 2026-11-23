@@ -122,10 +122,10 @@ export default function SuperAdminCategories({ onToast }) {
   };
 
   return (
-    <div className="space-y-6 font-sans animate-fadeIn">
+    <div className="space-y-4 font-sans animate-fadeIn">
       {/* Toast Feedback Alert Banner */}
       {toastFeedback && (
-        <div className={`p-4 rounded-xl border flex items-center justify-between text-xs font-bold animate-fadeIn shadow-sm ${
+        <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold animate-fadeIn shadow-sm ${
           toastFeedback.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
         }`}>
           <span>{toastFeedback.msg}</span>
@@ -134,7 +134,7 @@ export default function SuperAdminCategories({ onToast }) {
       )}
 
       {/* Header bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Job categories</h1>
         </div>
@@ -186,9 +186,9 @@ export default function SuperAdminCategories({ onToast }) {
       </div>
 
       {/* Grid structure layout mapping */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-3 items-start">
         {/* Left hierarchy */}
-        <div className="xl:col-span-2 space-y-6 min-w-0">
+        <div className="xl:col-span-2 space-y-4 min-w-0">
           <CategoryHierarchy 
             categories={categories}
             selectedCategory={selectedCategory}
@@ -204,7 +204,7 @@ export default function SuperAdminCategories({ onToast }) {
         </div>
 
         {/* Right side insights details */}
-        <div className="space-y-6">
+        <div>
           <CategoryDetailsPanel 
             selectedCategory={selectedCategory} 
             onEditCategory={handleOpenEditModal}
