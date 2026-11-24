@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export function setAuthItem(key, value) {
   try {
@@ -217,15 +217,28 @@ export async function loginAdmin({ email, password, expectedRole }) {
 
 export async function loginWithGoogle({ token, expectedRole }) {
   try {
-    const response = await fetch(`${API_BASE_URL}/accounts/google/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    });
+    const endpoint = `${API_BASE_URL}/accounts/google/`;
+    console.log(`[Google Auth] Initiating Google login at: ${endpoint}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for Render cold start
+
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const data = await response.json().catch(() => ({}));
+    console.log(`[Google Auth] Response received (${response.status}):`, data);
 
     if (!response.ok) {
       const errorMessage =

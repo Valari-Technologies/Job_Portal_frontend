@@ -450,6 +450,11 @@ export default function Login() {
           >
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
+          {isSubmitting && (
+            <p className="text-[11px] text-center text-slate-500 mt-2 font-medium animate-pulse">
+              Connecting to server... If the backend was asleep, please allow ~30s.
+            </p>
+          )}
         </form>
 
         {/* Divider lines */}

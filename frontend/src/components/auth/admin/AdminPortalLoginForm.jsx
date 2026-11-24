@@ -169,10 +169,12 @@ export default function AdminPortalLoginForm() {
     clearAuthError();
 
     try {
+      console.log('[AdminPortalLoginForm] Google credential received.');
       const response = await loginWithGoogle({
         token: credentialResponse.credential,
         expectedRole: 'ADMIN_PORTAL',
       });
+      console.log('[AdminPortalLoginForm] loginWithGoogle response:', response);
 
       if (response.success) {
         const role = response.role;
@@ -186,7 +188,8 @@ export default function AdminPortalLoginForm() {
       } else {
         triggerAuthError(response.message || 'Google login failed.');
       }
-    } catch {
+    } catch (err) {
+      console.error('[AdminPortalLoginForm] Error during Google login:', err);
       triggerAuthError('An unexpected Google authentication error occurred.');
     } finally {
       setIsSubmitting(false);
@@ -341,6 +344,11 @@ export default function AdminPortalLoginForm() {
           >
             {isSubmitting ? 'AUTHENTICATING...' : 'LOGIN'}
           </button>
+          {isSubmitting && (
+            <p className="text-[11px] text-center text-slate-500 mt-2 font-medium animate-pulse">
+              Connecting to server... If the backend was asleep, please allow ~30s.
+            </p>
+          )}
         </div>
 
         {/* Or Divider */}
