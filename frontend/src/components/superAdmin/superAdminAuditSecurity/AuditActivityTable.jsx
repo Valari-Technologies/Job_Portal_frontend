@@ -67,28 +67,29 @@ export default function AuditActivityTable() {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-155 bg-white p-6 shadow-2xs space-y-5">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
-        <div>
-          <h3 className="text-base font-extrabold text-slate-805">Audit activity</h3>
-          <p className="text-xs text-slate-455 font-bold mt-0.5">
-            Real-time record of authentications, account creation, and moderation decisions.
-          </p>
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs flex flex-col justify-between h-full">
+      <div>
+        {/* Header & Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-extrabold text-slate-800">Audit activity</h3>
+            <p className="text-xs text-slate-400 font-bold mt-0.5">
+              Real-time record of authentications, account creation, and moderation decisions.
+            </p>
+          </div>
+
+          <button
+            onClick={loadEvents}
+            disabled={loading}
+            className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
 
-        <button
-          onClick={loadEvents}
-          disabled={loading}
-          className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Filter Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 pb-2">
         <form onSubmit={handleSearchSubmit} className="relative sm:col-span-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -137,6 +138,7 @@ export default function AuditActivityTable() {
           </select>
         </div>
       </div>
+      </div>
 
       {/* Loading State */}
       {loading && (
@@ -175,7 +177,7 @@ export default function AuditActivityTable() {
 
       {/* Table Data */}
       {!loading && !error && events.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
@@ -235,7 +237,7 @@ export default function AuditActivityTable() {
 
       {/* Pagination Controls */}
       {!loading && !error && events.length > 0 && (
-        <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-xs font-sans">
+        <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-xs font-sans mt-auto">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}

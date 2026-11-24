@@ -9,23 +9,25 @@ import {
   Star,
   Wallet,
   Building2,
-  ThumbsUp,
-  ThumbsDown,
   Clock,
   UserCheck,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterMetricCard from '../../components/recruiter/dashboard/RecruiterMetricCard';
+import ApplicationDetailsDrawer from '../../components/recruiter/applications/ApplicationDetailsDrawer';
 import { getRecruiterDashboardData, fetchRecruiterDashboardFromApi } from '../../services/recruiter/recruiterDashboardService';
 import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
-import { updateApplicationStatusService } from '../../services/recruiter/recruiterApplicationsService';
+import { updateApplicationStatusService, getRecruiterApplicationsData } from '../../services/recruiter/recruiterApplicationsService';
 import { useRecruiterUser } from '../../context/RecruiterUserContext';
 
 export default function RecruiterDashboard() {
   const { profile } = useRecruiterUser();
   const [data, setData] = useState(() => getRecruiterDashboardData());
   const [commerceSummary] = useState(() => getRecruiterCommerceSummary());
+  const [selectedApplication, setSelectedApplication] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,21 +39,25 @@ export default function RecruiterDashboard() {
     return () => { isMounted = false; };
   }, []);
 
-  const handleShortlistApplicant = async (appId) => {
-    try {
-      await updateApplicationStatusService(appId, 'SHORTLISTED');
-      setData(getRecruiterDashboardData());
-    } catch (err) {
-      console.error("Failed to shortlist applicant", err);
+  const handleReviewApplicant = (item) => {
+    if (item.raw_app) {
+      setSelectedApplication(item.raw_app);
+    } else {
+      const appsData = getRecruiterApplicationsData();
+      const found = (appsData.applications || []).find(a => String(a.id) === String(item.id));
+      setSelectedApplication(found || item);
     }
   };
 
-  const handleRejectApplicant = async (appId) => {
+  const handleUpdateStatus = async (appId, newStatus) => {
     try {
-      await updateApplicationStatusService(appId, 'REJECTED');
+      await updateApplicationStatusService(appId, newStatus);
       setData(getRecruiterDashboardData());
+      if (selectedApplication && String(selectedApplication.id) === String(appId)) {
+        setSelectedApplication(prev => ({ ...prev, status: newStatus }));
+      }
     } catch (err) {
-      console.error("Failed to reject applicant", err);
+      console.error("Failed to update status", err);
     }
   };
 
@@ -241,51 +247,65 @@ export default function RecruiterDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 space-y-3 pt-1">
+              <div className="divide-y divide-slate-100 space-y-2 pt-1">
                 {data.recent_applications.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between pt-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                  <div 
+                    key={idx} 
+                    onClick={() => handleReviewApplicant(item)}
+                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="h-9 w-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
                         {item.candidate_initials || "C"}
                       </div>
-                      <div>
-                        <p className="text-xs font-black text-slate-805">{item.candidate_name}</p>
-                        <p className="text-[11px] font-bold text-slate-450">Applied for <span className="text-indigo-600">{item.job_title}</span></p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-805 truncate group-hover:text-indigo-600 transition-colors">
+                          {item.candidate_name}
+                        </p>
+                        <p className="text-[11px] font-bold text-slate-450 truncate">
+                          Applied for <span className="text-indigo-600 font-bold">{item.job_title}</span>
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                        item.status === 'SHORTLISTED' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        item.status === 'INTERVIEW' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
-                        item.status === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                        item.status === 'REJECTED' ? 'bg-red-50 text-red-600 border border-red-200' :
-                        'bg-slate-100 text-slate-600 border border-slate-200'
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* ATS / Match Score Badge */}
+                      {item.match_score !== undefined && item.match_score !== null && (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                          item.match_score >= 85 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                            : item.match_score >= 70 
+                              ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          <Sparkles className="h-2.5 w-2.5" />
+                          <span>{item.match_score}% Match</span>
+                        </span>
+                      )}
+
+                      {/* Status Badge */}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                        item.status === 'SHORTLISTED' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        item.status === 'INTERVIEW' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                        item.status === 'SELECTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        item.status === 'REJECTED' ? 'bg-red-50 text-red-600 border-red-200' :
+                        'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
                         {item.status || 'APPLIED'}
                       </span>
+
+                      {/* Review Action Button */}
                       <button 
                         type="button" 
-                        title="Shortlist applicant"
-                        onClick={() => handleShortlistApplicant(item.id)}
-                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                          item.status === 'SHORTLISTED' 
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-300' 
-                            : 'border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200'
-                        }`}
+                        title="Review application"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReviewApplicant(item);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200/80 hover:border-indigo-600 text-[11px] font-extrabold transition-all cursor-pointer shadow-2xs group/btn"
                       >
-                        <ThumbsUp className="h-4 w-4" />
-                      </button>
-                      <button 
-                        type="button" 
-                        title="Reject applicant"
-                        onClick={() => handleRejectApplicant(item.id)}
-                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                          item.status === 'REJECTED' 
-                            ? 'bg-red-50 text-red-600 border-red-300' 
-                            : 'border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200'
-                        }`}
-                      >
-                        <ThumbsDown className="h-4 w-4" />
+                        <Eye className="h-3 w-3" />
+                        <span>Review</span>
                       </button>
                     </div>
                   </div>
@@ -295,6 +315,15 @@ export default function RecruiterDashboard() {
           </div>
 
         </div>
+
+        {/* Application Details Drawer */}
+        {selectedApplication && (
+          <ApplicationDetailsDrawer
+            application={selectedApplication}
+            onClose={() => setSelectedApplication(null)}
+            onUpdateStatus={handleUpdateStatus}
+          />
+        )}
 
       </main>
     </RecruiterLayout>
