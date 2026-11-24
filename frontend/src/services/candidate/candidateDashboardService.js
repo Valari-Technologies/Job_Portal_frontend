@@ -14,7 +14,7 @@
 import { getCandidateProfile, uploadCandidateProfilePhoto, removeCandidateProfilePhoto as removeCandidateProfilePhotoService } from './candidateProfileService';
 import { authenticatedFetch } from '../auth/adminAuthService';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export async function getCandidateDashboardData() {
   const url = `${API_BASE_URL}/accounts/candidate/dashboard/`;

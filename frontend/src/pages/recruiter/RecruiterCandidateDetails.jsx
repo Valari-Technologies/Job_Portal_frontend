@@ -25,7 +25,7 @@ export default function RecruiterCandidateDetails() {
       phone: '6365865876'
     },
     application_status: 'APPLIED',
-    resume_url: 'http://127.0.0.1:8000/media/resumes/DHANAIS_RESUME_1.pdf',
+    resume_url: `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/media/resumes/DHANAIS_RESUME_1.pdf`,
     skills: ['React', 'JavaScript', 'Python', 'Django', 'Tailwind CSS'],
     experiences: [],
     educations: [],

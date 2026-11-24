@@ -23,7 +23,7 @@
 
 import { getAuthenticatedUser, authenticatedFetch } from '../auth/adminAuthService';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const STORAGE_RESUMES_KEY = 'statejobz_candidate_resumes';
 const STORAGE_ANALYSES_KEY = 'statejobz_candidate_resume_analyses';

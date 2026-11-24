@@ -1,6 +1,6 @@
 import { authenticatedFetch } from '../auth/adminAuthService';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 /**
  * Sends a message or command action to the Candidate AI Career Copilot.

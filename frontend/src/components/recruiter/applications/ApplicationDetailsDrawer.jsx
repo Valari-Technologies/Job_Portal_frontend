@@ -42,11 +42,12 @@ export default function ApplicationDetailsDrawer({ application, onClose, onUpdat
   const currentStatus = application.status || 'APPLIED';
 
   // Robust resume URL and filename resolution
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
   const rawResumeUrl = application.resume_url || application.resume?.file_url || application.resume?.file_path || application.candidate?.resume_url;
   const resumeUrl = rawResumeUrl ? (
     String(rawResumeUrl).startsWith('http://') || String(rawResumeUrl).startsWith('https://') 
       ? rawResumeUrl 
-      : `http://127.0.0.1:8000${String(rawResumeUrl).startsWith('/') ? '' : '/media/'}${rawResumeUrl}`
+      : `${apiBase}${String(rawResumeUrl).startsWith('/') ? '' : '/media/'}${rawResumeUrl}`
   ) : null;
   const resumeFilename = application.resume_filename || application.resume?.file_name || (resumeUrl ? 'Candidate_Resume.pdf' : null);
 

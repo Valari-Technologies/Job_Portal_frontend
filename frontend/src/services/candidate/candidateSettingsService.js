@@ -17,7 +17,7 @@ import { authenticatedFetch, getAuthenticatedUser } from '../auth/adminAuthServi
 import { getCandidateProfile, updateCandidateProfile } from './candidateProfileService';
 import { getCandidateResumes } from './candidateResumeService';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 function getUserStorageKey(suffix) {
   const user = getAuthenticatedUser();
