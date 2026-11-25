@@ -78,14 +78,14 @@ export default function CandidateSidePanel({
             </svg>
           </button>
 
-          <div className="flex items-start gap-4">
+          <div className="flex items-center gap-4">
             <Avatar
-              src={candidate?.profile_photo}
+              src={candidate?.profile_photo || candidate?.profile_picture}
               alt={candidate?.full_name || 'Candidate'}
-              imgClassName="h-12 w-12 shrink-0 rounded-2xl object-cover border border-slate-200"
+              imgClassName="h-16 w-16 shrink-0 rounded-2xl object-cover object-top border-2 border-teal-200 bg-white shadow-sm"
               fallbackNode={
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border border-teal-100 text-teal-600">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border-2 border-teal-100 text-teal-600">
+                  <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>

@@ -1,61 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
-import { MoreVertical, Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import Avatar from '../../shared/Avatar';
+import TableActionMenu from '../../shared/TableActionMenu';
 
 function CandidateActionMenu({ candidate, onSelectCandidate, onTriggerAction }) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   return (
-    <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-        aria-label="Actions menu"
-      >
-        <MoreVertical className="h-4.5 w-4.5" />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-slate-150 bg-white p-1.5 shadow-lg z-30 space-y-0.5 animate-fadeIn text-left">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              if (onSelectCandidate) onSelectCandidate(candidate);
-              if (onTriggerAction) onTriggerAction('VIEW', candidate);
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-teal-600 rounded-lg transition-colors cursor-pointer"
-          >
-            <Eye className="h-3.5 w-3.5 text-slate-400" />
-            <span>View profile</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              if (onTriggerAction) onTriggerAction('DELETE', candidate);
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-            <span>Delete</span>
-          </button>
-        </div>
-      )}
-    </div>
+    <TableActionMenu
+      items={[
+        {
+          label: 'View profile',
+          icon: <Eye className="h-3.5 w-3.5 text-slate-400" />,
+          onClick: () => {
+            if (onSelectCandidate) onSelectCandidate(candidate);
+            if (onTriggerAction) onTriggerAction('VIEW', candidate);
+          },
+        },
+        {
+          label: 'Delete',
+          icon: <Trash2 className="h-3.5 w-3.5 text-rose-500" />,
+          className:
+            'w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer',
+          onClick: () => {
+            if (onTriggerAction) onTriggerAction('DELETE', candidate);
+          },
+        },
+      ]}
+    />
   );
 }
 
