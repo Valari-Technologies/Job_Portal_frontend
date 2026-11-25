@@ -229,7 +229,6 @@ export async function loginAdmin({ email, password, expectedRole }) {
 export async function loginWithGoogle({ token, expectedRole }) {
   try {
     const endpoint = `${API_BASE_URL}/accounts/google/`;
-    console.log(`[Google Auth] Initiating Google login at: ${endpoint}`);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for Render cold start
@@ -249,7 +248,6 @@ export async function loginWithGoogle({ token, expectedRole }) {
     }
 
     const data = await response.json().catch(() => ({}));
-    console.log(`[Google Auth] Response received (${response.status}):`, data);
 
     if (!response.ok) {
       const errorMessage =

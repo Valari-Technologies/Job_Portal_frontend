@@ -29,21 +29,12 @@ export default function AdminPortalLoginForm() {
     setTimeout(() => {
       authErrorRef.current?.focus();
     }, 50);
-
-    authErrorTimerRef.current = setTimeout(() => {
-      setIsErrorVisible(false);
-      setTimeout(() => {
-        setAuthError(null);
-      }, 500);
-    }, 4000);
   };
 
   const clearAuthError = () => {
     if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
     setIsErrorVisible(false);
-    setTimeout(() => {
-      setAuthError(null);
-    }, 300);
+    setAuthError(null);
   };
 
   useEffect(() => {
@@ -169,12 +160,10 @@ export default function AdminPortalLoginForm() {
     clearAuthError();
 
     try {
-      console.log('[AdminPortalLoginForm] Google credential received.');
       const response = await loginWithGoogle({
         token: credentialResponse.credential,
         expectedRole: 'ADMIN_PORTAL',
       });
-      console.log('[AdminPortalLoginForm] loginWithGoogle response:', response);
 
       if (response.success) {
         const role = response.role;

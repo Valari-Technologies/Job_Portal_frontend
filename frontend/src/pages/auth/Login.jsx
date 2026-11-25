@@ -43,21 +43,12 @@ export default function Login() {
     setTimeout(() => {
       authErrorRef.current?.focus();
     }, 50);
-
-    authErrorTimerRef.current = setTimeout(() => {
-      setIsErrorVisible(false);
-      setTimeout(() => {
-        setAuthError(null);
-      }, 500);
-    }, 4000);
   };
 
   const clearAuthError = () => {
     if (authErrorTimerRef.current) clearTimeout(authErrorTimerRef.current);
     setIsErrorVisible(false);
-    setTimeout(() => {
-      setAuthError(null);
-    }, 300);
+    setAuthError(null);
   };
 
   useEffect(() => {
