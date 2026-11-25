@@ -140,12 +140,8 @@ export default function Login() {
 
         if (response.success) {
           const role = response.role;
-          if (role === 'SUPER_ADMIN') {
-            window.location.href = '/super-admin/overview';
-            return;
-          }
-          if (role === 'ADMIN') {
-            window.location.href = '/admin/dashboard';
+          if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+            triggerAuthError('Access denied. Admin accounts must log in at /admin.');
             return;
           }
 
@@ -206,12 +202,8 @@ export default function Login() {
 
       if (response.success) {
         const role = response.role;
-        if (role === 'SUPER_ADMIN') {
-          window.location.href = '/super-admin/overview';
-          return;
-        }
-        if (role === 'ADMIN') {
-          window.location.href = '/admin/dashboard';
+        if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+          triggerAuthError('Access denied. Admin accounts must log in at /admin.');
           return;
         }
 

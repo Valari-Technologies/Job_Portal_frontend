@@ -102,6 +102,37 @@ export async function registerCandidate({ fullName, mobileNumber, email, passwor
   }
 }
 
+function validateExpectedRole(userRole, expectedRole) {
+  if (!expectedRole) return null;
+
+  const exp = expectedRole.toUpperCase().trim();
+  const isAdminRole = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+
+  if (exp === 'CANDIDATE' && userRole !== 'CANDIDATE') {
+    if (isAdminRole) {
+      return "Access denied. Admin accounts must log in at /admin.";
+    }
+    return (userRole === 'HR' || userRole === 'RECRUITER')
+      ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
+      : "Access denied. Candidate login only.";
+  }
+
+  if ((exp === 'HR' || exp === 'RECRUITER') && userRole !== 'HR' && userRole !== 'RECRUITER') {
+    if (isAdminRole) {
+      return "Access denied. Admin accounts must log in at /admin.";
+    }
+    return userRole === 'CANDIDATE'
+      ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
+      : "Access denied. HR / Recruiter login only.";
+  }
+
+  if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && !isAdminRole) {
+    return "Access denied. Candidate and HR users must log in at /login.";
+  }
+
+  return null;
+}
+
 export async function loginAdmin({ email, password, expectedRole }) {
   try {
     const payload = {
@@ -146,32 +177,12 @@ export async function loginAdmin({ email, password, expectedRole }) {
     }
 
     // Client-side role mismatch safeguard before persisting any session tokens
-    if (expectedRole) {
-      const exp = expectedRole.toUpperCase().trim();
-      const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
-
-      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE' && !isAdminRole) {
-        return {
-          success: false,
-          message: (user.role === 'HR' || user.role === 'RECRUITER')
-            ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
-            : "Access denied. Candidate login only.",
-        };
-      }
-      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER' && !isAdminRole) {
-        return {
-          success: false,
-          message: user.role === 'CANDIDATE'
-            ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
-            : "Access denied. HR / Recruiter login only.",
-        };
-      }
-      if ((exp === 'ADMIN' || exp === 'SUPER_ADMIN' || exp === 'ADMIN_PORTAL') && !isAdminRole) {
-        return {
-          success: false,
-          message: "Access denied. Candidate and HR users must log in at /login.",
-        };
-      }
+    const roleError = validateExpectedRole(user.role, expectedRole);
+    if (roleError) {
+      return {
+        success: false,
+        message: roleError,
+      };
     }
 
     if (user.role === 'SUPER_ADMIN') {
@@ -261,26 +272,12 @@ export async function loginWithGoogle({ token, expectedRole }) {
       };
     }
 
-    if (expectedRole) {
-      const exp = expectedRole.toUpperCase().trim();
-      const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
-
-      if (exp === 'CANDIDATE' && user.role !== 'CANDIDATE' && !isAdminRole) {
-        return {
-          success: false,
-          message: (user.role === 'HR' || user.role === 'RECRUITER')
-            ? "This account is registered as an HR / Recruiter. Please switch to the 'HR / Recruiter' tab to login."
-            : "Access denied. Candidate login only.",
-        };
-      }
-      if ((exp === 'HR' || exp === 'RECRUITER') && user.role !== 'HR' && user.role !== 'RECRUITER' && !isAdminRole) {
-        return {
-          success: false,
-          message: user.role === 'CANDIDATE'
-            ? "This account is registered as a Candidate. Please switch to the 'Candidate' tab to login."
-            : "Access denied. HR / Recruiter login only.",
-        };
-      }
+    const roleError = validateExpectedRole(user.role, expectedRole);
+    if (roleError) {
+      return {
+        success: false,
+        message: roleError,
+      };
     }
 
     if (user.role === 'SUPER_ADMIN') {
