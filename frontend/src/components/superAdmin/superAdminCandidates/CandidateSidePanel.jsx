@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Avatar from '../../shared/Avatar';
 
 export default function CandidateSidePanel({ 
   isOpen, 
@@ -78,19 +79,18 @@ export default function CandidateSidePanel({
           </button>
 
           <div className="flex items-start gap-4">
-            {candidate?.profile_photo ? (
-              <img
-                src={candidate.profile_photo}
-                alt={candidate.full_name || 'Candidate'}
-                className="h-12 w-12 shrink-0 rounded-2xl object-cover border border-slate-200"
-              />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border border-teal-100 text-teal-600">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-            )}
+            <Avatar
+              src={candidate?.profile_photo}
+              alt={candidate?.full_name || 'Candidate'}
+              imgClassName="h-12 w-12 shrink-0 rounded-2xl object-cover border border-slate-200"
+              fallbackNode={
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border border-teal-100 text-teal-600">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              }
+            />
 
             <div className="space-y-1 min-w-0 flex-1">
               <span className="text-xs font-black uppercase tracking-widest text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md">

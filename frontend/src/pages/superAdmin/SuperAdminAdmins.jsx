@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, UserCheck, AlertCircle, RefreshCw, MoreVertical, Eye } from 'lucide-react';
 import { fetchAdminsService } from '../../services/superAdmin/superAdminService';
 import SuperAdminPagination from '../../components/superAdmin/common/SuperAdminPagination';
+import Avatar from '../../components/shared/Avatar';
 
 function AdminActionMenu({ admin }) {
   const [open, setOpen] = useState(false);
@@ -196,7 +197,18 @@ export default function SuperAdminAdmins() {
 
                   return (
                     <tr key={adm.id || adm.email} className="hover:bg-slate-50/40">
-                      <td className="px-5 py-3.5 text-xs font-bold text-slate-900">{displayName}</td>
+                      <td className="px-5 py-3.5 text-xs font-bold text-slate-900">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar
+                            src={adm.profile_photo}
+                            alt={displayName}
+                            fallbackText={displayName.charAt(0).toUpperCase()}
+                            imgClassName="h-8 w-8 rounded-full object-cover border border-slate-200 bg-white shrink-0"
+                            fallbackClassName="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-extrabold text-xs shrink-0"
+                          />
+                          <span>{displayName}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3.5 text-xs font-bold text-slate-500">{adm.email}</td>
                       <td className="px-4 py-3.5 text-xs font-bold text-slate-600">{adm.role || 'ADMIN'}</td>
                       <td className="px-4 py-3.5">

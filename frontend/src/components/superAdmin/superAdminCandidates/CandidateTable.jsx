@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MoreVertical, Eye, Trash2 } from 'lucide-react';
+import Avatar from '../../shared/Avatar';
 
 function CandidateActionMenu({ candidate, onSelectCandidate, onTriggerAction }) {
   const [open, setOpen] = useState(false);
@@ -161,17 +162,11 @@ export default function CandidateTable({
                   {/* Candidate Identity */}
                   <td className="px-4 sm:px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      {photo ? (
-                        <img 
-                          src={photo} 
-                          alt={displayName} 
-                          className="h-9 w-9 rounded-full object-cover border border-black bg-white shrink-0" 
-                        />
-                      ) : (
-                        <div className="h-9 w-9 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-extrabold text-sm shrink-0">
-                          {initial}
-                        </div>
-                      )}
+                      <Avatar
+                        src={photo}
+                        alt={displayName}
+                        fallbackText={initial}
+                      />
                       <div className="min-w-0">
                         <p className="font-extrabold text-slate-900 leading-snug truncate text-xs sm:text-sm">{displayName}</p>
                         <p className="text-[11px] text-slate-500 font-medium truncate">{c.email || c.phone_number || c.mobile_number || 'No email'}</p>

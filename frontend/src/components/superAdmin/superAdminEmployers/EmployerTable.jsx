@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MoreVertical, Eye, Trash2 } from 'lucide-react';
+import Avatar from '../../shared/Avatar';
 
 function EmployerActionMenu({ employer, onSelectEmployer, onDeleteEmployer }) {
   const [open, setOpen] = useState(false);
@@ -138,17 +139,11 @@ export default function EmployerTable({
                 >
                   <td className="px-4 sm:px-5 py-2.5 sm:py-3">
                     <div className="flex items-center gap-3">
-                      {emp.company_logo || emp.profile_photo ? (
-                        <img 
-                          src={emp.company_logo || emp.profile_photo} 
-                          alt={emp.company_name || 'Logo'} 
-                          className="h-9 w-9 rounded-full object-cover border border-black bg-white shrink-0" 
-                        />
-                      ) : (
-                        <div className="h-9 w-9 rounded-full bg-white border border-black flex items-center justify-center text-slate-900 font-extrabold text-sm shrink-0">
-                          {companyInitial}
-                        </div>
-                      )}
+                      <Avatar
+                        src={emp.company_logo || emp.profile_photo}
+                        alt={emp.company_name || 'Logo'}
+                        fallbackText={companyInitial}
+                      />
                       <div className="min-w-0">
                         <p className="font-extrabold text-slate-900 leading-snug truncate text-xs sm:text-sm">{emp.company_name || emp.full_name}</p>
                         <p className="text-[11px] text-slate-500 font-medium truncate">{emp.company_email || emp.email}</p>

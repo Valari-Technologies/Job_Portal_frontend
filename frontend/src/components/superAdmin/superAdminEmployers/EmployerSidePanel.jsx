@@ -1,4 +1,5 @@
 import { Building2, Mail, Phone, Globe, MapPin, Calendar, User, ShieldCheck, ShieldAlert } from 'lucide-react';
+import Avatar from '../../shared/Avatar';
 
 export default function EmployerSidePanel({ 
   isOpen, 
@@ -36,17 +37,16 @@ export default function EmployerSidePanel({
           </button>
 
           <div className="flex items-start gap-4">
-            {emp && emp.company_logo ? (
-              <img 
-                src={emp.company_logo} 
-                alt={emp.company_name || 'Logo'} 
-                className="h-14 w-14 rounded-full object-cover border-2 border-black bg-white shadow-xs shrink-0" 
-              />
-            ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white border-2 border-black text-slate-900 font-black text-xl shadow-xs">
-                {emp ? (emp.company_name ? emp.company_name.charAt(0).toUpperCase() : (emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E')) : <Building2 className="h-7 w-7" />}
-              </div>
-            )}
+            <Avatar
+              src={emp ? (emp.company_logo || emp.profile_photo) : null}
+              alt={emp?.company_name || 'Logo'}
+              imgClassName="h-14 w-14 rounded-full object-cover border-2 border-black bg-white shadow-xs shrink-0"
+              fallbackNode={
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white border-2 border-black text-slate-900 font-black text-xl shadow-xs">
+                  {emp ? (emp.company_name ? emp.company_name.charAt(0).toUpperCase() : (emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E')) : <Building2 className="h-7 w-7" />}
+                </div>
+              }
+            />
 
             <div className="space-y-1 min-w-0 pr-6">
               <span className="text-[10px] font-black uppercase tracking-widest text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-100 inline-block">
