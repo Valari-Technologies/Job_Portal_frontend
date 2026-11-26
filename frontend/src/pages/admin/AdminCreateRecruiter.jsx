@@ -32,7 +32,9 @@ export default function AdminCreateRecruiter() {
     location_id: null,
     companyEmail: '',
     companyPhoneCountryCode: '+91',
-    companyPhone: ''
+    companyPhone: '',
+    website: '',
+    linkedinUrl: ''
   });
 
   // Validation feedback lists tracking
@@ -173,6 +175,8 @@ export default function AdminCreateRecruiter() {
         location_id: formState.location_id || null,
         company_email: formState.companyEmail.trim(),
         company_phone: `${formState.companyPhoneCountryCode}${formState.companyPhone}`.trim(),
+        website: formState.website.trim() || null,
+        linkedin_url: formState.linkedinUrl.trim() || null,
         designation: 'HR Manager',
         status: 'ACTIVE',
         profile_photo: photoDataUrl,

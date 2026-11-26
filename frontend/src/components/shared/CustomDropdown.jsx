@@ -29,11 +29,13 @@ export default function CustomDropdown({
   error = false,
   required = false,
   size = 'md', // 'sm' | 'md'
-  rounded = 'xl' // 'xl' | 'full' | 'lg'
+  rounded = 'xl', // 'xl' | 'full' | 'lg'
+  onCreateOption = null
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -265,6 +267,33 @@ export default function CustomDropdown({
                   aria-label="Type to search options"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const trimmed = searchQuery.trim();
+                      if (!trimmed || isCreating) return;
+                      const exactMatch = normalizedOptions.find(
+                        (opt) => opt.value !== '' && opt.label.toLowerCase() === trimmed.toLowerCase()
+                      );
+                      if (exactMatch) {
+                        handleSelect(exactMatch);
+                        return;
+                      }
+                      if (onCreateOption) {
+                        setIsCreating(true);
+                        try {
+                          const created = await onCreateOption(trimmed);
+                          if (created) {
+                            setIsOpen(false);
+                            setSearchQuery('');
+                          }
+                        } finally {
+                          setIsCreating(false);
+                        }
+                      }
+                    }
+                  }}
                   placeholder="Type to search..."
                   className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   onClick={(e) => e.stopPropagation()}
@@ -275,9 +304,42 @@ export default function CustomDropdown({
 
           {/* Options List */}
           <div className="max-h-56 overflow-y-auto divide-y divide-slate-50 overscroll-contain">
+            {onCreateOption &&
+              searchQuery.trim() &&
+              !normalizedOptions.some(
+                (opt) => opt.value !== '' && opt.label.toLowerCase() === searchQuery.trim().toLowerCase()
+              ) && (
+                <button
+                  type="button"
+                  disabled={isCreating}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const trimmed = searchQuery.trim();
+                    if (!trimmed || isCreating) return;
+                    setIsCreating(true);
+                    try {
+                      const created = await onCreateOption(trimmed);
+                      if (created) {
+                        setIsOpen(false);
+                        setSearchQuery('');
+                      }
+                    } finally {
+                      setIsCreating(false);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 text-xs text-left flex items-center justify-between gap-2 bg-teal-50/70 text-teal-700 hover:bg-teal-100/70 font-bold transition-colors cursor-pointer"
+                >
+                  <span className="truncate">
+                    {isCreating ? `Adding "${searchQuery.trim()}"...` : `+ Add "${searchQuery.trim()}"`}
+                  </span>
+                  <span className="text-[10px] font-semibold text-teal-600 shrink-0">Press Enter</span>
+                </button>
+              )}
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-xs text-slate-400 text-center font-medium">
-                No matching options
+                {onCreateOption
+                  ? (searchQuery.trim() ? 'Press Enter above to add this location' : 'No options yet — type to add')
+                  : 'No matching options'}
               </div>
             ) : (
               filteredOptions.map((opt, idx) => {

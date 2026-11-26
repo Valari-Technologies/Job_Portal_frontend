@@ -1,82 +1,10 @@
-import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { fetchLocations } from '../../../services/superAdmin/locationService';
 import CustomDropdown from '../../shared/CustomDropdown';
+import CascadingLocationSelector from '../../shared/CascadingLocationSelector';
 
 export default function CompanyInformationStep({ formState, setFormState, errors, setErrors, touched, setTouched }) {
   const industries = ["Education", "Technology", "Healthcare", "Finance", "Services", "Retail", "Manufacturing"];
   const companyTypes = ["Private", "Public", "Non-Profit", "Partnership", "Sole Proprietorship"];
-
-  const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [localities, setLocalities] = useState([]);
-  const [loadingLocations, setLoadingLocations] = useState(true);
-
-  // Fetch initial States from location catalog
-  useEffect(() => {
-    let active = true;
-    async function loadStates() {
-      try {
-        const data = await fetchLocations({ location_type: 'STATE' });
-        if (active) setStates(data);
-      } catch (err) {
-        console.error("Failed to load states:", err);
-      } finally {
-        if (active) setLoadingLocations(false);
-      }
-    }
-    loadStates();
-    return () => { active = false; };
-  }, []);
-
-  // Fetch Districts when State changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.stateId) {
-      setDistricts([]);
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadDistricts() {
-      const data = await fetchLocations({ location_type: 'DISTRICT', parent_id: formState.stateId });
-      if (active) setDistricts(data);
-    }
-    loadDistricts();
-    return () => { active = false; };
-  }, [formState.stateId]);
-
-  // Fetch Cities when District changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.districtId) {
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadCities() {
-      const data = await fetchLocations({ location_type: 'CITY', parent_id: formState.districtId });
-      if (active) setCities(data);
-    }
-    loadCities();
-    return () => { active = false; };
-  }, [formState.districtId]);
-
-  // Fetch Localities when City changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.cityId) {
-      setLocalities([]);
-      return;
-    }
-    async function loadLocalities() {
-      const data = await fetchLocations({ location_type: 'LOCALITY', parent_id: formState.cityId });
-      if (active) setLocalities(data);
-    }
-    loadLocalities();
-    return () => { active = false; };
-  }, [formState.cityId]);
 
   const validateField = (name, value) => {
     let err = null;
@@ -100,95 +28,6 @@ export default function CompanyInformationStep({ formState, setFormState, errors
     setFormState(prev => ({ ...prev, [name]: val }));
     if (touched[name]) {
       validateField(name, val);
-    }
-  };
-
-  const handleStateChange = (e) => {
-    const sId = e.target.value;
-    const selectedStateObj = states.find(s => String(s.id) === String(sId));
-    const locName = selectedStateObj?.name || '';
-
-    setFormState(prev => ({
-      ...prev,
-      stateId: sId,
-      districtId: '',
-      cityId: '',
-      localityId: '',
-      location: locName,
-      location_id: sId ? Number(sId) : null
-    }));
-
-    if (touched.location) {
-      validateField('location', locName);
-    }
-  };
-
-  const handleDistrictChange = (e) => {
-    const dId = e.target.value;
-    const selectedStateObj = states.find(s => String(s.id) === String(formState.stateId));
-    const selectedDistrictObj = districts.find(d => String(d.id) === String(dId));
-
-    const parts = [selectedDistrictObj?.name, selectedStateObj?.name].filter(Boolean);
-    const locName = parts.join(', ') || formState.location;
-    const chosenId = dId || formState.stateId;
-
-    setFormState(prev => ({
-      ...prev,
-      districtId: dId,
-      cityId: '',
-      localityId: '',
-      location: locName,
-      location_id: chosenId ? Number(chosenId) : null
-    }));
-
-    if (touched.location) {
-      validateField('location', locName);
-    }
-  };
-
-  const handleCityChange = (e) => {
-    const cId = e.target.value;
-    const selectedStateObj = states.find(s => String(s.id) === String(formState.stateId));
-    const selectedDistrictObj = districts.find(d => String(d.id) === String(formState.districtId));
-    const selectedCityObj = cities.find(c => String(c.id) === String(cId));
-
-    const parts = [selectedCityObj?.name, selectedDistrictObj?.name, selectedStateObj?.name].filter(Boolean);
-    const locName = parts.join(', ') || formState.location;
-    const chosenId = cId || formState.districtId || formState.stateId;
-
-    setFormState(prev => ({
-      ...prev,
-      cityId: cId,
-      localityId: '',
-      location: locName,
-      location_id: chosenId ? Number(chosenId) : null
-    }));
-
-    if (touched.location) {
-      validateField('location', locName);
-    }
-  };
-
-  const handleLocalityChange = (e) => {
-    const lId = e.target.value;
-    const selectedStateObj = states.find(s => String(s.id) === String(formState.stateId));
-    const selectedDistrictObj = districts.find(d => String(d.id) === String(formState.districtId));
-    const selectedCityObj = cities.find(c => String(c.id) === String(formState.cityId));
-    const selectedLocalityObj = localities.find(l => String(l.id) === String(lId));
-
-    const parts = [selectedLocalityObj?.name, selectedCityObj?.name, selectedDistrictObj?.name, selectedStateObj?.name].filter(Boolean);
-    const locName = parts.join(', ') || formState.location;
-    const chosenId = lId || formState.cityId || formState.districtId || formState.stateId;
-
-    setFormState(prev => ({
-      ...prev,
-      localityId: lId,
-      location: locName,
-      location_id: chosenId ? Number(chosenId) : null
-    }));
-
-    if (touched.location) {
-      validateField('location', locName);
     }
   };
 
@@ -309,63 +148,60 @@ export default function CompanyInformationStep({ formState, setFormState, errors
           )}
         </div>
 
+        {/* Website (Optional) */}
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-semibold text-slate-700">Website (Optional)</label>
+          <input
+            type="url"
+            value={formState.website || ''}
+            onChange={(e) => handleChange('website', e.target.value)}
+            placeholder="https://www.company.com"
+            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-[14px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#4A1DDF] focus:ring-1 focus:ring-[#4A1DDF] focus:outline-none min-h-[46px]"
+          />
+        </div>
+
+        {/* LinkedIn Profile Link (Optional) */}
+        <div className="space-y-1.5">
+          <label className="text-[13px] font-semibold text-slate-700">LinkedIn Profile Link (Optional)</label>
+          <input
+            type="url"
+            value={formState.linkedinUrl || ''}
+            onChange={(e) => handleChange('linkedinUrl', e.target.value)}
+            placeholder="https://www.linkedin.com/company/company-name"
+            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-[14px] font-medium text-slate-800 placeholder-slate-400 focus:border-[#4A1DDF] focus:ring-1 focus:ring-[#4A1DDF] focus:outline-none min-h-[46px]"
+          />
+        </div>
+
       </div>
 
       {/* Cascading Location Selectors (State, District, City, Locality) */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
-        <label className="text-[13px] font-semibold text-slate-700 block">Location *</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* State */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 block">State</label>
-            <CustomDropdown
-              value={formState.stateId || ''}
-              onChange={handleStateChange}
-              disabled={loadingLocations}
-              searchable={true}
-              placeholder={loadingLocations ? "Loading states..." : "Select State"}
-              options={states.map((s) => ({ value: s.id, label: s.name }))}
-            />
-          </div>
-
-          {/* District */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 block">District</label>
-            <CustomDropdown
-              value={formState.districtId || ''}
-              onChange={handleDistrictChange}
-              disabled={!formState.stateId}
-              searchable={true}
-              placeholder="Select District"
-              options={districts.map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </div>
-
-          {/* City / Town */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 block">City / Town</label>
-            <CustomDropdown
-              value={formState.cityId || ''}
-              onChange={handleCityChange}
-              disabled={!formState.districtId}
-              searchable={true}
-              placeholder="Select City/Town"
-              options={cities.map((c) => ({ value: c.id, label: c.name }))}
-            />
-          </div>
-
-          {/* Locality */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 block">Locality</label>
-            <CustomDropdown
-              value={formState.localityId || ''}
-              onChange={handleLocalityChange}
-              disabled={!formState.cityId}
-              placeholder="Select Locality"
-              options={localities.map((l) => ({ value: l.id, label: l.name }))}
-            />
-          </div>
+        <div>
+          <label className="text-[13px] font-semibold text-slate-700 block">Location *</label>
+          <p className="text-[11px] text-slate-400 font-medium">Search or type a new State, District, City/Town, or Locality and press Enter to add it.</p>
         </div>
+        <CascadingLocationSelector
+          stateId={formState.stateId}
+          districtId={formState.districtId}
+          cityId={formState.cityId}
+          localityId={formState.localityId}
+          labelClassName="text-[11px] font-semibold text-slate-500 block mb-1"
+          gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+          onChange={({ stateId, districtId, cityId, localityId, locationId, locationAddress }) => {
+            setFormState(prev => ({
+              ...prev,
+              stateId,
+              districtId,
+              cityId,
+              localityId,
+              location: locationAddress,
+              location_id: locationId,
+            }));
+            if (locationAddress && errors.location) {
+              setErrors(prev => ({ ...prev, location: null }));
+            }
+          }}
+        />
 
         {errors.location && touched.location && (
           <div className="flex items-center gap-1 text-[12px] text-red-500 font-medium min-h-[16px]">

@@ -172,6 +172,23 @@ export default function EmployerSidePanel({
                     </div>
                   </div>
 
+                  {emp.linkedin_url && (
+                    <div className="flex items-start gap-3">
+                      <Globe className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">LinkedIn Profile</span>
+                        <a 
+                          href={emp.linkedin_url.startsWith('http') ? emp.linkedin_url : `https://${emp.linkedin_url}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-extrabold text-teal-600 hover:underline break-all"
+                        >
+                          {emp.linkedin_url}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-3">
                     <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
                     <div>

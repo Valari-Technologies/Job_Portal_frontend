@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { createEmployerService } from '../../../services/superAdmin/superAdminService';
-import { fetchLocations } from '../../../services/superAdmin/locationService';
+import CascadingLocationSelector from '../../shared/CascadingLocationSelector';
 
 
 function fileToDataUrl(file) {
@@ -33,16 +33,14 @@ export default function AddEmployerForm() {
     companyPhone: '',
     companyEmail: '',
     website: '',
+    linkedinUrl: '',
     stateId: '',
     districtId: '',
     cityId: '',
-    localityId: ''
+    localityId: '',
+    locationId: null,
+    locationAddress: ''
   });
-
-  const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [localities, setLocalities] = useState([]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -50,65 +48,6 @@ export default function AddEmployerForm() {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Fetch initial States from location catalog
-  useEffect(() => {
-    let active = true;
-    async function loadStates() {
-      const data = await fetchLocations({ location_type: 'STATE' });
-      if (active) setStates(data);
-    }
-    loadStates();
-    return () => { active = false; };
-  }, []);
-
-  // Fetch Districts when State changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.stateId) {
-      setDistricts([]);
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadDistricts() {
-      const data = await fetchLocations({ location_type: 'DISTRICT', parent_id: formState.stateId });
-      if (active) setDistricts(data);
-    }
-    loadDistricts();
-    return () => { active = false; };
-  }, [formState.stateId]);
-
-  // Fetch Cities when District changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.districtId) {
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadCities() {
-      const data = await fetchLocations({ location_type: 'CITY', parent_id: formState.districtId });
-      if (active) setCities(data);
-    }
-    loadCities();
-    return () => { active = false; };
-  }, [formState.districtId]);
-
-  // Fetch Localities when City changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.cityId) {
-      setLocalities([]);
-      return;
-    }
-    async function loadLocalities() {
-      const data = await fetchLocations({ location_type: 'LOCALITY', parent_id: formState.cityId });
-      if (active) setLocalities(data);
-    }
-    loadLocalities();
-    return () => { active = false; };
-  }, [formState.cityId]);
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -221,19 +160,8 @@ export default function AddEmployerForm() {
 
     setIsSubmitting(true);
     try {
-      const selectedStateObj = states.find(s => String(s.id) === String(formState.stateId));
-      const selectedDistrictObj = districts.find(d => String(d.id) === String(formState.districtId));
-      const selectedCityObj = cities.find(c => String(c.id) === String(formState.cityId));
-      const selectedLocalityObj = localities.find(l => String(l.id) === String(formState.localityId));
-
-      const locationAddressStr = [
-        selectedLocalityObj?.name,
-        selectedCityObj?.name,
-        selectedDistrictObj?.name,
-        selectedStateObj?.name
-      ].filter(Boolean).join(', ');
-
-      const selectedLocationId = formState.localityId || formState.cityId || formState.districtId || formState.stateId || null;
+      const locationAddressStr = formState.locationAddress || '';
+      const selectedLocationId = formState.locationId || formState.localityId || formState.cityId || formState.districtId || formState.stateId || null;
       const logoDataUrl = formState.companyLogo ? await fileToDataUrl(formState.companyLogo) : null;
 
       const payload = {
@@ -249,6 +177,7 @@ export default function AddEmployerForm() {
         company_phone: formState.companyPhone.trim(),
         company_email: formState.companyEmail.trim(),
         website: formState.website.trim() || null,
+        linkedin_url: formState.linkedinUrl.trim() || null,
         company_address: locationAddressStr || null,
         location_id: selectedLocationId ? Number(selectedLocationId) : null,
         verification_status: 'PENDING',
@@ -579,7 +508,7 @@ export default function AddEmployerForm() {
             </div>
 
             {/* Website */}
-            <div className="space-y-1.5 md:col-span-2" data-error={!!errors.website}>
+            <div className="space-y-1.5" data-error={!!errors.website}>
               <label htmlFor="website" className="text-[13px] font-bold text-slate-700">Website (Optional)</label>
               <input 
                 id="website"
@@ -599,6 +528,19 @@ export default function AddEmployerForm() {
               {errors.website && <p className="text-xs text-red-500 font-semibold">{errors.website}</p>}
             </div>
 
+            {/* LinkedIn Profile Link */}
+            <div className="space-y-1.5">
+              <label htmlFor="linkedinUrl" className="text-[13px] font-bold text-slate-700">LinkedIn Profile Link (Optional)</label>
+              <input 
+                id="linkedinUrl"
+                type="url"
+                value={formState.linkedinUrl}
+                onChange={(e) => setFormState(prev => ({ ...prev, linkedinUrl: e.target.value }))}
+                placeholder="https://www.linkedin.com/company/company-name"
+                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 min-h-[44px]"
+              />
+            </div>
+
             {/* Description */}
             <div className="space-y-1.5 md:col-span-2">
               <label htmlFor="companyDescription" className="text-[13px] font-bold text-slate-700">Company Description</label>
@@ -613,78 +555,29 @@ export default function AddEmployerForm() {
             </div>
           </div>
 
-          {/* Cascading Location Selectors */}
+          {/* Cascading Searchable Location Selectors */}
           <div className="space-y-3">
-            <label className="text-[13px] font-bold text-slate-700 block">Company Location</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label htmlFor="state" className="text-xs font-semibold text-slate-500 block mb-1">State</label>
-                <select
-                  id="state"
-                  value={formState.stateId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, stateId: e.target.value, districtId: '', cityId: '', localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 min-h-[44px]"
-                >
-                  <option value="">Select State</option>
-                  {states.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="district" className="text-xs font-semibold text-slate-500 block mb-1">District</label>
-                <select
-                  id="district"
-                  disabled={!formState.stateId}
-                  value={formState.districtId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, districtId: e.target.value, cityId: '', localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select District</option>
-                  {districts.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="city" className="text-xs font-semibold text-slate-500 block mb-1">City / Town</label>
-                <select
-                  id="city"
-                  disabled={!formState.districtId}
-                  value={formState.cityId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, cityId: e.target.value, localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select City/Town</option>
-                  {cities.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="locality" className="text-xs font-semibold text-slate-500 block mb-1">Locality</label>
-                <select
-                  id="locality"
-                  disabled={!formState.cityId}
-                  value={formState.localityId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, localityId: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select Locality</option>
-                  {localities.map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-[13px] font-bold text-slate-700 block">Company Location</label>
+              <p className="text-[11px] text-slate-400 font-medium">Search or type a new State, District, City/Town, or Locality and press Enter to add it.</p>
             </div>
-            {states.length === 0 && (
-              <p className="text-[11px] text-amber-600 font-semibold">
-                No location records configured yet. Populate location catalog under Location Management.
-              </p>
-            )}
+            <CascadingLocationSelector
+              stateId={formState.stateId}
+              districtId={formState.districtId}
+              cityId={formState.cityId}
+              localityId={formState.localityId}
+              onChange={({ stateId, districtId, cityId, localityId, locationId, locationAddress }) =>
+                setFormState(prev => ({
+                  ...prev,
+                  stateId,
+                  districtId,
+                  cityId,
+                  localityId,
+                  locationId,
+                  locationAddress,
+                }))
+              }
+            />
           </div>
 
           {/* System Default Badges */}
