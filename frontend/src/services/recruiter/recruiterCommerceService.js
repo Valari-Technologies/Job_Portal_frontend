@@ -15,11 +15,6 @@ function getRecruiterCommerceStorageKey() {
 }
 
 function getDefaultCommerceSummary() {
-  // Set validity to a future date matching realistic subscription window
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + 65); // ~2 months out
-  const validUntilStr = futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
   return {
     currency: "INR",
     wallet: {
@@ -27,43 +22,19 @@ function getDefaultCommerceSummary() {
       formatted_balance: "₹0.00"
     },
     credits: {
-      available: 10,
-      total_allowance: 10,
+      available: 0,
+      total_allowance: 0,
       used: 0
     },
-    current_plan: {
-      id: "basic",
-      name: "Free Starter Plan",
-      price: 0,
-      formatted_price: "Free",
-      duration_days: 30,
-      valid_until: validUntilStr,
-      is_free: true,
-      features: [
-        "10 Job Credits included",
-        "7 days active listing per job",
-        "Standard search visibility",
-        "Candidate Profile & Resume access"
-      ]
-    },
+    current_plan: null,
     usage: {
-      allowance: 10,
+      allowance: 0,
       used: 0,
-      remaining: 10,
+      remaining: 0,
       is_unlimited: false
     },
     last_payment_method: null,
-    transactions: [
-      {
-        id: "TXN_1001",
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        description: "Free Starter Plan - 10 Credits Activation",
-        amount: 0,
-        formatted_amount: "₹0.00",
-        status: "SUCCESS",
-        invoice_url: null
-      }
-    ],
+    transactions: [],
     usage_jobs: []
   };
 }
@@ -103,7 +74,7 @@ export async function fetchCommerceSummaryService() {
     const response = await authenticatedFetch(url);
     if (response.ok) {
       const data = await response.json();
-      if (data && data.current_plan) {
+      if (data && data.credits) {
         if (!Array.isArray(data.usage_jobs)) data.usage_jobs = [];
         saveRecruiterCommerceSummary(data);
         return data;
@@ -120,15 +91,15 @@ export async function fetchCommerceSummaryService() {
  */
 export function checkRecruiterPlanStatus() {
   const commerce = getRecruiterCommerceSummary();
-  const plan = commerce.current_plan || {};
+  const plan = commerce.current_plan || null;
   const credits = commerce.credits?.available ?? commerce.usage?.remaining ?? 0;
-  const totalAllowance = commerce.credits?.total_allowance ?? commerce.usage?.allowance ?? 10;
+  const totalAllowance = commerce.credits?.total_allowance ?? commerce.usage?.allowance ?? 0;
   const usedCredits = commerce.credits?.used ?? commerce.usage?.used ?? 0;
 
   let isExpired = false;
-  let daysRemaining = 30;
+  let daysRemaining = 0;
 
-  if (plan.valid_until) {
+  if (plan?.valid_until) {
     const expiryTime = new Date(plan.valid_until).getTime();
     if (!isNaN(expiryTime)) {
       const diffDays = Math.ceil((expiryTime - Date.now()) / (1000 * 60 * 60 * 24));
@@ -139,13 +110,14 @@ export function checkRecruiterPlanStatus() {
     }
   }
 
-  const canPostJob = !isExpired && credits > 0;
+  const hasActivePlan = !!(plan && plan.id);
+  const canPostJob = hasActivePlan && !isExpired && credits > 0;
 
   return {
-    hasActivePlan: !!plan.id,
-    planId: plan.id || 'basic',
-    planName: plan.name || 'Free Starter Plan',
-    validUntil: plan.valid_until || 'No expiry',
+    hasActivePlan,
+    planId: plan?.id || null,
+    planName: plan?.name || 'No Active Plan',
+    validUntil: plan?.valid_until || 'N/A',
     isExpired,
     daysRemaining,
     availableCredits: credits,
@@ -262,123 +234,50 @@ export async function deductJobCreditService({ jobId, jobTitle, listingDays = 30
 }
 
 export async function subscribePlanService({ planId, paymentMethod = 'CARD' }) {
-  // Plan catalog definition
-  const planCatalog = {
-    basic: {
-      id: "basic",
-      name: "Free Starter Plan",
-      price: 0,
-      formatted_price: "Free",
-      duration_days: 30,
-      credits: 10,
-      features: [
-        "10 Job Credits included",
-        "7 days active listing per job",
-        "Standard search visibility",
-        "Candidate Profile & Resume access"
-      ]
-    },
-    professional: {
-      id: "professional",
-      name: "Professional Plan",
-      price: 49,
-      formatted_price: "₹49",
-      duration_days: 30,
-      credits: 50,
-      features: [
-        "50 Job Posting Credits included",
-        "30 days active listing per job",
-        "Featured listing tag",
-        "Priority candidate search placement",
-        "Social network sharing"
-      ]
-    },
-    premium: {
-      id: "premium",
-      name: "Premium Plan",
-      price: 69,
-      formatted_price: "₹69",
-      duration_days: 60,
-      credits: 150,
-      features: [
-        "150 Job Posting Credits included",
-        "60 days active listing per job",
-        "Top of search placement",
-        "Direct email blast to matching candidates",
-        "Dedicated account support"
-      ]
-    }
-  };
-
-  const selected = planCatalog[planId] || planCatalog.basic;
-  const commerce = getRecruiterCommerceSummary();
-
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + selected.duration_days);
-  const validUntilStr = futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-  // Update plan and add new credits
-  commerce.current_plan = {
-    id: selected.id,
-    name: selected.name,
-    price: selected.price,
-    formatted_price: selected.formatted_price,
-    duration_days: selected.duration_days,
-    valid_until: validUntilStr,
-    is_free: selected.price === 0,
-    features: selected.features
-  };
-
-  // Stack/renew credits
-  commerce.credits.total_allowance = selected.credits;
-  commerce.credits.available = selected.credits;
-  commerce.credits.used = 0;
-
-  if (commerce.usage) {
-    commerce.usage.allowance = selected.credits;
-    commerce.usage.remaining = selected.credits;
-    commerce.usage.used = 0;
+  const status = checkRecruiterPlanStatus();
+  if (status.hasActivePlan && !status.isExpired && status.availableCredits > 0) {
+    return {
+      success: false,
+      message: `Your ${status.planName} is still active with ${status.availableCredits} credit(s) remaining (valid until ${status.validUntil}). You can purchase a new plan only after finishing your current plan.`
+    };
   }
 
-  commerce.last_payment_method = paymentMethod;
-
-  // Add transaction record
-  const txn = {
-    id: `TXN_${Date.now()}`,
-    date: todayStr,
-    description: `${selected.name} Activation (${selected.credits} Credits)`,
-    amount: selected.price,
-    formatted_amount: selected.formatted_price,
-    status: "SUCCESS",
-    invoice_url: null
-  };
-
-  commerce.transactions = [txn, ...(commerce.transactions || [])];
-
-  // Save changes locally
-  saveRecruiterCommerceSummary(commerce);
-
-  // Send in-app notification
+  const url = `${API_BASE_URL}/accounts/recruiter/commerce/subscribe/`;
   try {
-    await addRecruiterNotification({
-      title: 'Plan Activated Successfully',
-      message: `${selected.name} is now active with ${selected.credits} job credits, valid until ${validUntilStr}.`,
-      notification_type: 'BILLING',
-      reference_type: 'payment',
-      reference_id: null
-    });
-  } catch {}
-
-  // Sync to backend if available
-  try {
-    const url = `${API_BASE_URL}/accounts/recruiter/commerce/subscribe/`;
-    await authenticatedFetch(url, {
+    const response = await authenticatedFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan_id: planId, payment_method: paymentMethod })
     });
-  } catch {}
 
-  return { success: true, message: `${selected.name} activated successfully!`, commerce };
+    const resData = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        message: resData?.detail || 'Failed to activate plan.'
+      };
+    }
+
+    const updatedCommerce = await fetchCommerceSummaryService();
+    try {
+      await addRecruiterNotification({
+        title: 'Plan Activated Successfully',
+        message: resData?.message || 'Your posting plan is now active.',
+        notification_type: 'BILLING',
+        reference_type: 'payment',
+        reference_id: null
+      });
+    } catch {}
+
+    return {
+      success: true,
+      message: resData?.message || 'Plan activated successfully!',
+      commerce: updatedCommerce
+    };
+  } catch {
+    return {
+      success: false,
+      message: 'Network error while activating plan. Please try again.'
+    };
+  }
 }

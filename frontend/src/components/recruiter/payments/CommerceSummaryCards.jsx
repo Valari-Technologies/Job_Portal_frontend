@@ -3,14 +3,14 @@ import { ArrowRight, CheckCircle, Zap, AlertTriangle } from 'lucide-react';
 
 export default function CommerceSummaryCards({ commerceSummary }) {
   const credits = commerceSummary?.credits?.available || 0;
-  const totalAllowance = commerceSummary?.credits?.total_allowance || 10;
+  const totalAllowance = commerceSummary?.credits?.total_allowance || 0;
   const usedCredits = commerceSummary?.credits?.used || 0;
   const plan = commerceSummary?.current_plan;
   const usage = commerceSummary?.usage || { allowance: totalAllowance, used: usedCredits, remaining: credits };
 
   // Calculate plan expiration
   let isExpired = false;
-  let daysRemaining = 30;
+  let daysRemaining = 0;
   if (plan?.valid_until) {
     const expiryTime = new Date(plan.valid_until).getTime();
     if (!isNaN(expiryTime)) {
@@ -20,7 +20,10 @@ export default function CommerceSummaryCards({ commerceSummary }) {
     }
   }
 
-  const usagePercent = Math.min(100, Math.round(((usage.used || usedCredits) / (usage.allowance || totalAllowance || 1)) * 100));
+  const hasActivePlan = !!(plan && !isExpired && credits > 0);
+  const usagePercent = totalAllowance > 0
+    ? Math.min(100, Math.round(((usage.used || usedCredits) / totalAllowance) * 100))
+    : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 font-sans">
@@ -86,12 +89,20 @@ export default function CommerceSummaryCards({ commerceSummary }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              <CheckCircle className={`h-5 w-5 ${hasActivePlan ? 'text-emerald-600' : 'text-slate-400'}`} />
               <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Current Plan</span>
             </div>
-            {isExpired ? (
+            {!plan ? (
+              <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                No Plan Selected
+              </span>
+            ) : isExpired ? (
               <span className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" /> Plan Expired
+              </span>
+            ) : credits <= 0 ? (
+              <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                Credits Finished
               </span>
             ) : (
               <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
@@ -126,13 +137,19 @@ export default function CommerceSummaryCards({ commerceSummary }) {
         </div>
 
         <div className="pt-2 border-t border-slate-100">
-          <Link
-            to="/recruiter/payments/plans"
-            className="text-xs font-bold text-indigo-600 flex items-center justify-between group hover:underline"
-          >
-            <span>Upgrade or Change Plan</span>
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          {hasActivePlan ? (
+            <span className="text-xs font-semibold text-slate-500 flex items-center justify-between">
+              <span>New plan unlocks after using remaining {credits} credit(s)</span>
+            </span>
+          ) : (
+            <Link
+              to="/recruiter/payments/plans"
+              className="text-xs font-bold text-indigo-600 flex items-center justify-between group hover:underline"
+            >
+              <span>{plan ? 'Choose Next Plan' : 'Choose a Suitable Plan'}</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

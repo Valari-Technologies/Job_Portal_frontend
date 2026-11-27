@@ -1,32 +1,46 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Check, ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 import { JobWizardContext } from './JobWizardContext.js';
 import { getPostingPlans } from '../../../../services/recruiter/recruiterPricingService';
+import {
+  checkRecruiterPlanStatus,
+  fetchCommerceSummaryService,
+  subscribePlanService,
+} from '../../../../services/recruiter/recruiterCommerceService';
 
 export default function PostingPlanSelection({ source }) {
   const navigate = useNavigate();
   const isPaymentsMode = source === 'payments';
   const { selectedPlan, setSelectedPlan } = useContext(JobWizardContext);
   const [plans] = useState(() => getPostingPlans());
+  const [planStatus, setPlanStatus] = useState(() => checkRecruiterPlanStatus());
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    fetchCommerceSummaryService().then(() => {
+      setPlanStatus(checkRecruiterPlanStatus());
+    });
+  }, []);
+
+  const isCurrentPlanStillActive =
+    isPaymentsMode && planStatus.hasActivePlan && !planStatus.isExpired && planStatus.availableCredits > 0;
+
   const handleNext = async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan || isCurrentPlanStillActive) return;
 
     if (isPaymentsMode) {
       setIsSubscribing(true);
       setErrorMessage('');
       try {
-        const { subscribePlanService } = await import('../../../../services/recruiter/recruiterCommerceService');
         const res = await subscribePlanService({ planId: selectedPlan.id });
         if (res.success) {
           navigate('/recruiter/payments');
         } else {
           setErrorMessage(res.message || 'Failed to activate plan.');
         }
-      } catch (err) {
+      } catch {
         setErrorMessage('Could not activate plan. Please try again.');
       } finally {
         setIsSubscribing(false);
@@ -50,6 +64,17 @@ export default function PostingPlanSelection({ source }) {
             : 'Choose the visibility that matches your hiring urgency.'}
         </p>
       </div>
+
+      {isCurrentPlanStillActive && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-xl flex items-start gap-2.5">
+          <Lock className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+          <span>
+            Your <strong>{planStatus.planName}</strong> is currently active with{' '}
+            <strong>{planStatus.availableCredits}</strong> credit(s) remaining (valid until {planStatus.validUntil}).
+            You can choose and purchase a new plan once your current plan is finished or expired.
+          </span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">
@@ -143,7 +168,7 @@ export default function PostingPlanSelection({ source }) {
 
         <button
           type="button"
-          disabled={!selectedPlan || isSubscribing}
+          disabled={!selectedPlan || isSubscribing || isCurrentPlanStillActive}
           onClick={handleNext}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[44px] cursor-pointer"
         >
