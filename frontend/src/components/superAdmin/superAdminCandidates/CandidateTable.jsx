@@ -1,8 +1,9 @@
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, CheckCircle2, Ban } from 'lucide-react';
 import Avatar from '../../shared/Avatar';
 import TableActionMenu from '../../shared/TableActionMenu';
 
 function CandidateActionMenu({ candidate, onSelectCandidate, onTriggerAction }) {
+  const isSuspended = String(candidate?.status || '').toUpperCase() === 'SUSPENDED';
   return (
     <TableActionMenu
       items={[
@@ -12,6 +13,18 @@ function CandidateActionMenu({ candidate, onSelectCandidate, onTriggerAction }) 
           onClick: () => {
             if (onSelectCandidate) onSelectCandidate(candidate);
             if (onTriggerAction) onTriggerAction('VIEW', candidate);
+          },
+        },
+        {
+          label: isSuspended ? 'Activate account' : 'Suspend account',
+          icon: isSuspended
+            ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            : <Ban className="h-3.5 w-3.5 text-amber-600" />,
+          className: isSuspended
+            ? 'w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer'
+            : 'w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer',
+          onClick: () => {
+            if (onTriggerAction) onTriggerAction(isSuspended ? 'ACTIVATE' : 'SUSPEND', candidate);
           },
         },
         {

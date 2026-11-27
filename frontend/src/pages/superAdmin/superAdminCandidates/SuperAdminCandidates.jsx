@@ -134,7 +134,18 @@ export default function SuperAdminCandidates({ onToast }) {
           onToast(result.message);
           return;
         }
-        setCandidates(prev => prev.map(c => (c.id === record.id ? { ...c, status: newStatus } : c)));
+        setCandidates((prev) => {
+          const updated = prev.map((c) => (c.id === record.id ? { ...c, status: newStatus } : c));
+          if (accountStatus !== 'All') {
+            return updated.filter(
+              (c) => String(c.status || '').toUpperCase() === accountStatus.toUpperCase()
+            );
+          }
+          return updated;
+        });
+        setSelectedCandidate((prev) =>
+          prev && prev.id === record.id ? { ...prev, status: newStatus } : prev
+        );
         onToast(`Candidate account: ${record.full_name} ${actionType === 'SUSPEND' ? 'suspended' : 'activated'} successfully.`);
       });
     } else if (actionType === 'DELETE') {
@@ -161,6 +172,8 @@ export default function SuperAdminCandidates({ onToast }) {
     if (type === 'ADD_SAVE') {
       setCandidates(prev => [data, ...prev]);
       setSelectedCandidate(data);
+    } else {
+      handleTriggerAction(type, data);
     }
   };
 
