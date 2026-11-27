@@ -18,15 +18,17 @@ import {
 import RecruiterLayout from '../../components/recruiter/common/RecruiterLayout';
 import RecruiterMetricCard from '../../components/recruiter/dashboard/RecruiterMetricCard';
 import ApplicationDetailsDrawer from '../../components/recruiter/applications/ApplicationDetailsDrawer';
+import RecruiterPlanAlertModal from '../../components/recruiter/common/RecruiterPlanAlertModal';
 import { getRecruiterDashboardData, fetchRecruiterDashboardFromApi } from '../../services/recruiter/recruiterDashboardService';
-import { getRecruiterCommerceSummary } from '../../services/recruiter/recruiterCommerceService';
+import { getRecruiterCommerceSummary, fetchCommerceSummaryService } from '../../services/recruiter/recruiterCommerceService';
 import { updateApplicationStatusService, getRecruiterApplicationsData } from '../../services/recruiter/recruiterApplicationsService';
 import { useRecruiterUser } from '../../context/RecruiterUserContext';
 
 export default function RecruiterDashboard() {
   const { profile } = useRecruiterUser();
   const [data, setData] = useState(() => getRecruiterDashboardData());
-  const [commerceSummary] = useState(() => getRecruiterCommerceSummary());
+  const [commerceSummary, setCommerceSummary] = useState(() => getRecruiterCommerceSummary());
+  const [isCommerceLoaded, setIsCommerceLoaded] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
 
   useEffect(() => {
@@ -34,6 +36,12 @@ export default function RecruiterDashboard() {
     fetchRecruiterDashboardFromApi().then(freshData => {
       if (isMounted && freshData) {
         setData(freshData);
+      }
+    });
+    fetchCommerceSummaryService().then(liveCommerce => {
+      if (isMounted) {
+        if (liveCommerce) setCommerceSummary(liveCommerce);
+        setIsCommerceLoaded(true);
       }
     });
     return () => { isMounted = false; };
@@ -76,6 +84,7 @@ export default function RecruiterDashboard() {
 
   return (
     <RecruiterLayout activeTab="dashboard">
+      <RecruiterPlanAlertModal commerceSummary={commerceSummary} isLoaded={isCommerceLoaded} />
       <main className="p-4 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
         
         {/* Header Block */}
