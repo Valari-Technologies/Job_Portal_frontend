@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { createCandidateService } from '../../../services/superAdmin/superAdminService';
-import { fetchLocations } from '../../../services/superAdmin/locationService';
+import CascadingLocationSelector from '../../shared/CascadingLocationSelector';
 
 export default function AddCandidateForm() {
   const navigate = useNavigate();
@@ -27,76 +27,12 @@ export default function AddCandidateForm() {
     workMode: ''
   });
 
-  const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [localities, setLocalities] = useState([]);
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Fetch initial States from location catalog
-  useEffect(() => {
-    let active = true;
-    async function loadStates() {
-      const data = await fetchLocations({ location_type: 'STATE' });
-      if (active) setStates(data);
-    }
-    loadStates();
-    return () => { active = false; };
-  }, []);
-
-  // Fetch Districts when State changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.stateId) {
-      setDistricts([]);
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadDistricts() {
-      const data = await fetchLocations({ location_type: 'DISTRICT', parent_id: formState.stateId });
-      if (active) setDistricts(data);
-    }
-    loadDistricts();
-    return () => { active = false; };
-  }, [formState.stateId]);
-
-  // Fetch Cities when District changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.districtId) {
-      setCities([]);
-      setLocalities([]);
-      return;
-    }
-    async function loadCities() {
-      const data = await fetchLocations({ location_type: 'CITY', parent_id: formState.districtId });
-      if (active) setCities(data);
-    }
-    loadCities();
-    return () => { active = false; };
-  }, [formState.districtId]);
-
-  // Fetch Localities when City changes
-  useEffect(() => {
-    let active = true;
-    if (!formState.cityId) {
-      setLocalities([]);
-      return;
-    }
-    async function loadLocalities() {
-      const data = await fetchLocations({ location_type: 'LOCALITY', parent_id: formState.cityId });
-      if (active) setLocalities(data);
-    }
-    loadLocalities();
-    return () => { active = false; };
-  }, [formState.cityId]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -462,78 +398,27 @@ export default function AddCandidateForm() {
             </div>
           </div>
 
-          {/* Cascading Location Selectors */}
+          {/* Cascading Searchable Location Selectors */}
           <div className="space-y-3">
-            <label className="text-[13px] font-bold text-slate-700 block">Location</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label htmlFor="state" className="text-xs font-semibold text-slate-500 block mb-1">State</label>
-                <select
-                  id="state"
-                  value={formState.stateId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, stateId: e.target.value, districtId: '', cityId: '', localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 min-h-[44px]"
-                >
-                  <option value="">Select State</option>
-                  {states.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="district" className="text-xs font-semibold text-slate-500 block mb-1">District</label>
-                <select
-                  id="district"
-                  disabled={!formState.stateId}
-                  value={formState.districtId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, districtId: e.target.value, cityId: '', localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select District</option>
-                  {districts.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="city" className="text-xs font-semibold text-slate-500 block mb-1">City / Town</label>
-                <select
-                  id="city"
-                  disabled={!formState.districtId}
-                  value={formState.cityId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, cityId: e.target.value, localityId: '' }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select City/Town</option>
-                  {cities.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="locality" className="text-xs font-semibold text-slate-500 block mb-1">Locality</label>
-                <select
-                  id="locality"
-                  disabled={!formState.cityId}
-                  value={formState.localityId}
-                  onChange={(e) => setFormState(prev => ({ ...prev, localityId: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400 min-h-[44px]"
-                >
-                  <option value="">Select Locality</option>
-                  {localities.map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-[13px] font-bold text-slate-700 block">Location</label>
+              <p className="text-[11px] text-slate-400 font-medium">Search or type a new State, District, City/Town, or Locality and press Enter to add it.</p>
             </div>
-            {states.length === 0 && (
-              <p className="text-[11px] text-amber-600 font-semibold">
-                No location records configured yet. Populate location catalog under Location Management.
-              </p>
-            )}
+            <CascadingLocationSelector
+              stateId={formState.stateId}
+              districtId={formState.districtId}
+              cityId={formState.cityId}
+              localityId={formState.localityId}
+              onChange={({ stateId, districtId, cityId, localityId }) =>
+                setFormState(prev => ({
+                  ...prev,
+                  stateId,
+                  districtId,
+                  cityId,
+                  localityId,
+                }))
+              }
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
