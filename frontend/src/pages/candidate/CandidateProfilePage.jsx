@@ -16,7 +16,8 @@ import {
   updateCandidateLinks
 } from '../../services/candidate/candidateProfileService';
 import { getCandidateOnboardingStatus } from '../../services/candidate/candidateOnboardingService';
-import { INDIA_STATES, getDistrictsForState, parseLocationString } from '../../data/indiaLocations';
+import CandidateLocationSelector from '../../components/candidate/profile/CandidateLocationSelector';
+import { parseLocationString } from '../../data/indiaLocations';
 import {
   ArrowLeft,
   Pencil,
@@ -110,15 +111,19 @@ export default function CandidateProfilePage() {
   const initEditForms = useCallback((data) => {
     if (!data) return;
     const parsed = parseLocationString(data.location || '');
-    const stateVal = data.state || parsed.state || 'Tamil Nadu';
+    const stateVal = data.state || parsed.state || '';
     const districtVal = data.district || parsed.district || '';
+    const cityVal = data.city || '';
+    const localityVal = data.locality || '';
 
     setPersonalForm({
       fullName: data.fullName || '',
       headline: data.headline || '',
       state: stateVal,
       district: districtVal,
-      location: data.location || (districtVal ? `${districtVal}, ${stateVal}` : stateVal),
+      city: cityVal,
+      locality: localityVal,
+      location: data.location || [localityVal, cityVal, districtVal, stateVal].filter(Boolean).join(', '),
       phone: data.phone || '',
       summary: data.summary || ''
     });
@@ -257,25 +262,14 @@ export default function CandidateProfilePage() {
     }
   };
 
-  // State & District change handlers
-  const handleStateChange = (newState) => {
-    const dists = getDistrictsForState(newState);
-    const newDistrict = dists.includes(personalForm.district) ? personalForm.district : '';
-    const newLoc = newDistrict ? `${newDistrict}, ${newState}` : newState;
+  const handleLocationChange = ({ state, district, city, locality, location }) => {
     setPersonalForm(prev => ({
       ...prev,
-      state: newState,
-      district: newDistrict,
-      location: newLoc
-    }));
-  };
-
-  const handleDistrictChange = (newDistrict) => {
-    const newLoc = newDistrict ? `${newDistrict}, ${personalForm.state}` : (personalForm.state || '');
-    setPersonalForm(prev => ({
-      ...prev,
-      district: newDistrict,
-      location: newLoc
+      state,
+      district,
+      city,
+      locality,
+      location,
     }));
   };
 
@@ -283,9 +277,16 @@ export default function CandidateProfilePage() {
   const handleSavePersonal = async () => {
     setIsSaving(true);
     try {
+      const locParts = [];
+      [personalForm.locality, personalForm.city, personalForm.district, personalForm.state].forEach((p) => {
+        const t = String(p || '').trim();
+        if (t && !locParts.some((existing) => existing.toLowerCase() === t.toLowerCase())) {
+          locParts.push(t);
+        }
+      });
       const payload = {
         ...personalForm,
-        location: personalForm.district ? `${personalForm.district}, ${personalForm.state}` : (personalForm.state || '')
+        location: locParts.join(', ')
       };
       const res = await updateCandidateProfile(payload);
       if (res.success) {
@@ -989,30 +990,13 @@ export default function CandidateProfilePage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">State</label>
-                      <CustomDropdown
-                        value={personalForm.state || ''}
-                        placeholder="Select State"
-                        searchable={true}
-                        onChange={(e) => handleStateChange(e.target.value)}
-                        options={INDIA_STATES}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-700 block">District</label>
-                      <CustomDropdown
-                        value={personalForm.district || ''}
-                        disabled={!personalForm.state}
-                        placeholder={personalForm.state ? 'Select District' : 'Select State first'}
-                        searchable={true}
-                        onChange={(e) => handleDistrictChange(e.target.value)}
-                        options={getDistrictsForState(personalForm.state) || []}
-                      />
-                    </div>
-                  </div>
+                  <CandidateLocationSelector
+                    state={personalForm.state || ''}
+                    district={personalForm.district || ''}
+                    city={personalForm.city || ''}
+                    locality={personalForm.locality || ''}
+                    onChange={handleLocationChange}
+                  />
 
                   <div className="space-y-1">
                     <label className="text-xs font-extrabold text-slate-700 block">Phone Number</label>

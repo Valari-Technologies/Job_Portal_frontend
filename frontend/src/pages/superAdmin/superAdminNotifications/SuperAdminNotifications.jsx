@@ -141,7 +141,7 @@ export default function SuperAdminNotifications() {
       return { path: '/super-admin/overview', label: 'Go to Overview & Applications' };
     }
     if (refType.includes('candidate') || notifType.includes('candidate') || (refType === 'user' && notifType.includes('candidate'))) {
-      return { path: '/super-admin/overview', label: 'Go to Candidate Directory' };
+      return { path: '/super-admin/candidates', label: 'Go to Candidate Directory' };
     }
     if (refType.includes('report') || notifType.includes('report')) {
       return { path: '/super-admin/reports', label: 'Go to Reports & Safety' };
