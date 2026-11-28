@@ -6,6 +6,7 @@ import EmployerFilters from '../../../components/superAdmin/superAdminEmployers/
 import EmployerTable from '../../../components/superAdmin/superAdminEmployers/EmployerTable';
 import EmployerSidePanel from '../../../components/superAdmin/superAdminEmployers/EmployerSidePanel';
 import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
+import { downloadCsv } from '../../../utils/exportCsv';
 
 export default function SuperAdminEmployers({ onToast = () => {} }) {
   const navigate = useNavigate();
@@ -127,6 +128,36 @@ export default function SuperAdminEmployers({ onToast = () => {} }) {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!employers.length) {
+      if (onToast) onToast('No employers available to export.');
+      return;
+    }
+    const headers = [
+      'Company Name',
+      'Contact Person',
+      'Email',
+      'Phone',
+      'Designation',
+      'Location',
+      'Verification Status',
+      'Trust Level',
+    ];
+    const rows = employers.map((emp) => [
+      emp.company_name || emp.full_name || '',
+      emp.full_name || emp.primary_contact_name || '',
+      emp.company_email || emp.email || '',
+      emp.company_phone || emp.phone_number || emp.phone || '',
+      emp.designation || '',
+      emp.location?.full_path || emp.location?.name || emp.location?.state || emp.company_address || 'Not specified',
+      emp.verification_status || 'PENDING',
+      emp.trust_level || 'NEW',
+    ]);
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`employers-${dateStamp}.csv`, headers, rows);
+    if (onToast) onToast(`Exported ${employers.length} employer(s) to CSV.`);
+  };
+
   const handleConfirmDelete = async () => {
     if (!deleteTarget || isDeleting) return;
     setIsDeleting(true);
@@ -177,10 +208,11 @@ export default function SuperAdminEmployers({ onToast = () => {} }) {
           {/* Action buttons row */}
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button 
-              disabled 
-              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 text-xs font-bold text-slate-400 shadow-2xs cursor-not-allowed"
+              type="button"
+              onClick={handleExportCSV}
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 sm:px-4 py-2.5 text-xs font-extrabold text-teal-700 shadow-2xs hover:bg-teal-100 hover:border-teal-300 transition-colors cursor-pointer"
             >
-              <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Export</span>

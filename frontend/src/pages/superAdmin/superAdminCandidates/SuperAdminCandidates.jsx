@@ -10,6 +10,7 @@ import CandidateTable from '../../../components/superAdmin/superAdminCandidates/
 import CandidateSidePanel from '../../../components/superAdmin/superAdminCandidates/CandidateSidePanel';
 import CandidateModal from '../../../components/superAdmin/superAdminCandidates/CandidateModal';
 import SuperAdminPagination from '../../../components/superAdmin/common/SuperAdminPagination';
+import { downloadCsv } from '../../../utils/exportCsv';
 
 export default function SuperAdminCandidates({ onToast }) {
   const navigate = useNavigate();
@@ -106,7 +107,41 @@ export default function SuperAdminCandidates({ onToast }) {
 
   // CSV export function
   const handleExportCSV = () => {
-    onToast('Candidate export features will connect when data models are active.');
+    if (!visibleCandidates.length) {
+      if (onToast) onToast('No candidates available to export.');
+      return;
+    }
+    const formatCandidateLocation = (c) => {
+      if (!c) return 'Not specified';
+      if (typeof c.location === 'string' && c.location) return c.location;
+      if (c.location?.full_path) return c.location.full_path;
+      if (c.location?.name) return c.location.name;
+      if (c.location?.city && c.location?.state) return `${c.location.city}, ${c.location.state}`;
+      if (c.location?.state) return c.location.state;
+      if (c.city && c.state) return `${c.city}, ${c.state}`;
+      return c.state || c.city || 'Not specified';
+    };
+    const headers = [
+      'Candidate Name',
+      'Email',
+      'Phone',
+      'Location',
+      'Profile Completion',
+      'Applications',
+      'Account Status',
+    ];
+    const rows = visibleCandidates.map((c) => [
+      c.full_name || c.name || c.username || 'Candidate',
+      c.email || '',
+      c.phone_number || c.mobile_number || c.phone || '',
+      formatCandidateLocation(c),
+      `${Number(c.profile_completion ?? 0)}%`,
+      c.applications ?? c.applications_count ?? 0,
+      String(c.status || 'ACTIVE').toUpperCase(),
+    ]);
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`candidates-${dateStamp}.csv`, headers, rows);
+    if (onToast) onToast(`Exported ${visibleCandidates.length} candidate(s) to CSV.`);
   };
 
   const handleSelectCandidate = (cand) => {
@@ -211,11 +246,10 @@ export default function SuperAdminCandidates({ onToast }) {
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               type="button"
-              disabled
               onClick={handleExportCSV}
-              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 sm:px-4 py-2.5 text-xs font-bold text-slate-400 shadow-2xs cursor-not-allowed"
+              className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 sm:px-4 py-2.5 text-xs font-extrabold text-teal-700 shadow-2xs hover:bg-teal-100 hover:border-teal-300 transition-colors cursor-pointer"
             >
-              <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Export</span>
